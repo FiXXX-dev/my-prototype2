@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Личный кабинет — КЛЕВЕР</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--accent:#FF6B35;--danger:#FF3B6B;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
+header{position:sticky;top:0;z-index:100;background:var(--dark);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:70px;border-bottom:2px solid var(--green);}
+.logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:24px;color:white;letter-spacing:-1px;display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo span{color:var(--lime);}
+nav{display:flex;gap:32px;}
+nav a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:14px;font-weight:500;}
+nav a:hover{color:var(--lime);}
+.btn-phone{background:var(--green);color:var(--dark);padding:10px 20px;border-radius:40px;font-weight:700;font-size:14px;text-decoration:none;}
+.breadcrumb{padding:16px 40px;background:white;font-size:13px;color:#8aaa94;border-bottom:1px solid #e8f4ec;}
+.breadcrumb a{color:var(--green-dark);text-decoration:none;}
+.breadcrumb span{margin:0 8px;}
+.auth-wrap{max-width:520px;margin:60px auto;padding:0 20px;}
+.auth-box{background:white;border-radius:24px;padding:48px;box-shadow:0 20px 50px rgba(0,0,0,0.05);}
+.auth-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;letter-spacing:-1px;text-align:center;margin-bottom:8px;}
+.auth-sub{color:#8aaa94;font-size:14px;text-align:center;margin-bottom:32px;}
+.auth-tabs{display:flex;background:var(--gray);border-radius:14px;padding:4px;margin-bottom:28px;}
+.auth-tab{flex:1;padding:12px;border:none;background:none;border-radius:11px;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;color:#6b8a74;cursor:pointer;transition:all .2s;}
+.auth-tab.active{background:white;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+.auth-form{display:flex;flex-direction:column;gap:14px;}
+.form-grp{display:flex;flex-direction:column;gap:6px;}
+.form-grp label{font-size:13px;font-weight:600;color:var(--text);}
+.form-grp label .req{color:var(--accent);}
+.form-grp input{padding:13px 16px;border:1.5px solid #d0e8d8;border-radius:12px;font-family:'Onest',sans-serif;font-size:14px;outline:none;transition:border .2s;background:white;}
+.form-grp input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,204,113,0.12);}
+.form-grp .hint{font-size:12px;color:#8aaa94;margin-top:2px;}
+.field-toggle{display:flex;gap:8px;margin-bottom:4px;}
+.field-toggle button{flex:1;padding:10px;background:var(--gray);border:1.5px solid transparent;border-radius:10px;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;color:#6b8a74;cursor:pointer;transition:all .2s;}
+.field-toggle button.active{background:white;border-color:var(--green);color:var(--green-dark);}
+.user-type{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+.user-type-opt{padding:14px;background:var(--gray);border:1.5px solid transparent;border-radius:12px;cursor:pointer;text-align:center;transition:all .2s;}
+.user-type-opt.active{background:white;border-color:var(--green);}
+.user-type-opt-icon{font-size:24px;margin-bottom:4px;}
+.user-type-opt-name{font-size:13px;font-weight:600;}
+.btn-submit{padding:15px;background:var(--green);border:none;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:var(--dark);cursor:pointer;transition:all .2s;margin-top:8px;}
+.btn-submit:hover{background:var(--lime);transform:translateY(-2px);}
+.auth-msg{padding:12px 16px;border-radius:10px;font-size:13px;display:none;}
+.auth-msg.error{background:#ffe8ee;color:var(--danger);}
+.auth-msg.success{background:#e8faf0;color:var(--green-dark);}
+.auth-msg.visible{display:block;}
+.guest-link{text-align:center;margin-top:20px;font-size:13px;color:#8aaa94;}
+.guest-link a{color:var(--green-dark);font-weight:600;text-decoration:none;cursor:pointer;}
+.account-wrap{display:none;}
+.account-wrap.visible{display:grid;grid-template-columns:260px 1fr;max-width:1200px;margin:32px auto;padding:0 40px;gap:24px;}
+.account-side{background:white;border-radius:20px;padding:24px;border:1.5px solid #e0ece4;position:sticky;top:90px;height:fit-content;}
+.user-card{padding:0 0 20px;border-bottom:1px solid #e8f4ec;margin-bottom:16px;}
+.user-avatar{width:54px;height:54px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;color:var(--dark);margin-bottom:12px;}
+.user-name{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700;line-height:1.2;margin-bottom:4px;}
+.user-type-badge{display:inline-block;background:var(--gray);color:#6b8a74;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;}
+.user-contact{font-size:13px;color:#8aaa94;margin-top:6px;line-height:1.5;}
+.acc-nav{display:flex;flex-direction:column;gap:4px;}
+.acc-link{padding:11px 14px;border-radius:10px;color:#6b8a74;background:none;border:none;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;font-family:'Onest',sans-serif;transition:all .15s;}
+.acc-link:hover{background:var(--gray);color:var(--text);}
+.acc-link.active{background:var(--green);color:var(--dark);font-weight:700;}
+.acc-link .badge{margin-left:auto;background:rgba(0,0,0,0.08);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;}
+.acc-link.active .badge{background:rgba(0,0,0,0.2);}
+.acc-logout{margin-top:12px;padding:11px 14px;border:1.5px solid #ffd0d8;background:none;border-radius:10px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;width:100%;font-family:'Onest',sans-serif;}
+.acc-logout:hover{background:#ffe8ee;}
+.acc-tab{display:none;}
+.acc-tab.active{display:block;}
+.acc-page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:14px;}
+.acc-title{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:900;letter-spacing:-1px;}
+.acc-sub{color:#8aaa94;font-size:14px;margin-top:4px;}
+.btn{padding:11px 22px;border-radius:12px;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;text-decoration:none;}
+.btn-primary{background:var(--green);color:var(--dark);font-weight:700;}
+.btn-primary:hover{background:var(--lime);}
+.btn-secondary{background:white;color:var(--text);border:1.5px solid #d0e8d8;}
+.btn-danger{background:#ffe8ee;color:var(--danger);}
+.btn-sm{padding:7px 14px;font-size:12px;}
+.card{background:white;border-radius:18px;padding:24px;border:1.5px solid #e0ece4;margin-bottom:14px;}
+.profile-form{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.profile-form .full{grid-column:1/-1;}
+.order{background:white;border-radius:16px;border:1.5px solid #e0ece4;padding:20px;margin-bottom:14px;}
+.order-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e8f4ec;}
+.order-num{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:var(--green-dark);}
+.order-date{font-size:12px;color:#8aaa94;margin-top:2px;}
+.order-total{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;}
+.order-status{padding:4px 12px;border-radius:30px;font-size:11px;font-weight:700;display:inline-block;}
+.status-new{background:#fff3ee;color:var(--accent);}
+.status-done{background:#e8faf0;color:var(--green-dark);}
+.order-items{display:flex;flex-direction:column;gap:6px;}
+.order-line{display:flex;justify-content:space-between;font-size:13px;color:#6b8a74;}
+.order-actions{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;}
+.fav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.fav-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;overflow:hidden;}
+.fav-img{background:var(--gray);height:140px;display:flex;align-items:center;justify-content:center;font-size:48px;}
+.fav-img img{width:100%;height:100%;object-fit:contain;padding:14px;}
+.fav-body{padding:14px;}
+.fav-name{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4;}
+.fav-price{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:var(--green-dark);margin-bottom:10px;}
+.fav-actions{display:flex;gap:6px;}
+.addr-card{background:white;border:1.5px solid #e0ece4;border-radius:16px;padding:18px 20px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:14px;}
+.addr-card.default{border-color:var(--green);background:#f0fbf5;}
+.addr-info{flex:1;}
+.addr-label{font-weight:700;font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.addr-tag{background:var(--green);color:var(--dark);font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
+.addr-text{color:#6b8a74;font-size:13px;line-height:1.5;}
+.addr-actions{display:flex;flex-direction:column;gap:6px;}
+.empty{text-align:center;padding:48px 20px;color:#8aaa94;}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+.empty-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;backdrop-filter:blur(4px);}
+.modal-bg.open{display:flex;}
+.modal-box{background:white;border-radius:20px;padding:32px;max-width:540px;width:100%;position:relative;}
+.modal-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;}
+.modal-sub{font-size:13px;color:#8aaa94;margin-bottom:22px;}
+.modal-close{position:absolute;top:18px;right:18px;width:32px;height:32px;background:var(--gray);border:none;border-radius:50%;font-size:14px;cursor:pointer;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid #e8f4ec;}
+footer{background:var(--dark2);padding:32px 40px;border-top:2px solid rgba(46,204,113,0.2);margin-top:60px;display:flex;justify-content:space-between;align-items:center;}
+.footer-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;color:white;}
+.footer-logo span{color:var(--lime);}
+footer p{color:rgba(255,255,255,0.25);font-size:13px;}
+.footer-links{display:flex;gap:24px;}
+.footer-links a{color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;}
+.addr-suggestions{position:absolute;left:0;right:0;top:100%;background:white;border:1.5px solid #d0e8d8;border-top:none;border-radius:0 0 12px 12px;max-height:240px;overflow-y:auto;z-index:10;box-shadow:0 8px 20px rgba(0,0,0,0.08);display:none;}
+.addr-suggestions.visible{display:block;}
+.addr-sug-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #e8f4ec;}
+.addr-sug-item:last-child{border:none;}
+.addr-sug-item:hover{background:#f0fbf5;}
+.addr-sug-main{color:var(--text);font-weight:500;}
+.addr-sug-sub{color:#8aaa94;font-size:11px;margin-top:2px;}
+.addr-input-wrap{position:relative;}
+.addr-loading{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:14px;color:#8aaa94;display:none;}
+.addr-loading.visible{display:block;}
+</style>
+</head>
+<body>
+<style id="preloader-style">
+#klever-preloader{position:fixed;inset:0;background:#0f1a14;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#klever-preloader.hidden{opacity:0;pointer-events:none;}
+#klever-preloader .pre-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:42px;color:white;letter-spacing:-1.5px;display:flex;align-items:center;gap:14px;margin-bottom:32px;}
+#klever-preloader .pre-logo .leaf{font-size:48px;animation:preSpin 1.5s ease-in-out infinite;display:inline-block;}
+#klever-preloader .pre-logo span{color:#C8F135;}
+#klever-preloader .pre-bar{width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+#klever-preloader .pre-bar::after{content:'';display:block;width:40%;height:100%;background:linear-gradient(90deg, transparent, #2ECC71, transparent);animation:preLoad 1.2s ease-in-out infinite;}
+@keyframes preSpin{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+@keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
+</style>
+<div id="klever-preloader">
+  <div class="pre-logo"><span class="leaf">🍀</span> <span>Clever</span></div>
+  <div class="pre-bar"></div>
+</div>
+<script id="preloader-script">
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var p = document.getElementById('klever-preloader');
+    if (p) {
+      p.classList.add('hidden');
+      setTimeout(function(){ p.remove(); }, 400);
+    }
+  }, 200);
+});
+// Fallback - если что-то застряло, убираем через 5 секунд
+setTimeout(function(){
+  var p = document.getElementById('klever-preloader');
+  if (p) { p.classList.add('hidden'); setTimeout(function(){ p.remove(); }, 400); }
+}, 5000);
+</script>
+
+<header>
+  <a href="index.html" class="logo">🍀 <span>Clever</span></a>
+  <nav>
+    <a href="catalog.html">Каталог</a><a href="sales.html">Акции</a>
+    <a href="wholesale.html">Оптовикам</a><a href="delivery.html">Доставка</a>
+    <a href="about.html">О нас</a><a href="contacts.html">Контакты</a>
+  </nav>
+  <a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+</header>
+
+<div class="breadcrumb">
+  <a href="index.html">Главная</a><span>→</span>Личный кабинет
+</div>
+
+<!-- АВТОРИЗАЦИЯ -->
+<div class="auth-wrap" id="authWrap">
+  <div class="auth-box">
+    <div class="auth-title">🍀 Добро пожаловать!</div>
+    <div class="auth-sub">Войдите или создайте аккаунт</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Вход</button>
+      <button class="auth-tab" id="tabRegBtn" onclick="switchAuthTab('register')">Регистрация</button>
+    </div>
+
+    <div id="loginForm" class="auth-form">
+      <div class="field-toggle">
+        <button id="loginByEmailBtn" class="active" onclick="setLoginMethod('email')">📧 По Email</button>
+        <button id="loginByPhoneBtn" onclick="setLoginMethod('phone')">📱 По телефону</button>
+      </div>
+      <div class="form-grp">
+        <label id="loginIdLabel">Email <span class="req">*</span></label>
+        <input type="text" id="loginId" placeholder="example@mail.ru">
+      </div>
+      <div class="form-grp">
+        <label>Пароль <span class="req">*</span></label>
+        <input type="password" id="loginPass" placeholder="••••••••">
+      </div>
+      <div class="auth-msg" id="loginMsg"></div>
+      <button class="btn-submit" onclick="doLogin()">Войти →</button>
+      <div class="guest-link">Нет аккаунта? <a onclick="switchAuthTab('register')">Зарегистрироваться</a></div>
+    </div>
+
+    <div id="registerForm" class="auth-form" style="display:none;">
+      <div class="form-grp">
+        <label>Я регистрируюсь как: <span class="req">*</span></label>
+        <div class="user-type">
+          <div class="user-type-opt active" id="typeIndividualBtn" onclick="setUserType('individual')">
+            <div class="user-type-opt-icon">👤</div>
+            <div class="user-type-opt-name">Физ. лицо</div>
+          </div>
+          <div class="user-type-opt" id="typeCompanyBtn" onclick="setUserType('company')">
+            <div class="user-type-opt-icon">🏢</div>
+            <div class="user-type-opt-name">ИП / Компания</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="individualFields">
+        <div class="form-grp">
+          <label>Фамилия <span class="req">*</span></label>
+          <input type="text" id="regLastName" placeholder="Иванов">
+        </div>
+        <div class="form-grp">
+          <label>Имя <span class="req">*</span></label>
+          <input type="text" id="regFirstName" placeholder="Иван">
+        </div>
+        <div class="form-grp">
+          <label>Отчество</label>
+          <input type="text" id="regMiddleName" placeholder="Иванович (если есть)">
+        </div>
+      </div>
+
+      <div id="companyFields" style="display:none;">
+        <div class="form-grp">
+          <label>Название компании <span class="req">*</span></label>
+          <input type="text" id="regCompany" placeholder="ООО «Название»">
+        </div>
+        <div class="form-grp">
+          <label>ИНН</label>
+          <input type="text" id="regInn" placeholder="10 или 12 цифр" maxlength="12">
+        </div>
+        <div class="form-grp">
+          <label>Фамилия контактного лица <span class="req">*</span></label>
+          <input type="text" id="regContactLast" placeholder="Иванов">
+        </div>
+        <div class="form-grp">
+          <label>Имя <span class="req">*</span></label>
+          <input type="text" id="regContactFirst" placeholder="Иван">
+        </div>
+        <div class="form-grp">
+          <label>Отчество</label>
+          <input type="text" id="regContactMiddle" placeholder="Иванович (если есть)">
+        </div>
+      </div>
+
+      <div class="field-toggle">
+        <button id="regByEmailBtn" class="active" onclick="setRegMethod('email')">📧 Регистрация по Email</button>
+        <button id="regByPhoneBtn" onclick="setRegMethod('phone')">📱 По телефону</button>
+      </div>
+
+      <div class="form-grp" id="regEmailGrp">
+        <label>Email <span class="req">*</span></label>
+        <input type="email" id="regEmail" placeholder="example@mail.ru">
+      </div>
+
+      <div class="form-grp" id="regPhoneGrp" style="display:none;">
+        <label>Телефон <span class="req">*</span></label>
+        <input type="tel" id="regPhone" placeholder="+7 (___) ___-__-__">
+      </div>
+
+      <div class="form-grp">
+        <label>Пароль <span class="req">*</span></label>
+        <input type="password" id="regPass" placeholder="Минимум 6 символов">
+        <div class="hint">Минимум 6 символов</div>
+      </div>
+
+      <div class="form-grp">
+        <label>Повторите пароль <span class="req">*</span></label>
+        <input type="password" id="regPass2" placeholder="••••••••">
+      </div>
+
+      <div class="auth-msg" id="regMsg"></div>
+      <button class="btn-submit" onclick="doRegister()">Создать аккаунт →</button>
+      <div class="guest-link">Уже есть аккаунт? <a onclick="switchAuthTab('login')">Войти</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ЛИЧНЫЙ КАБИНЕТ -->
+<div class="account-wrap" id="accountWrap">
+  <aside class="account-side">
+    <div class="user-card">
+      <div class="user-avatar" id="userAvatar">К</div>
+      <div class="user-name" id="userName">—</div>
+      <div class="user-type-badge" id="userTypeBadge">Физ. лицо</div>
+      <div class="user-contact" id="userContact">—</div>
+    </div>
+    <nav class="acc-nav">
+      <button class="acc-link active" onclick="showAccTab('profile', this)">👤 Профиль</button>
+      <button class="acc-link" onclick="showAccTab('orders', this)">🛍️ Заказы <span class="badge" id="cntMyOrders">0</span></button>
+      <button class="acc-link" onclick="showAccTab('favorites', this)">❤️ Избранное <span class="badge" id="cntMyFav">0</span></button>
+      <button class="acc-link" onclick="showAccTab('addresses', this)">📍 Адреса <span class="badge" id="cntMyAddr">0</span></button>
+      <button class="acc-link" onclick="showAccTab('security', this)">🔒 Безопасность</button>
+    </nav>
+    <button class="acc-logout" onclick="doLogout()">Выйти из аккаунта</button>
+  </aside>
+
+  <main>
+    <div class="acc-tab active" id="accTab-profile">
+      <div class="acc-page-header">
+        <div><div class="acc-title">Профиль</div><div class="acc-sub">Личные данные и контакты</div></div>
+      </div>
+      <div class="card" id="profileCard"></div>
+    </div>
+
+    <div class="acc-tab" id="accTab-orders">
+      <div class="acc-page-header">
+        <div><div class="acc-title">История заказов</div><div class="acc-sub">Все ваши покупки</div></div>
+      </div>
+      <div id="myOrdersList"></div>
+    </div>
+
+    <div class="acc-tab" id="accTab-favorites">
+      <div class="acc-page-header">
+        <div><div class="acc-title">Избранное</div><div class="acc-sub">Товары которые вам понравились</div></div>
+      </div>
+      <div id="myFavoritesList"></div>
+    </div>
+
+    <div class="acc-tab" id="accTab-addresses">
+      <div class="acc-page-header">
+        <div><div class="acc-title">Адреса доставки</div><div class="acc-sub">Сохранённые адреса для быстрого заказа</div></div>
+        <button class="btn btn-primary" onclick="openAddrModal()">+ Добавить адрес</button>
+      </div>
+      <div id="myAddressesList"></div>
+    </div>
+
+    <div class="acc-tab" id="accTab-security">
+      <div class="acc-page-header">
+        <div><div class="acc-title">Безопасность</div><div class="acc-sub">Смена пароля</div></div>
+      </div>
+      <div class="card">
+        <h3 style="font-family:Unbounded,sans-serif;font-size:16px;font-weight:900;margin-bottom:16px;letter-spacing:-0.5px;">Сменить пароль</h3>
+        <div class="profile-form">
+          <div class="form-grp full">
+            <label>Текущий пароль</label>
+            <input type="password" id="oldPass" placeholder="••••••••">
+          </div>
+          <div class="form-grp">
+            <label>Новый пароль</label>
+            <input type="password" id="newPass" placeholder="Минимум 6 символов">
+          </div>
+          <div class="form-grp">
+            <label>Повторите новый пароль</label>
+            <input type="password" id="newPass2" placeholder="••••••••">
+          </div>
+        </div>
+        <div class="auth-msg" id="passMsg" style="margin-top:14px;"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="changePassword()">Сохранить пароль</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-bg" id="addrModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAddrModal()">✕</button>
+    <div class="modal-title" id="addrModalTitle">Новый адрес</div>
+    <div class="modal-sub">Добавьте адрес для быстрого оформления заказов</div>
+    <div class="profile-form">
+      <div class="form-grp full">
+        <label>Название <span class="req">*</span></label>
+        <input type="text" id="addrLabel" placeholder="Например: Дом или Офис">
+      </div>
+      <div class="form-grp full">
+        <label>Адрес <span class="req">*</span></label>
+        <div class="addr-input-wrap">
+          <input type="text" id="addrText" placeholder="Начните вводить — появятся подсказки" autocomplete="off" oninput="searchAddress(this.value)">
+          <span class="addr-loading" id="addrLoading">⏳</span>
+          <div class="addr-suggestions" id="addrSuggestions"></div>
+        </div>
+      </div>
+      <div class="form-grp full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="addrDefault" style="width:auto;">
+          Сделать адресом по умолчанию
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeAddrModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveAddress()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">🍀 <span>Clever</span></div>
+  <p>© 2025 ООО «Клевер»</p>
+  <div class="footer-links">
+    <a href="index.html">Главная</a><a href="catalog.html">Каталог</a><a href="contacts.html">Контакты</a>
+  </div>
+</footer>
+
+<script>
+const USERS_KEY = 'klever_users';
+const CURRENT_USER_KEY = 'klever_current_user';
+const ORDERS_KEY = 'klever_orders';
+let currentUserType = 'individual';
+let currentLoginMethod = 'email';
+let currentRegMethod = 'email';
+let editingAddrId = null;
+
+function getUsers(){ try{return JSON.parse(localStorage.getItem(USERS_KEY))||[];}catch(e){return [];} }
+function setUsers(u){ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+function getCurrentUserId(){ return localStorage.getItem(CURRENT_USER_KEY); }
+function setCurrentUserId(id){ localStorage.setItem(CURRENT_USER_KEY, id); }
+function clearCurrentUser(){ localStorage.removeItem(CURRENT_USER_KEY); }
+function getCurrentUser(){
+  const id = getCurrentUserId();
+  if (!id) return null;
+  return getUsers().find(u => u.id === id) || null;
+}
+function updateCurrentUser(updates){
+  const id = getCurrentUserId();
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === id);
+  if (idx === -1) return;
+  users[idx] = {...users[idx], ...updates};
+  setUsers(users);
+}
+function showMsg(elId, text, type){
+  const el = document.getElementById(elId);
+  el.className = 'auth-msg ' + type + ' visible';
+  el.textContent = text;
+}
+function hideMsg(elId){ document.getElementById(elId).classList.remove('visible'); }
+function normalizePhone(p){ return (p || '').replace(/\D/g, ''); }
+
+function switchAuthTab(tab){
+  document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegBtn').classList.toggle('active', tab === 'register');
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? 'flex' : 'none';
+}
+
+function setLoginMethod(method){
+  currentLoginMethod = method;
+  document.getElementById('loginByEmailBtn').classList.toggle('active', method === 'email');
+  document.getElementById('loginByPhoneBtn').classList.toggle('active', method === 'phone');
+  document.getElementById('loginIdLabel').innerHTML = (method === 'email' ? 'Email' : 'Телефон') + ' <span class="req">*</span>';
+  document.getElementById('loginId').placeholder = method === 'email' ? 'example@mail.ru' : '+7 (___) ___-__-__';
+  document.getElementById('loginId').type = method === 'email' ? 'email' : 'tel';
+}
+
+function setUserType(type){
+  currentUserType = type;
+  document.getElementById('typeIndividualBtn').classList.toggle('active', type === 'individual');
+  document.getElementById('typeCompanyBtn').classList.toggle('active', type === 'company');
+  document.getElementById('individualFields').style.display = type === 'individual' ? 'block' : 'none';
+  document.getElementById('companyFields').style.display = type === 'company' ? 'block' : 'none';
+}
+
+function setRegMethod(method){
+  currentRegMethod = method;
+  document.getElementById('regByEmailBtn').classList.toggle('active', method === 'email');
+  document.getElementById('regByPhoneBtn').classList.toggle('active', method === 'phone');
+  document.getElementById('regEmailGrp').style.display = method === 'email' ? 'block' : 'none';
+  document.getElementById('regPhoneGrp').style.display = method === 'phone' ? 'block' : 'none';
+}
+
+function doLogin(){
+  hideMsg('loginMsg');
+  const id = document.getElementById('loginId').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!id || !pass){ showMsg('loginMsg', 'Заполните все поля', 'error'); return; }
+
+  const users = getUsers();
+  const user = users.find(u => {
+    if (currentLoginMethod === 'email') return u.email && u.email.toLowerCase() === id.toLowerCase();
+    return u.phone && normalizePhone(u.phone) === normalizePhone(id);
+  });
+
+  if (!user){ showMsg('loginMsg', 'Пользователь не найден', 'error'); return; }
+  if (user.password !== pass){ showMsg('loginMsg', 'Неверный пароль', 'error'); return; }
+
+  setCurrentUserId(user.id);
+  showAccount();
+}
+
+function doRegister(){
+  hideMsg('regMsg');
+  let lastName = '', firstName = '', middleName = '', company = '', inn = '';
+  if (currentUserType === 'individual'){
+    lastName = document.getElementById('regLastName').value.trim();
+    firstName = document.getElementById('regFirstName').value.trim();
+    middleName = document.getElementById('regMiddleName').value.trim();
+    if (!lastName || !firstName){ showMsg('regMsg', 'Укажите фамилию и имя', 'error'); return; }
+  } else {
+    company = document.getElementById('regCompany').value.trim();
+    inn = document.getElementById('regInn').value.trim();
+    lastName = document.getElementById('regContactLast').value.trim();
+    firstName = document.getElementById('regContactFirst').value.trim();
+    middleName = document.getElementById('regContactMiddle').value.trim();
+    if (!company || !lastName || !firstName){ showMsg('regMsg', 'Заполните название компании, фамилию и имя контактного лица', 'error'); return; }
+  }
+
+  let email = '', phone = '';
+  if (currentRegMethod === 'email'){
+    email = document.getElementById('regEmail').value.trim().toLowerCase();
+    if (!email || !email.includes('@')){ showMsg('regMsg', 'Укажите корректный email', 'error'); return; }
+  } else {
+    phone = document.getElementById('regPhone').value.trim();
+    if (normalizePhone(phone).length < 10){ showMsg('regMsg', 'Укажите корректный телефон', 'error'); return; }
+  }
+
+  const pass = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  if (pass.length < 6){ showMsg('regMsg', 'Пароль минимум 6 символов', 'error'); return; }
+  if (pass !== pass2){ showMsg('regMsg', 'Пароли не совпадают', 'error'); return; }
+
+  const users = getUsers();
+  if (email && users.find(u => u.email && u.email.toLowerCase() === email)){
+    showMsg('regMsg', 'Этот email уже зарегистрирован', 'error'); return;
+  }
+  if (phone && users.find(u => u.phone && normalizePhone(u.phone) === normalizePhone(phone))){
+    showMsg('regMsg', 'Этот телефон уже зарегистрирован', 'error'); return;
+  }
+
+  const fullName = [lastName, firstName, middleName].filter(Boolean).join(' ');
+  const newUser = {
+    id: 'u' + Date.now(),
+    type: currentUserType,
+    lastName, firstName, middleName,
+    name: fullName, // для совместимости
+    company: company || undefined,
+    inn: inn || undefined,
+    email: email || undefined,
+    phone: phone || undefined,
+    password: pass,
+    addresses: [],
+    favorites: [],
+    created: new Date().toISOString(),
+  };
+  users.push(newUser);
+  setUsers(users);
+  setCurrentUserId(newUser.id);
+  showAccount();
+}
+
+function doLogout(){
+  if (!confirm('Выйти из аккаунта?')) return;
+  clearCurrentUser();
+  location.reload();
+}
+
+function showAccount(){
+  document.getElementById('authWrap').style.display = 'none';
+  document.getElementById('accountWrap').classList.add('visible');
+  renderProfile();
+  updateBadges();
+}
+
+function showAccTab(name, btn){
+  document.querySelectorAll('.acc-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.acc-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('accTab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'orders') renderMyOrders();
+  if (name === 'favorites') renderMyFavorites();
+  if (name === 'addresses') renderMyAddresses();
+}
+
+function updateBadges(){
+  const u = getCurrentUser();
+  if (!u) return;
+  const orders = (JSON.parse(localStorage.getItem(ORDERS_KEY)) || []).filter(o => o.userId === u.id);
+  document.getElementById('cntMyOrders').textContent = orders.length;
+  document.getElementById('cntMyFav').textContent = (u.favorites || []).length;
+  document.getElementById('cntMyAddr').textContent = (u.addresses || []).length;
+}
+
+function renderProfile(){
+  const u = getCurrentUser();
+  if (!u) return;
+
+  const displayName = u.type === 'company' ? u.company : u.name;
+  document.getElementById('userAvatar').textContent = (displayName || '?')[0].toUpperCase();
+  document.getElementById('userName').textContent = displayName || '—';
+  document.getElementById('userTypeBadge').textContent = u.type === 'company' ? '🏢 ИП / Компания' : '👤 Физ. лицо';
+
+  const contacts = [];
+  if (u.email) contacts.push('📧 ' + u.email);
+  if (u.phone) contacts.push('📱 ' + u.phone);
+  document.getElementById('userContact').innerHTML = contacts.join('<br>') || '—';
+
+  const html = u.type === 'individual' ? `
+    <h3 style="font-family:Unbounded,sans-serif;font-size:16px;font-weight:900;margin-bottom:16px;letter-spacing:-0.5px;">Личные данные</h3>
+    <div class="profile-form">
+      <div class="form-grp"><label>Фамилия</label><input type="text" id="pfLastName" value="${u.lastName || ''}"></div>
+      <div class="form-grp"><label>Имя</label><input type="text" id="pfFirstName" value="${u.firstName || ''}"></div>
+      <div class="form-grp full"><label>Отчество</label><input type="text" id="pfMiddleName" value="${u.middleName || ''}" placeholder="(если есть)"></div>
+      <div class="form-grp"><label>Email</label><input type="email" id="pfEmail" value="${u.email || ''}"></div>
+      <div class="form-grp"><label>Телефон</label><input type="tel" id="pfPhone" value="${u.phone || ''}" placeholder="+7 (___) ___-__-__"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="saveProfile()">Сохранить</button>
+  ` : `
+    <h3 style="font-family:Unbounded,sans-serif;font-size:16px;font-weight:900;margin-bottom:16px;letter-spacing:-0.5px;">Данные компании</h3>
+    <div class="profile-form">
+      <div class="form-grp full"><label>Название компании</label><input type="text" id="pfCompany" value="${u.company || ''}"></div>
+      <div class="form-grp full"><label>ИНН</label><input type="text" id="pfInn" value="${u.inn || ''}" maxlength="12"></div>
+      <div class="form-grp"><label>Фамилия контактного лица</label><input type="text" id="pfLastName" value="${u.lastName || ''}"></div>
+      <div class="form-grp"><label>Имя</label><input type="text" id="pfFirstName" value="${u.firstName || ''}"></div>
+      <div class="form-grp full"><label>Отчество</label><input type="text" id="pfMiddleName" value="${u.middleName || ''}" placeholder="(если есть)"></div>
+      <div class="form-grp"><label>Email</label><input type="email" id="pfEmail" value="${u.email || ''}"></div>
+      <div class="form-grp"><label>Телефон</label><input type="tel" id="pfPhone" value="${u.phone || ''}" placeholder="+7 (___) ___-__-__"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="saveProfile()">Сохранить</button>
+  `;
+  document.getElementById('profileCard').innerHTML = html;
+}
+
+function saveProfile(){
+  const u = getCurrentUser();
+  const lastName = document.getElementById('pfLastName').value.trim();
+  const firstName = document.getElementById('pfFirstName').value.trim();
+  const middleName = document.getElementById('pfMiddleName').value.trim();
+  const fullName = [lastName, firstName, middleName].filter(Boolean).join(' ');
+  const updates = {
+    lastName, firstName, middleName,
+    name: fullName,
+    email: document.getElementById('pfEmail').value.trim() || undefined,
+    phone: document.getElementById('pfPhone').value.trim() || undefined,
+  };
+  if (u.type === 'company'){
+    updates.company = document.getElementById('pfCompany').value.trim();
+    updates.inn = document.getElementById('pfInn').value.trim() || undefined;
+  }
+  updateCurrentUser(updates);
+  renderProfile();
+  alert('✓ Данные сохранены');
+}
+
+function changePassword(){
+  hideMsg('passMsg');
+  const u = getCurrentUser();
+  const oldP = document.getElementById('oldPass').value;
+  const newP = document.getElementById('newPass').value;
+  const newP2 = document.getElementById('newPass2').value;
+  if (oldP !== u.password){ showMsg('passMsg', 'Текущий пароль неверный', 'error'); return; }
+  if (newP.length < 6){ showMsg('passMsg', 'Новый пароль минимум 6 символов', 'error'); return; }
+  if (newP !== newP2){ showMsg('passMsg', 'Пароли не совпадают', 'error'); return; }
+  updateCurrentUser({password: newP});
+  document.getElementById('oldPass').value = '';
+  document.getElementById('newPass').value = '';
+  document.getElementById('newPass2').value = '';
+  showMsg('passMsg', '✓ Пароль успешно изменён', 'success');
+}
+
+function renderMyOrders(){
+  const u = getCurrentUser();
+  const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
+  const myOrders = allOrders.filter(o => o.userId === u.id).reverse();
+  const list = document.getElementById('myOrdersList');
+
+  if (myOrders.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">🛍️</div>
+      <div class="empty-title">Заказов пока нет</div>
+      <div>Когда оформите первый заказ, он появится здесь</div>
+      <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">Перейти в каталог →</a>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = myOrders.map(o => `
+    <div class="order">
+      <div class="order-head">
+        <div>
+          <div class="order-num">Заказ #${o.num}</div>
+          <div class="order-date">${o.date}</div>
+        </div>
+        <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'В обработке'}</span>
+        <div class="order-total">${o.total.toLocaleString('ru-RU')} ₽</div>
+      </div>
+      <div class="order-items">
+        ${(o.items || []).map(i => `<div class="order-line"><span>${i.name} × ${i.qty}</span><span>${(i.price * i.qty).toLocaleString('ru-RU')} ₽</span></div>`).join('')}
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-primary btn-sm" onclick="repeatOrder(${o.num})">↻ Повторить заказ</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function repeatOrder(orderNum){
+  const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
+  const order = allOrders.find(o => o.num === orderNum);
+  if (!order) return;
+  localStorage.setItem('klever_cart', JSON.stringify(order.items));
+  alert('✓ Товары добавлены в корзину');
+  window.location.href = 'checkout.html';
+}
+
+function renderMyFavorites(){
+  const u = getCurrentUser();
+  const favs = u.favorites || [];
+  const list = document.getElementById('myFavoritesList');
+
+  if (favs.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">❤️</div>
+      <div class="empty-title">Список избранного пуст</div>
+      <div>Нажимайте ♡ на товарах в каталоге чтобы добавить их сюда</div>
+      <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">Перейти в каталог →</a>
+    </div>`;
+    return;
+  }
+
+  let products = [];
+  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
+  const favProducts = favs.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
+
+  if (favProducts.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">❤️</div>
+      <div class="empty-title">Откройте каталог чтобы загрузить товары</div>
+      <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">В каталог</a>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = '<div class="fav-grid">' + favProducts.map(p => `
+    <div class="fav-card">
+      <a href="product.html?sku=${p.sku}" style="text-decoration:none;color:inherit;">
+        <div class="fav-img">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div>
+      </a>
+      <div class="fav-body">
+        <div class="fav-name">${p.name}</div>
+        <div class="fav-price">${p.price} ₽</div>
+        <div class="fav-actions">
+          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addFavToCart('${p.sku}')">+ В корзину</button>
+          <button class="btn btn-danger btn-sm" onclick="removeFav('${p.sku}')">✕</button>
+        </div>
+      </div>
+    </div>
+  `).join('') + '</div>';
+}
+
+function removeFav(sku){
+  const u = getCurrentUser();
+  const favs = (u.favorites || []).filter(s => s !== sku);
+  updateCurrentUser({favorites: favs});
+  renderMyFavorites();
+  updateBadges();
+}
+
+function addFavToCart(sku){
+  let products = [];
+  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
+  const p = products.find(x => x.sku === sku);
+  if (!p) return;
+  const cart = JSON.parse(localStorage.getItem('klever_cart') || '[]');
+  const existing = cart.find(i => i.sku === sku);
+  if (existing) existing.qty++;
+  else cart.push({name: p.name, sku: p.sku, price: p.price, img: p.img || '', qty: 1});
+  localStorage.setItem('klever_cart', JSON.stringify(cart));
+  alert('✓ "' + p.name + '" добавлен в корзину');
+}
+
+function renderMyAddresses(){
+  const u = getCurrentUser();
+  const addrs = u.addresses || [];
+  const list = document.getElementById('myAddressesList');
+
+  if (addrs.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">📍</div>
+      <div class="empty-title">Адресов пока нет</div>
+      <div>Добавьте адрес чтобы быстрее оформлять заказы</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = addrs.map((a, idx) => `
+    <div class="addr-card ${a.isDefault ? 'default' : ''}">
+      <div class="addr-info">
+        <div class="addr-label">${a.label || 'Адрес'}${a.isDefault ? '<span class="addr-tag">По умолчанию</span>' : ''}</div>
+        <div class="addr-text">${a.address}</div>
+      </div>
+      <div class="addr-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editAddress(${idx})">Изм.</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteAddress(${idx})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openAddrModal(){
+  editingAddrId = null;
+  document.getElementById('addrModalTitle').textContent = 'Новый адрес';
+  document.getElementById('addrLabel').value = '';
+  document.getElementById('addrText').value = '';
+  document.getElementById('addrDefault').checked = false;
+  document.getElementById('addrModal').classList.add('open');
+}
+
+function editAddress(idx){
+  const u = getCurrentUser();
+  const a = u.addresses[idx];
+  editingAddrId = idx;
+  document.getElementById('addrModalTitle').textContent = 'Редактировать адрес';
+  document.getElementById('addrLabel').value = a.label || '';
+  document.getElementById('addrText').value = a.address || '';
+  document.getElementById('addrDefault').checked = !!a.isDefault;
+  document.getElementById('addrModal').classList.add('open');
+}
+
+function closeAddrModal(){
+  document.getElementById('addrModal').classList.remove('open');
+}
+
+function saveAddress(){
+  const label = document.getElementById('addrLabel').value.trim();
+  const text = document.getElementById('addrText').value.trim();
+  const isDef = document.getElementById('addrDefault').checked;
+  if (!label || !text){ alert('Заполните название и адрес'); return; }
+
+  const u = getCurrentUser();
+  let addrs = u.addresses || [];
+  if (isDef){ addrs = addrs.map(a => ({...a, isDefault: false})); }
+  const newAddr = {label, address: text, isDefault: isDef};
+  if (editingAddrId !== null){ addrs[editingAddrId] = newAddr; }
+  else { addrs.push(newAddr); if (addrs.length === 1) addrs[0].isDefault = true; }
+  updateCurrentUser({addresses: addrs});
+  closeAddrModal();
+  renderMyAddresses();
+  updateBadges();
+}
+
+function deleteAddress(idx){
+  if (!confirm('Удалить адрес?')) return;
+  const u = getCurrentUser();
+  const addrs = u.addresses || [];
+  addrs.splice(idx, 1);
+  if (addrs.length > 0 && !addrs.find(a => a.isDefault)){ addrs[0].isDefault = true; }
+  updateCurrentUser({addresses: addrs});
+  renderMyAddresses();
+  updateBadges();
+}
+
+// ====== ПОДСКАЗКИ АДРЕСОВ через OpenStreetMap Nominatim (бесплатно, без ключа) ======
+let addrSearchTimer = null;
+function searchAddress(query){
+  clearTimeout(addrSearchTimer);
+  const sugBox = document.getElementById('addrSuggestions');
+  const loading = document.getElementById('addrLoading');
+
+  if (!query || query.length < 3){
+    sugBox.classList.remove('visible');
+    loading.classList.remove('visible');
+    return;
+  }
+
+  loading.classList.add('visible');
+
+  // Дебаунс 400мс — не дёргаем API на каждой букве
+  addrSearchTimer = setTimeout(() => {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&accept-language=ru&countrycodes=ru&q=' + encodeURIComponent(query);
+
+    fetch(url, {headers: {'User-Agent': 'KleverShop/1.0'}})
+      .then(r => r.json())
+      .then(data => {
+        loading.classList.remove('visible');
+        if (!data || data.length === 0){
+          sugBox.classList.remove('visible');
+          return;
+        }
+        sugBox.innerHTML = data.map(item => {
+          const addr = item.address || {};
+          const main = item.display_name.split(',').slice(0, 3).join(', ');
+          const sub = [addr.city || addr.town || addr.village, addr.state].filter(Boolean).join(', ');
+          return `<div class="addr-sug-item" onclick="selectAddress('${item.display_name.replace(/'/g, "\\'")}')">
+            <div class="addr-sug-main">${main}</div>
+            <div class="addr-sug-sub">${sub}</div>
+          </div>`;
+        }).join('');
+        sugBox.classList.add('visible');
+      })
+      .catch(err => {
+        loading.classList.remove('visible');
+        sugBox.classList.remove('visible');
+        console.error('Ошибка подсказок:', err);
+      });
+  }, 400);
+}
+
+function selectAddress(addr){
+  document.getElementById('addrText').value = addr;
+  document.getElementById('addrSuggestions').classList.remove('visible');
+}
+
+// Закрываем подсказки при клике вне поля
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.addr-input-wrap')){
+    document.getElementById('addrSuggestions')?.classList.remove('visible');
+  }
+});
+
+// Авто-вход
+if (getCurrentUser()){ showAccount(); }
+</script>
+</body>
+</html>

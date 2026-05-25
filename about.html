@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>О нас — КЛЕВЕР</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--white:#ffffff;--accent:#FF6B35;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Onest',sans-serif;background:var(--white);color:var(--text);}
+  header{position:sticky;top:0;z-index:100;background:var(--dark);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:70px;border-bottom:2px solid var(--green);}
+  .logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:24px;color:var(--white);letter-spacing:-1px;display:flex;align-items:center;gap:10px;text-decoration:none;}
+  .logo span{color:var(--lime);}
+  nav{display:flex;gap:32px;}
+  nav a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s;}
+  nav a:hover,nav a.active{color:var(--lime);}
+  .btn-phone{background:var(--green);color:var(--dark);padding:10px 20px;border-radius:40px;font-weight:700;font-size:14px;text-decoration:none;}
+  .breadcrumb{padding:16px 40px;background:var(--gray);font-size:13px;color:#8aaa94;}
+  .breadcrumb a{color:var(--green-dark);text-decoration:none;}
+  .breadcrumb span{margin:0 8px;}
+  .page-hero{background:var(--dark);padding:60px 40px;position:relative;overflow:hidden;}
+  .page-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 80% at 80% 50%,rgba(46,204,113,0.1),transparent);pointer-events:none;}
+  .page-tag{display:inline-block;background:rgba(200,241,53,0.12);border:1px solid var(--lime);color:var(--lime);padding:5px 14px;border-radius:30px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+  .page-title{font-family:'Unbounded',sans-serif;font-size:clamp(32px,4vw,52px);font-weight:900;color:white;line-height:1.1;letter-spacing:-2px;}
+  .page-sub{color:rgba(255,255,255,0.55);font-size:17px;margin-top:14px;max-width:540px;}
+  .page-content{max-width:1100px;margin:60px auto;padding:0 40px;}
+  .section-tag{display:inline-block;background:var(--green-light);color:var(--green-dark);padding:5px 14px;border-radius:30px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;}
+  .section-title{font-family:'Unbounded',sans-serif;font-size:clamp(24px,3vw,36px);font-weight:900;letter-spacing:-1.5px;margin-bottom:32px;}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-bottom:60px;}
+  .stat{background:var(--gray);padding:32px 24px;text-align:center;border-radius:4px;}
+  .stat-num{font-family:'Unbounded',sans-serif;font-size:36px;font-weight:900;color:var(--green-dark);margin-bottom:8px;}
+  .stat-label{color:#6b8a74;font-size:14px;}
+  .about-text{font-size:16px;line-height:1.8;color:#4a6854;max-width:720px;margin-bottom:48px;}
+  .values-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:60px;}
+  .value-card{background:var(--dark);border-radius:20px;padding:32px;}
+  .value-icon{font-size:36px;margin-bottom:16px;}
+  .value-title{font-family:'Unbounded',sans-serif;font-size:17px;font-weight:700;color:white;margin-bottom:10px;letter-spacing:-0.5px;}
+  .value-text{color:rgba(255,255,255,0.5);font-size:14px;line-height:1.7;}
+  footer{background:var(--dark2);padding:40px;border-top:2px solid rgba(46,204,113,0.2);display:flex;justify-content:space-between;align-items:center;margin-top:80px;}
+  .footer-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;color:white;}
+  .footer-logo span{color:var(--lime);}
+  footer p{color:rgba(255,255,255,0.25);font-size:13px;}
+  .footer-links{display:flex;gap:24px;}
+  .footer-links a{color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;}
+  .footer-links a:hover{color:var(--green);}
+  @media(max-width:900px){header{padding:0 20px;}nav{display:none;}.page-hero,.page-content{padding-left:20px;padding-right:20px;}.stats{grid-template-columns:repeat(2,1fr);}.values-grid{grid-template-columns:1fr;}}
+</style>
+<style id="cart-inline-styles">
+.cart-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:background .2s,transform .15s;flex-shrink:0;padding:0;}
+.cart-btn:hover{background:rgba(255,255,255,0.15);transform:scale(1.05);}
+.cart-badge{position:absolute;top:-4px;right:-4px;background:#FF6B35;color:white;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid #0f1a14;font-family:'Unbounded',sans-serif;}
+.header-actions{display:flex;gap:12px;align-items:center;}
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;backdrop-filter:blur(2px);}
+.cart-overlay.open{opacity:1;visibility:visible;}
+.cart-panel{position:fixed;right:0;top:0;bottom:0;width:440px;max-width:100%;background:white;z-index:201;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,0.15);}
+.cart-panel.open{transform:translateX(0);}
+.cart-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px;border-bottom:1px solid #e0ece4;background:#0f1a14;color:white;}
+.cart-header h3{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;display:flex;align-items:center;gap:10px;}
+.cart-close{width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.cart-close:hover{background:rgba(255,255,255,0.15);}
+.cart-items{flex:1;overflow-y:auto;padding:20px 28px;}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px 20px;}
+.cart-item{display:grid;grid-template-columns:64px 1fr auto;gap:14px;padding:16px 0;border-bottom:1px solid #e8f4ec;align-items:flex-start;}
+.cart-item:last-child{border-bottom:none;}
+.cart-item-img{width:64px;height:64px;background:#f2f7f4;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.cart-item-img img{width:100%;height:100%;object-fit:contain;padding:6px;}
+.cart-item-name{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:4px;color:#1a2e22;}
+.cart-item-sku{font-size:12px;color:#8aaa94;margin-bottom:12px;}
+.cart-item-controls{display:flex;align-items:center;gap:8px;}
+.qty-btn{width:28px;height:28px;background:#f2f7f4;border:1px solid #d0e8d8;border-radius:8px;font-size:16px;font-weight:700;color:#1aab58;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{background:#e0ece4;}
+.qty-val{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;min-width:24px;text-align:center;}
+.remove-btn{margin-left:8px;background:none;border:none;color:#FF3B6B;font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.remove-btn:hover{background:#ffe8ee;}
+.cart-item-price{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:#1aab58;white-space:nowrap;}
+.cart-footer{padding:20px 28px;border-top:1px solid #e0ece4;background:#f2f7f4;}
+.cart-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:16px;}
+.cart-total-price{font-family:'Unbounded',sans-serif;font-size:24px;font-weight:900;color:#1aab58;}
+.btn-checkout{width:100%;padding:16px;background:#2ECC71;border:none;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:#0f1a14;cursor:pointer;transition:all .2s;}
+.btn-checkout:hover{background:#C8F135;transform:translateY(-2px);}
+.cart-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f1a14;color:white;padding:14px 24px;border-radius:30px;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:300;opacity:0;transition:opacity .3s,transform .3s;display:flex;align-items:center;gap:10px;max-width:90%;}
+.cart-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+
+</head>
+<body>
+<style id="preloader-style">
+#klever-preloader{position:fixed;inset:0;background:#0f1a14;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#klever-preloader.hidden{opacity:0;pointer-events:none;}
+#klever-preloader .pre-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:42px;color:white;letter-spacing:-1.5px;display:flex;align-items:center;gap:14px;margin-bottom:32px;}
+#klever-preloader .pre-logo .leaf{font-size:48px;animation:preSpin 1.5s ease-in-out infinite;display:inline-block;}
+#klever-preloader .pre-logo span{color:#C8F135;}
+#klever-preloader .pre-bar{width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+#klever-preloader .pre-bar::after{content:'';display:block;width:40%;height:100%;background:linear-gradient(90deg, transparent, #2ECC71, transparent);animation:preLoad 1.2s ease-in-out infinite;}
+@keyframes preSpin{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+@keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
+</style>
+<div id="klever-preloader">
+  <div class="pre-logo"><span class="leaf">🍀</span> <span>Clever</span></div>
+  <div class="pre-bar"></div>
+</div>
+<script id="preloader-script">
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var p = document.getElementById('klever-preloader');
+    if (p) {
+      p.classList.add('hidden');
+      setTimeout(function(){ p.remove(); }, 400);
+    }
+  }, 200);
+});
+// Fallback - если что-то застряло, убираем через 5 секунд
+setTimeout(function(){
+  var p = document.getElementById('klever-preloader');
+  if (p) { p.classList.add('hidden'); setTimeout(function(){ p.remove(); }, 400); }
+}, 5000);
+</script>
+<header>
+  <a href="index.html" class="logo">🍀 <span>Clever</span></a>
+  <nav>
+    <a href="catalog.html">Каталог</a><a href="sales.html">Акции</a><a href="wholesale.html">Оптовикам</a>
+    <a href="delivery.html">Доставка</a><a href="about.html" class="active">О нас</a><a href="contacts.html">Контакты</a>
+  </nav>
+  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+    <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a>
+    <button class="cart-btn" onclick="openCart()">
+      🛒
+      <span class="cart-badge" id="cartBadge" style="display:none;"></span>
+    </button>
+  </div>
+</header>
+<div class="breadcrumb"><a href="index.html">Главная</a><span>→</span>О нас</div>
+<div class="page-hero">
+  <div class="page-tag">Компания</div>
+  <div class="page-title">ООО «Клевер» —<br>надёжный партнёр</div>
+  <div class="page-sub">Производство, продажа и доставка хозяйственных товаров и бытовой химии в Санкт-Петербурге</div>
+</div>
+<div class="page-content">
+  <div class="stats">
+    <div class="stat"><div class="stat-num">300+</div><div class="stat-label">Товаров в каталоге</div></div>
+    <div class="stat"><div class="stat-num">7</div><div class="stat-label">Категорий товаров</div></div>
+    <div class="stat"><div class="stat-num">1 день</div><div class="stat-label">Срок доставки по СПб</div></div>
+    <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Гарантия возврата</div></div>
+  </div>
+  <div class="section-tag">О компании</div>
+  <div class="section-title">Кто мы такие</div>
+  <div class="about-text">
+    Компания «КЛЕВЕР» — динамично развивающаяся организация в области хозяйственных товаров и бытовой химии. Мы работаем напрямую с производителями, что позволяет нам держать низкие цены без ущерба качеству.<br><br>
+    Наш ассортимент включает более 300 позиций: от бумажной продукции и одноразовой посуды до средств защиты и профессиональной бытовой химии. Мы обслуживаем как частных покупателей, так и крупных оптовых клиентов — рестораны, кафе, клининговые компании, магазины.
+  </div>
+  <div class="values-grid">
+    <div class="value-card"><div class="value-icon">💰</div><div class="value-title">Низкие цены</div><div class="value-text">Работаем напрямую с производителями — никаких лишних посредников и наценок.</div></div>
+    <div class="value-card"><div class="value-icon">✅</div><div class="value-title">Качество товара</div><div class="value-text">Каждая позиция проверяется перед поступлением на склад. Только проверенные поставщики.</div></div>
+    <div class="value-card"><div class="value-icon">🚚</div><div class="value-title">Быстрая доставка</div><div class="value-text">Доставляем по Санкт-Петербургу в день заказа или на следующий рабочий день.</div></div>
+    <div class="value-card"><div class="value-icon">🤝</div><div class="value-title">Индивидуальный подход</div><div class="value-text">Для оптовых клиентов — персональный менеджер, отдельные условия и скидки.</div></div>
+  </div>
+
+  <!-- CTA -->
+  <div style="background:var(--green);border-radius:24px;padding:48px;margin-top:48px;text-align:center;">
+    <div style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;color:var(--dark);letter-spacing:-1px;margin-bottom:12px;">Давайте начнём работать!</div>
+    <div style="color:rgba(0,0,0,0.55);font-size:16px;margin-bottom:28px;">Более 300 товаров в наличии — выбирайте удобный способ связаться</div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="catalog.html" style="background:var(--dark);color:white;padding:16px 28px;border-radius:50px;font-weight:700;font-size:15px;text-decoration:none;">Перейти в каталог →</a>
+      <a href="contacts.html" style="background:white;color:var(--dark);padding:16px 28px;border-radius:50px;font-weight:700;font-size:15px;text-decoration:none;">Написать нам</a>
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="footer-logo">🍀 <span>Clever</span></div>
+  <p>© 2025 ООО «Клевер». Все права защищены.</p>
+  <div class="footer-links"><a href="index.html">Главная</a><a href="catalog.html">Каталог</a><a href="contacts.html">Контакты</a></div>
+<div style="display:flex;justify-content:flex-end;padding:8px 40px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:16px;"><a href="admin.html" style="color:rgba(255,255,255,0.15);font-size:11px;">⚙️ Админка</a></div></footer>
+<!-- КОРЗИНА -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<aside class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <h3>🛒 Корзина</h3>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      <span>Итого:</span>
+      <span class="cart-total-price" id="cartTotal">0 ₽</span>
+    </div>
+    <button class="btn-checkout" onclick="checkout()">Оформить заказ →</button>
+  </div>
+</aside>
+
+<script id="cart-inline-script">
+const CART_KEY='klever_cart';
+function getCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}catch(e){return[];}}
+function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartBadge();}
+function addToCart(p){const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:1});saveCart(c);showAddedToast(p.name);}
+function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();}
+function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();}
+function getCartTotal(){return getCart().reduce((s,i)=>s+i.price*i.qty,0);}
+function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
+function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
+function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartPanel').classList.add('open');document.body.style.overflow='hidden';renderCart();}
+function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
+function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="font-size:56px;margin-bottom:16px;">🛒</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>'<div class="cart-item"><div class="cart-item-img">'+(i.img?'<img src="'+i.img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>').join('');total.textContent=getCartTotal()+' ₽';}
+function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+document.addEventListener('DOMContentLoaded',updateCartBadge);
+</script>
+
+</body></html>

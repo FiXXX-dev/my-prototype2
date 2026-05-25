@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Оформление заказа — КЛЕВЕР</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--white:#ffffff;--accent:#FF6B35;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:var(--dark);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:70px;border-bottom:2px solid var(--green);}
+.logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:24px;color:var(--white);letter-spacing:-1px;display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo span{color:var(--lime);}
+nav{display:flex;gap:32px;}
+nav a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:14px;font-weight:500;}
+nav a:hover{color:var(--lime);}
+.btn-phone{background:var(--green);color:var(--dark);padding:10px 20px;border-radius:40px;font-weight:700;font-size:14px;text-decoration:none;}
+.breadcrumb{padding:16px 40px;background:white;font-size:13px;color:#8aaa94;border-bottom:1px solid #e8f4ec;}
+.breadcrumb a{color:var(--green-dark);text-decoration:none;}
+.breadcrumb span{margin:0 8px;}
+
+/* LAYOUT */
+.checkout-wrap{max-width:1100px;margin:40px auto;padding:0 40px;display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:start;}
+
+/* LEFT - FORMS */
+.checkout-left{}
+.step{background:white;border-radius:20px;padding:32px;margin-bottom:20px;border:1.5px solid #e0ece4;}
+.step-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;letter-spacing:-0.5px;margin-bottom:24px;display:flex;align-items:center;gap:12px;}
+.step-num{width:32px;height:32px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--dark);flex-shrink:0;font-family:'Unbounded',sans-serif;}
+
+/* DELIVERY OPTIONS */
+.delivery-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0;}
+.delivery-option{border:2px solid #e0ece4;border-radius:16px;padding:20px;cursor:pointer;transition:all .2s;position:relative;}
+.delivery-option:hover{border-color:var(--green-light);}
+.delivery-option.selected{border-color:var(--green);background:#f0fbf5;}
+.delivery-option input[type="radio"]{display:none;}
+.delivery-option-icon{font-size:32px;margin-bottom:10px;display:block;}
+.delivery-option-title{font-weight:700;font-size:16px;margin-bottom:4px;}
+.delivery-option-desc{font-size:13px;color:#6b8a74;line-height:1.5;}
+.delivery-option-price{margin-top:10px;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;color:var(--green-dark);}
+.delivery-option.selected .delivery-option-price{color:var(--green-dark);}
+.check-mark{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;border:2px solid #d0e8d8;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.delivery-option.selected .check-mark{background:var(--green);border-color:var(--green);}
+.check-mark::after{content:'✓';font-size:12px;font-weight:700;color:white;display:none;}
+.delivery-option.selected .check-mark::after{display:block;}
+
+/* ADDRESS FORM */
+.address-form{margin-top:24px;display:none;}
+.address-form.visible{display:block;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.form-row-3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.form-group:last-child{margin-bottom:0;}
+.form-group label{font-size:13px;font-weight:600;color:var(--text);}
+.form-group label .req{color:var(--accent);}
+.form-group input,.form-group select,.form-group textarea{
+  padding:13px 16px;border:1.5px solid #d0e8d8;border-radius:12px;
+  font-family:'Onest',sans-serif;font-size:15px;color:var(--text);
+  outline:none;transition:border-color .2s,box-shadow .2s;background:white;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:var(--green);box-shadow:0 0 0 3px rgba(46,204,113,0.12);
+}
+.form-group input.error,.form-group select.error,.form-group textarea.error{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,107,53,0.1);
+}
+.error-hint{font-size:12px;color:var(--accent);margin-top:4px;display:none;}
+.error-hint.visible{display:block;}
+.form-group textarea{resize:vertical;min-height:90px;}
+.form-group select{cursor:pointer;}
+
+/* SECTION DIVIDER */
+.section-divider{border:none;border-top:1px solid #e8f4ec;margin:24px 0;}
+
+/* RIGHT - SUMMARY */
+.checkout-right{position:sticky;top:90px;}
+.order-summary{background:white;border-radius:20px;padding:28px;border:1.5px solid #e0ece4;}
+.summary-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:20px;}
+.summary-items{max-height:380px;overflow-y:auto;margin-bottom:16px;padding-right:4px;}
+.summary-item{display:grid;grid-template-columns:48px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid #e8f4ec;align-items:flex-start;}
+.summary-item:last-child{border:none;}
+.summary-item-img{width:48px;height:48px;background:var(--gray);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.summary-item-img img{width:100%;height:100%;object-fit:contain;padding:4px;}
+.summary-item-info{min-width:0;}
+.summary-item-name{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:4px;}
+.summary-item-unit-price{font-size:12px;color:#8aaa94;margin-bottom:8px;}
+.summary-item-controls{display:flex;align-items:center;gap:6px;}
+.qty-btn-sm{width:26px;height:26px;background:var(--gray);border:1px solid #d0e8d8;border-radius:7px;font-size:14px;font-weight:700;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;}
+.qty-btn-sm:hover{background:#e0ece4;}
+.qty-val-sm{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;min-width:24px;text-align:center;}
+.remove-btn-sm{margin-left:6px;background:none;border:none;color:#FF3B6B;font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:background .15s;line-height:1;}
+.remove-btn-sm:hover{background:#ffe8ee;}
+.summary-item-price-col{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.summary-item-price{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;color:var(--green-dark);white-space:nowrap;}
+
+.summary-line{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;}
+.summary-line .label{color:#6b8a74;}
+.summary-line .value{font-weight:600;}
+.summary-line.delivery .value{color:var(--green-dark);}
+.summary-line.total-line{border-top:2px solid #e0ece4;margin-top:8px;padding-top:14px;}
+.summary-line.total-line .label{font-weight:700;font-size:16px;}
+.summary-line.total-line .value{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;color:var(--green-dark);}
+
+/* MINIMUM ORDER */
+.min-order-warning{background:#fff3ee;border:1.5px solid #ffc4a8;border-radius:14px;padding:16px 20px;margin-bottom:20px;display:none;}
+.min-order-warning.visible{display:flex;gap:12px;align-items:flex-start;}
+.min-order-warning .icon{font-size:22px;flex-shrink:0;}
+.min-order-warning .text{font-size:13px;line-height:1.5;}
+.min-order-warning .text strong{font-weight:700;color:var(--accent);display:block;margin-bottom:2px;}
+
+/* SUBMIT */
+.btn-submit-order{
+  width:100%;padding:18px;background:var(--green);border:none;
+  border-radius:14px;font-family:'Unbounded',sans-serif;
+  font-size:16px;font-weight:700;color:var(--dark);cursor:pointer;
+  transition:all .2s;margin-top:16px;
+}
+.btn-submit-order:hover:not(:disabled){background:var(--lime);transform:translateY(-2px);box-shadow:0 12px 30px rgba(46,204,113,0.3);}
+.btn-submit-order:disabled{background:#d0e8d8;color:#8aaa94;cursor:not-allowed;transform:none;box-shadow:none;}
+.terms{font-size:12px;color:#8aaa94;text-align:center;margin-top:12px;line-height:1.6;}
+
+/* SUCCESS */
+.success-wrap{max-width:600px;margin:80px auto;padding:0 20px;text-align:center;display:none;}
+.success-wrap.visible{display:block;}
+.success-icon{font-size:80px;margin-bottom:24px;}
+.success-title{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:12px;color:var(--green-dark);}
+.success-sub{font-size:17px;color:#6b8a74;margin-bottom:32px;line-height:1.6;}
+.success-order-num{display:inline-block;background:var(--gray);border-radius:12px;padding:12px 24px;font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;color:var(--text);margin-bottom:32px;}
+.success-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.success-actions a{padding:14px 28px;border-radius:40px;font-weight:700;font-size:15px;text-decoration:none;}
+.success-actions .primary{background:var(--green);color:var(--dark);}
+.success-actions .secondary{background:white;color:var(--green-dark);border:2px solid var(--green-light);}
+
+footer{background:var(--dark2);padding:32px 40px;border-top:2px solid rgba(46,204,113,0.2);display:flex;justify-content:space-between;align-items:center;margin-top:60px;}
+.footer-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;color:white;}
+.footer-logo span{color:var(--lime);}
+footer p{color:rgba(255,255,255,0.25);font-size:13px;}
+.footer-links{display:flex;gap:24px;}
+.footer-links a{color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;}
+.footer-links a:hover{color:var(--green);}
+
+@media(max-width:900px){
+  header{padding:0 20px;}
+  nav{display:none;}
+  .checkout-wrap{grid-template-columns:1fr;padding:0 16px;}
+  .checkout-right{position:static;}
+  .delivery-options{grid-template-columns:1fr;}
+  .form-row,.form-row-3{grid-template-columns:1fr;}
+  .breadcrumb{padding:12px 16px;}
+  footer{padding:24px 16px;flex-direction:column;gap:12px;text-align:center;}
+}
+</style>
+</head>
+<body>
+<style id="preloader-style">
+#klever-preloader{position:fixed;inset:0;background:#0f1a14;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#klever-preloader.hidden{opacity:0;pointer-events:none;}
+#klever-preloader .pre-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:42px;color:white;letter-spacing:-1.5px;display:flex;align-items:center;gap:14px;margin-bottom:32px;}
+#klever-preloader .pre-logo .leaf{font-size:48px;animation:preSpin 1.5s ease-in-out infinite;display:inline-block;}
+#klever-preloader .pre-logo span{color:#C8F135;}
+#klever-preloader .pre-bar{width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+#klever-preloader .pre-bar::after{content:'';display:block;width:40%;height:100%;background:linear-gradient(90deg, transparent, #2ECC71, transparent);animation:preLoad 1.2s ease-in-out infinite;}
+@keyframes preSpin{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+@keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
+</style>
+<div id="klever-preloader">
+  <div class="pre-logo"><span class="leaf">🍀</span> <span>Clever</span></div>
+  <div class="pre-bar"></div>
+</div>
+<script id="preloader-script">
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var p = document.getElementById('klever-preloader');
+    if (p) {
+      p.classList.add('hidden');
+      setTimeout(function(){ p.remove(); }, 400);
+    }
+  }, 200);
+});
+// Fallback - если что-то застряло, убираем через 5 секунд
+setTimeout(function(){
+  var p = document.getElementById('klever-preloader');
+  if (p) { p.classList.add('hidden'); setTimeout(function(){ p.remove(); }, 400); }
+}, 5000);
+</script>
+
+<header>
+  <a href="index.html" class="logo">🍀 <span>Clever</span></a>
+  <nav>
+    <a href="catalog.html">Каталог</a><a href="delivery.html">Доставка</a>
+    <a href="about.html">О нас</a><a href="contacts.html">Контакты</a>
+  </nav>
+  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a></div>
+</header>
+
+<div class="breadcrumb">
+  <a href="index.html">Главная</a><span>→</span>
+  <a href="catalog.html">Каталог</a><span>→</span>
+  Оформление заказа
+</div>
+
+<!-- ИНФО ПЛАШКИ -->
+<div style="max-width:1100px;margin:24px auto 0;padding:0 40px;display:flex;gap:14px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:240px;background:#e8faf0;border:1.5px solid #a8f0c6;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:24px;">🚚</span>
+    <div style="font-size:13px;line-height:1.4;">
+      <strong style="display:block;color:#1aab58;">Бесплатная доставка по СПб</strong>
+      <span style="color:#6b8a74;">Привезём прямо к двери</span>
+    </div>
+  </div>
+  <div style="flex:1;min-width:240px;background:#fff8e8;border:1.5px solid #ffd9a8;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:24px;">💰</span>
+    <div style="font-size:13px;line-height:1.4;">
+      <strong style="display:block;color:#cf7a00;">Минимальная сумма — 5 000 ₽</strong>
+      <span style="color:#8a6a2a;">При меньшей сумме заказ не оформляется</span>
+    </div>
+  </div>
+</div>
+
+<!-- ФОРМА ЗАКАЗА -->
+<div class="checkout-wrap" id="checkoutWrap">
+
+  <!-- ЛЕВАЯ КОЛОНКА -->
+  <div class="checkout-left">
+
+    <!-- ШАГ 1 — ДОСТАВКА -->
+    <div class="step">
+      <div class="step-title"><span class="step-num">1</span> Способ получения</div>
+
+      <div class="delivery-options">
+        <div class="delivery-option selected" id="optCourier" onclick="selectDelivery('courier')">
+          <input type="radio" name="delivery" value="courier" checked>
+          <span class="delivery-option-icon">🚚</span>
+          <div class="delivery-option-title">Курьером</div>
+          <div class="delivery-option-desc">По Санкт-Петербургу, 1 рабочий день</div>
+          <div class="delivery-option-price" id="courierPriceLabel">Бесплатно</div>
+          <div style="font-size:11px;color:#1aab58;font-weight:700;margin-top:4px;">🎉 Всегда бесплатно</div>
+          <div class="check-mark"></div>
+        </div>
+        <div class="delivery-option" id="optPickup" onclick="selectDelivery('pickup')">
+          <input type="radio" name="delivery" value="pickup">
+          <span class="delivery-option-icon">🏪</span>
+          <div class="delivery-option-title">Самовывоз</div>
+          <div class="delivery-option-desc">ул. Софийская 4 к 3, пав. 29/8<br>Пн–Пт 9:00–18:00, Сб 10:00–16:00</div>
+          <div class="delivery-option-price">Бесплатно</div>
+          <div class="check-mark"></div>
+        </div>
+      </div>
+
+      <!-- ФОРМА АДРЕСА (только для курьера) -->
+      <div class="address-form visible" id="addressForm">
+        <hr class="section-divider">
+        <div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text);">📍 Адрес доставки</div>
+        <div class="form-group">
+          <label>Адрес <span class="req">*</span></label>
+          <input type="text" id="address" placeholder="Улица, дом, квартира/офис">
+          <div class="error-hint" id="addressErr">Укажите адрес доставки</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Телефон получателя <span class="req">*</span></label>
+            <input type="tel" id="deliveryPhone" placeholder="+7 (___) ___-__-__">
+            <div class="error-hint" id="delivPhoneErr">Укажите телефон</div>
+          </div>
+          <div class="form-group">
+            <label>Дата доставки <span class="req">*</span></label>
+            <input type="date" id="delivDate">
+            <div class="error-hint" id="delivDateErr">Выберите дату</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Желаемое время</label>
+          <select id="delivTime">
+            <option value="">— Любое время —</option>
+            <option>09:00 – 12:00</option>
+            <option>12:00 – 15:00</option>
+            <option>15:00 – 18:00</option>
+            <option>18:00 – 21:00</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ШАГ 2 — ДАННЫЕ КЛИЕНТА -->
+    <div class="step">
+      <div class="step-title"><span class="step-num">2</span> Информация о покупателе</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>ФИО <span class="req">*</span></label>
+          <input type="text" id="clientName" placeholder="Иванов Иван Иванович">
+          <div class="error-hint" id="clientNameErr">Укажите ФИО</div>
+        </div>
+        <div class="form-group">
+          <label>Название компании</label>
+          <input type="text" id="company" placeholder="ООО «Название» (если есть)">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Телефон <span class="req">*</span></label>
+          <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
+          <div class="error-hint" id="clientPhoneErr">Укажите корректный телефон</div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="clientEmail" placeholder="example@mail.ru">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Комментарий к заказу</label>
+        <textarea id="comment" placeholder="Особые пожелания, уточнения по заказу или доставке..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ПРАВАЯ КОЛОНКА - ИТОГ -->
+  <div class="checkout-right">
+
+    <!-- ПРЕДУПРЕЖДЕНИЕ О МИНИМАЛКЕ -->
+    <div class="min-order-warning" id="minOrderWarning">
+      <span class="icon">⚠️</span>
+      <div class="text">
+        <strong>Минимальная сумма заказа — 5 000 ₽</strong>
+        Добавьте товаров ещё на <span id="needMore"></span> ₽, чтобы оформить заказ.
+      </div>
+    </div>
+
+    <div class="order-summary">
+      <div class="summary-title">Ваш заказ</div>
+
+      <div class="summary-items" id="summaryItems"></div>
+
+      <div>
+        <div class="summary-line">
+          <span class="label">Товаров:</span>
+          <span class="value" id="summaryCount">0 шт.</span>
+        </div>
+        <div class="summary-line">
+          <span class="label">Сумма:</span>
+          <span class="value" id="summarySubtotal">0 ₽</span>
+        </div>
+        <div class="summary-line delivery">
+          <span class="label">Доставка:</span>
+          <span class="value" id="summaryDelivery">500 ₽</span>
+        </div>
+        <div class="summary-line total-line">
+          <span class="label">Итого:</span>
+          <span class="value" id="summaryTotal">0 ₽</span>
+        </div>
+      </div>
+
+      <button class="btn-submit-order" id="submitBtn" onclick="submitOrder()">
+        Оформить заказ →
+      </button>
+      <div class="terms">
+        Нажимая кнопку, вы соглашаетесь<br>с условиями обработки данных
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН УСПЕХА -->
+<div class="success-wrap" id="successWrap">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Заказ оформлен!</div>
+  <div class="success-sub">Мы получили ваш заказ и свяжемся<br>с вами в течение 30 минут для подтверждения.</div>
+  <div class="success-order-num" id="successOrderNum">#000000</div>
+  <div class="success-sub" id="successDetails"></div>
+  <div class="success-actions">
+    <a href="catalog.html" class="primary">Продолжить покупки</a>
+    <a href="index.html" class="secondary">На главную</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">🍀 <span>Clever</span></div>
+  <p>© 2025 ООО «Клевер». Все права защищены.</p>
+  <div class="footer-links">
+    <a href="index.html">Главная</a>
+    <a href="catalog.html">Каталог</a>
+    <a href="delivery.html">Доставка</a>
+  </div>
+</footer>
+
+<script>
+const CART_KEY = 'klever_cart';
+const MIN_ORDER = 5000;
+const DELIVERY_FREE_FROM = 0;
+const DELIVERY_COST = 0;
+
+let deliveryMethod = 'courier';
+
+function getCart() {
+  try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function getSubtotal() {
+  return getCart().reduce((s, i) => s + i.price * i.qty, 0);
+}
+
+function getDeliveryCost() {
+  if (deliveryMethod === 'pickup') return 0;
+  return getSubtotal() >= DELIVERY_FREE_FROM ? 0 : DELIVERY_COST;
+}
+
+function getTotal() {
+  return getSubtotal() + getDeliveryCost();
+}
+
+// Выбор способа доставки
+function selectDelivery(method) {
+  deliveryMethod = method;
+
+  document.getElementById('optCourier').classList.toggle('selected', method === 'courier');
+  document.getElementById('optPickup').classList.toggle('selected', method === 'pickup');
+
+  const addrForm = document.getElementById('addressForm');
+  addrForm.classList.toggle('visible', method === 'courier');
+
+  updateSummary();
+}
+
+// Изменение количества товара
+function changeItemQty(sku, delta) {
+  const cart = getCart();
+  const item = cart.find(i => i.sku === sku);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) {
+    removeItem(sku);
+    return;
+  }
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  updateSummary();
+}
+
+// Удаление товара
+function removeItem(sku) {
+  let cart = getCart();
+  cart = cart.filter(i => i.sku !== sku);
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+
+  // Если корзина пуста — показываем сообщение
+  if (cart.length === 0) {
+    checkCart();
+  } else {
+    updateSummary();
+  }
+}
+
+// Обновляем правую колонку
+function updateSummary() {
+  const cart = getCart();
+  const subtotal = getSubtotal();
+  const delivCost = getDeliveryCost();
+  const total = getTotal();
+
+  // Предупреждение о минималке
+  const warning = document.getElementById('minOrderWarning');
+  const submitBtn = document.getElementById('submitBtn');
+
+  if (subtotal < MIN_ORDER) {
+    warning.classList.add('visible');
+    document.getElementById('needMore').textContent = MIN_ORDER - subtotal;
+    submitBtn.disabled = true;
+  } else {
+    warning.classList.remove('visible');
+    submitBtn.disabled = false;
+  }
+
+  // Цена доставки курьером
+  const courierLabel = document.getElementById('courierPriceLabel');
+  if (subtotal >= DELIVERY_FREE_FROM) {
+    courierLabel.textContent = 'Бесплатно';
+    courierLabel.style.color = '#1aab58';
+  } else {
+    courierLabel.textContent = '500 ₽';
+    courierLabel.style.color = '#1aab58';
+  }
+
+  // Список товаров с кнопками управления
+  document.getElementById('summaryItems').innerHTML = cart.map(i => `
+    <div class="summary-item">
+      <div class="summary-item-img">
+        ${i.img ? `<img src="${i.img}" alt="" onerror="this.outerHTML='<span>📦</span>'">` : '📦'}
+      </div>
+      <div class="summary-item-info">
+        <div class="summary-item-name">${i.name}</div>
+        <div class="summary-item-unit-price">${i.price} ₽ за шт.</div>
+        <div class="summary-item-controls">
+          <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', -1)">−</button>
+          <span class="qty-val-sm">${i.qty}</span>
+          <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', 1)">+</button>
+          <button class="remove-btn-sm" onclick="removeItem('${i.sku}')" title="Удалить">✕</button>
+        </div>
+      </div>
+      <div class="summary-item-price-col">
+        <div class="summary-item-price">${i.qty * i.price} ₽</div>
+      </div>
+    </div>
+  `).join('') || '<div style="color:#8aaa94;font-size:14px;text-align:center;padding:20px;">Корзина пуста</div>';
+
+  const count = cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('summaryCount').textContent = count + ' шт.';
+  document.getElementById('summarySubtotal').textContent = subtotal + ' ₽';
+  document.getElementById('summaryDelivery').textContent =
+    delivCost === 0 ? (deliveryMethod === 'pickup' ? 'Самовывоз' : '🎉 Бесплатно') : delivCost + ' ₽';
+  document.getElementById('summaryTotal').textContent = total + ' ₽';
+}
+
+// Валидация и отправка
+function submitOrder() {
+  if (getSubtotal() < MIN_ORDER) return;
+
+  const errors = [];
+
+  // Проверка адреса (только для курьера)
+  if (deliveryMethod === 'courier') {
+    const addr = document.getElementById('address').value.trim();
+    const dPhone = document.getElementById('deliveryPhone').value.trim();
+    const dDate = document.getElementById('delivDate').value;
+
+    clearError('address', 'addressErr');
+    clearError('deliveryPhone', 'delivPhoneErr');
+    clearError('delivDate', 'delivDateErr');
+
+    if (!addr) { showError('address', 'addressErr'); errors.push('address'); }
+    if (!dPhone || dPhone.replace(/\D/g,'').length < 10) { showError('deliveryPhone', 'delivPhoneErr'); errors.push('dphone'); }
+    if (!dDate) { showError('delivDate', 'delivDateErr'); errors.push('ddate'); }
+  }
+
+  // Проверка данных клиента
+  const name = document.getElementById('clientName').value.trim();
+  const phone = document.getElementById('clientPhone').value.trim();
+
+  clearError('clientName', 'clientNameErr');
+  clearError('clientPhone', 'clientPhoneErr');
+
+  if (!name) { showError('clientName', 'clientNameErr'); errors.push('name'); }
+  if (!phone || phone.replace(/\D/g,'').length < 10) { showError('clientPhone', 'clientPhoneErr'); errors.push('phone'); }
+
+  if (errors.length > 0) {
+    // Скроллим к первой ошибке
+    document.querySelector('.error') && document.querySelector('.error').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // Всё ок — оформляем заказ
+  const orderNum = Math.floor(100000 + Math.random() * 900000);
+  const cart = getCart();
+  const total = getTotal();
+
+  // Сохраняем заказ
+  const orders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
+  orders.push({
+    num: orderNum,
+    date: new Date().toLocaleDateString('ru-RU'),
+    status: 'new',
+    items: cart,
+    subtotal: getSubtotal(),
+    delivery: getDeliveryCost(),
+    total: total,
+    method: deliveryMethod,
+    address: deliveryMethod === 'courier' ? document.getElementById('address').value : 'Самовывоз',
+    phone: document.getElementById('clientPhone').value,
+    name: document.getElementById('clientName').value,
+    company: document.getElementById('company').value,
+    email: document.getElementById('clientEmail').value,
+    comment: document.getElementById('comment').value,
+  });
+  localStorage.setItem('klever_orders', JSON.stringify(orders));
+
+  // Очищаем корзину
+  localStorage.removeItem(CART_KEY);
+
+  // Показываем экран успеха
+  document.getElementById('checkoutWrap').style.display = 'none';
+  const successWrap = document.getElementById('successWrap');
+  successWrap.classList.add('visible');
+  document.getElementById('successOrderNum').textContent = '#' + orderNum;
+
+  const methodText = deliveryMethod === 'courier'
+    ? `Доставим по адресу: ${document.getElementById('address').value}<br>Дата: ${document.getElementById('delivDate').value}`
+    : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
+  document.getElementById('successDetails').innerHTML =
+    `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Свяжемся с вами по номеру: <strong>${document.getElementById('clientPhone').value}</strong>`;
+
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function showError(fieldId, hintId) {
+  document.getElementById(fieldId).classList.add('error');
+  document.getElementById(hintId).classList.add('visible');
+}
+function clearError(fieldId, hintId) {
+  document.getElementById(fieldId).classList.remove('error');
+  document.getElementById(hintId).classList.remove('visible');
+}
+
+// Устанавливаем минимальную дату (завтра)
+function setMinDate() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dateInput = document.getElementById('delivDate');
+  if (dateInput) dateInput.min = tomorrow.toISOString().split('T')[0];
+}
+
+// Если корзина пуста — редирект в каталог
+function checkCart() {
+  if (getCart().length === 0) {
+    document.getElementById('checkoutWrap').innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:80px 20px;">
+        <div style="font-size:64px;margin-bottom:20px;">🛒</div>
+        <div style="font-family:Unbounded,sans-serif;font-size:24px;font-weight:900;margin-bottom:12px;">Корзина пуста</div>
+        <div style="color:#8aaa94;margin-bottom:28px;">Добавьте товары, чтобы оформить заказ</div>
+        <a href="catalog.html" style="display:inline-block;background:var(--green);color:var(--dark);padding:16px 32px;border-radius:40px;font-weight:700;font-size:16px;text-decoration:none;">Перейти в каталог →</a>
+      </div>`;
+  }
+}
+
+// Инициализация
+setMinDate();
+checkCart();
+updateSummary();
+</script>
+</body>
+</html>

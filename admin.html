@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админка — КЛЕВЕР</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--accent:#FF6B35;--danger:#FF3B6B;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#0f1a14,#162119);}
+.login-box{background:white;border-radius:24px;padding:48px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,0.3);}
+.login-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:28px;color:var(--dark);letter-spacing:-1px;text-align:center;margin-bottom:8px;}
+.login-logo span{color:var(--green-dark);}
+.login-sub{color:#8aaa94;font-size:14px;text-align:center;margin-bottom:32px;}
+.login-form{display:flex;flex-direction:column;gap:14px;}
+.login-input{padding:16px 18px;border:1.5px solid #d0e8d8;border-radius:14px;font-family:'Onest',sans-serif;font-size:15px;outline:none;transition:border .2s;}
+.login-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,204,113,0.12);}
+.login-btn{padding:16px;background:var(--green);border:none;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:var(--dark);cursor:pointer;transition:all .2s;}
+.login-btn:hover{background:var(--lime);transform:translateY(-2px);}
+.login-hint{font-size:12px;color:#8aaa94;text-align:center;margin-top:18px;padding:12px;background:var(--gray);border-radius:10px;}
+.login-hint strong{color:var(--green-dark);}
+.login-err{color:var(--danger);font-size:13px;text-align:center;display:none;}
+.login-err.show{display:block;}
+
+/* ADMIN LAYOUT */
+.admin-wrap{display:none;}
+.admin-wrap.visible{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{background:var(--dark);padding:24px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+.side-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;color:white;letter-spacing:-1px;margin-bottom:32px;padding:0 8px;display:flex;align-items:center;gap:8px;text-decoration:none;}
+.side-logo span{color:var(--lime);}
+.side-logo .badge{background:var(--accent);color:white;font-size:10px;padding:2px 8px;border-radius:20px;margin-left:auto;font-family:'Onest',sans-serif;font-weight:700;}
+.side-nav{display:flex;flex-direction:column;gap:4px;flex:1;}
+.side-link{padding:12px 16px;border-radius:12px;color:rgba(255,255,255,0.6);text-decoration:none;font-size:14px;font-weight:500;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;background:none;border:none;width:100%;text-align:left;font-family:'Onest',sans-serif;}
+.side-link:hover{background:rgba(255,255,255,0.05);color:white;}
+.side-link.active{background:var(--green);color:var(--dark);font-weight:700;}
+.side-link .count{margin-left:auto;background:rgba(0,0,0,0.15);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+.side-link.active .count{background:rgba(0,0,0,0.2);}
+.side-link:not(.active) .count{background:rgba(255,255,255,0.08);}
+.side-bottom{margin-top:auto;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);}
+.side-user{font-size:13px;color:rgba(255,255,255,0.5);padding:8px 16px;}
+.side-logout{padding:10px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border-radius:10px;font-size:13px;cursor:pointer;width:100%;font-family:'Onest',sans-serif;}
+.side-logout:hover{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.3);color:#ff8e60;}
+
+/* MAIN */
+.main{padding:32px 40px;overflow-x:auto;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
+.page-title{font-family:'Unbounded',sans-serif;font-size:30px;font-weight:900;letter-spacing:-1px;}
+.page-sub{color:#8aaa94;font-size:14px;margin-top:4px;}
+
+/* BUTTONS */
+.btn{padding:11px 22px;border-radius:12px;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:all .2s;}
+.btn-primary{background:var(--green);color:var(--dark);font-weight:700;}
+.btn-primary:hover{background:var(--lime);transform:translateY(-1px);}
+.btn-secondary{background:white;color:var(--text);border:1.5px solid #d0e8d8;}
+.btn-secondary:hover{border-color:var(--green);}
+.btn-danger{background:#ffe8ee;color:var(--danger);}
+.btn-danger:hover{background:#ffd0d8;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:32px;}
+.stat-card{background:white;border-radius:16px;padding:24px;border:1.5px solid #e0ece4;}
+.stat-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8aaa94;margin-bottom:8px;}
+.stat-num{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:900;color:var(--green-dark);line-height:1;}
+.stat-sub{font-size:12px;color:#8aaa94;margin-top:6px;}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+.toolbar-search{flex:1;min-width:240px;position:relative;}
+.toolbar-search input{width:100%;padding:11px 16px 11px 40px;border:1.5px solid #d0e8d8;border-radius:12px;font-family:'Onest',sans-serif;font-size:14px;outline:none;}
+.toolbar-search input:focus{border-color:var(--green);}
+.toolbar-search::before{content:'🔍';position:absolute;left:14px;top:50%;transform:translateY(-50%);}
+.toolbar-select{padding:11px 16px;border:1.5px solid #d0e8d8;border-radius:12px;background:white;font-family:'Onest',sans-serif;font-size:14px;cursor:pointer;outline:none;min-width:180px;}
+
+/* TABLE */
+.tbl-wrap{background:white;border-radius:16px;border:1.5px solid #e0ece4;overflow:hidden;}
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{background:var(--gray);text-align:left;padding:14px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b8a74;border-bottom:1px solid #e0ece4;}
+.tbl td{padding:14px 16px;border-bottom:1px solid #e8f4ec;font-size:14px;}
+.tbl tr:last-child td{border:none;}
+.tbl tr:hover{background:#f8fbf9;}
+.tbl .prod-img-cell{width:50px;height:50px;background:var(--gray);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.tbl .prod-img-cell img{width:100%;height:100%;object-fit:contain;padding:4px;}
+.tbl .actions{display:flex;gap:8px;justify-content:flex-end;}
+.tbl .col-num{font-family:'Unbounded',sans-serif;font-weight:700;color:var(--green-dark);}
+.tbl .col-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.col-badge.b-hit{background:#fff3ee;color:var(--accent);}
+.col-badge.b-new{background:#e8faf0;color:var(--green-dark);}
+.col-badge.b-sale{background:#ffe8ee;color:var(--danger);}
+
+/* PAGINATION */
+.tbl-footer{display:flex;justify-content:space-between;align-items:center;padding:16px;border-top:1px solid #e8f4ec;background:#fafcfb;font-size:13px;color:#8aaa94;}
+.pager{display:flex;gap:4px;}
+.pager button{width:34px;height:34px;border-radius:8px;border:1.5px solid #d0e8d8;background:white;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;font-family:'Onest',sans-serif;}
+.pager button.active{background:var(--green);border-color:var(--green);color:var(--dark);}
+.pager button:disabled{opacity:.4;cursor:not-allowed;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:none;opacity:0;transition:opacity .2s;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;opacity:1;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+.modal{background:white;border-radius:20px;width:100%;max-width:640px;padding:32px;box-shadow:0 30px 80px rgba(0,0,0,0.2);position:relative;}
+.modal-title{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;margin-bottom:8px;}
+.modal-sub{font-size:14px;color:#8aaa94;margin-bottom:24px;}
+.modal-close{position:absolute;top:20px;right:20px;width:32px;height:32px;background:var(--gray);border:none;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.modal-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-form .full{grid-column:1/-1;}
+.form-grp{display:flex;flex-direction:column;gap:6px;}
+.form-grp label{font-size:12px;font-weight:600;color:var(--text);}
+.form-grp input,.form-grp select,.form-grp textarea{padding:11px 14px;border:1.5px solid #d0e8d8;border-radius:10px;font-family:'Onest',sans-serif;font-size:14px;outline:none;background:white;}
+.form-grp input:focus,.form-grp select:focus,.form-grp textarea:focus{border-color:var(--green);}
+.form-grp textarea{resize:vertical;min-height:80px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid #e8f4ec;}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:#8aaa94;}
+.empty-icon{font-size:56px;margin-bottom:16px;}
+.empty-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+
+/* ORDERS */
+.order-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;padding:20px;margin-bottom:14px;}
+.order-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;padding-bottom:14px;border-bottom:1px solid #e8f4ec;}
+.order-num{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;color:var(--green-dark);}
+.order-date{font-size:13px;color:#8aaa94;}
+.order-total{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;}
+.order-status{padding:5px 14px;border-radius:30px;font-size:11px;font-weight:700;}
+.status-new{background:#fff3ee;color:var(--accent);}
+.status-done{background:#e8faf0;color:var(--green-dark);}
+.order-body{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.order-section{}
+.order-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8aaa94;margin-bottom:8px;}
+.order-value{font-size:14px;line-height:1.6;}
+.order-items{margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;}
+.order-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+.order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;}
+
+/* PROMOTIONS */
+.promo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.promo-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;overflow:hidden;}
+.promo-top{padding:24px;color:white;position:relative;}
+.promo-top.green{background:linear-gradient(135deg,#1aab58,#2ECC71);}
+.promo-top.accent{background:linear-gradient(135deg,#FF6B35,#ff9a70);}
+.promo-top.lime{background:linear-gradient(135deg,#8ab800,#C8F135);}
+.promo-disc{position:absolute;top:16px;right:16px;background:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:900;}
+.promo-name{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;line-height:1.2;letter-spacing:-0.5px;margin-bottom:6px;padding-right:50px;}
+.promo-desc{color:rgba(255,255,255,0.8);font-size:13px;line-height:1.5;}
+.promo-bottom{padding:14px 18px;background:#fafcfb;display:flex;justify-content:space-between;align-items:center;}
+.promo-validity{font-size:12px;color:#8aaa94;}
+.promo-actions{display:flex;gap:6px;}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .admin-wrap.visible{grid-template-columns:1fr;}
+  .sidebar{position:relative;height:auto;flex-direction:row;flex-wrap:wrap;padding:14px;}
+  .side-logo{margin:0;flex:1;}
+  .side-nav{flex-direction:row;flex-wrap:wrap;width:100%;margin-top:14px;}
+  .side-bottom{display:none;}
+  .main{padding:20px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .promo-grid{grid-template-columns:1fr;}
+  .modal-form{grid-template-columns:1fr;}
+  .order-body{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ЭКРАН ВХОДА -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <div class="login-logo">🍀 <span>Clever</span></div>
+    <div class="login-sub">Панель управления магазином</div>
+    <div class="login-form">
+      <input type="password" class="login-input" id="passInput" placeholder="Введите пароль" onkeypress="if(event.key==='Enter') doLogin()">
+      <div class="login-err" id="loginErr">Неверный пароль</div>
+      <button class="login-btn" onclick="doLogin()">Войти →</button>
+    </div>
+    <div class="login-hint">
+      💡 Демо-пароль: <strong>klever2025</strong>
+    </div>
+    <a href="index.html" style="display:block;text-align:center;margin-top:20px;color:#8aaa94;font-size:13px;text-decoration:none;">← Вернуться на сайт</a>
+  </div>
+</div>
+
+<!-- АДМИНКА -->
+<div class="admin-wrap" id="adminWrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <a href="index.html" class="side-logo">🍀 <span>Clever</span><span class="badge">админ</span></a>
+    <nav class="side-nav">
+      <button class="side-link active" onclick="showTab('dashboard', this)">📊 Дашборд</button>
+      <button class="side-link" onclick="showTab('products', this)">📦 Товары <span class="count" id="cntProducts">0</span></button>
+      <button class="side-link" onclick="showTab('orders', this)">🛍️ Заказы <span class="count" id="cntOrders">0</span></button>
+      <button class="side-link" onclick="showTab('contacts', this)">✉️ Заявки <span class="count" id="cntContacts">0</span></button>
+      <button class="side-link" onclick="showTab('promotions', this)">🔥 Акции <span class="count" id="cntPromos">0</span></button>
+      <button class="side-link" onclick="showTab('settings', this)">⚙️ Настройки</button>
+    </nav>
+    <div class="side-bottom">
+      <div class="side-user">👤 Администратор</div>
+      <button class="side-logout" onclick="doLogout()">Выйти</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="tab-content active" id="tab-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Дашборд</div>
+          <div class="page-sub">Сводка по магазину</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Товаров в каталоге</div>
+          <div class="stat-num" id="dashProducts">0</div>
+          <div class="stat-sub">Активных позиций</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Зарегистрированных</div>
+          <div class="stat-num" id="dashUsers">0</div>
+          <div class="stat-sub">Клиентов в базе</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Новых заказов</div>
+          <div class="stat-num" id="dashOrders">0</div>
+          <div class="stat-sub">Ожидают обработки</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Заявок</div>
+          <div class="stat-num" id="dashContacts">0</div>
+          <div class="stat-sub">С формы обратной связи</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Выручка</div>
+          <div class="stat-num" id="dashRevenue">0 ₽</div>
+          <div class="stat-sub">По выполненным заказам</div>
+        </div>
+      </div>
+
+      <!-- Статистика выполненных заказов -->
+      <div style="margin-top:20px;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:14px;">📊 Выполнено заказов за период</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+          <div class="stat-card" style="padding:18px;">
+            <div class="stat-label">Сегодня</div>
+            <div class="stat-num" id="doneToday" style="font-size:24px;">0</div>
+            <div class="stat-sub"><span id="doneTodaySum">0 ₽</span></div>
+          </div>
+          <div class="stat-card" style="padding:18px;">
+            <div class="stat-label">За неделю</div>
+            <div class="stat-num" id="doneWeek" style="font-size:24px;">0</div>
+            <div class="stat-sub"><span id="doneWeekSum">0 ₽</span></div>
+          </div>
+          <div class="stat-card" style="padding:18px;">
+            <div class="stat-label">За месяц</div>
+            <div class="stat-num" id="doneMonth" style="font-size:24px;">0</div>
+            <div class="stat-sub"><span id="doneMonthSum">0 ₽</span></div>
+          </div>
+          <div class="stat-card" style="padding:18px;">
+            <div class="stat-label">Всего</div>
+            <div class="stat-num" id="doneAll" style="font-size:24px;">0</div>
+            <div class="stat-sub"><span id="doneAllSum">0 ₽</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-header" style="margin-top:32px;">
+        <div>
+          <div class="page-title" style="font-size:22px;">Последние заказы</div>
+        </div>
+      </div>
+      <div id="dashLastOrders"></div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section class="tab-content" id="tab-products">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Товары</div>
+          <div class="page-sub">Управление товарами в каталоге</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="resetProducts()" title="Восстановить товары из стандартного списка">🔄 Сбросить</button>
+          <button class="btn btn-primary" onclick="openProductModal()">+ Добавить товар</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-search">
+          <input type="text" id="searchProducts" placeholder="Поиск по названию или артикулу..." oninput="renderProducts()">
+        </div>
+        <select class="toolbar-select" id="filterCat" onchange="renderProducts()">
+          <option value="">Все категории</option>
+          <option>Бытовая химия</option>
+          <option>Бумажная продукция</option>
+          <option>Одноразовая посуда</option>
+          <option>Средства защиты</option>
+          <option>Упаковка</option>
+          <option>Хозтовары</option>
+          <option>Канцелярия</option>
+        </select>
+      </div>
+
+      <div class="tbl-wrap">
+        <table class="tbl" id="productsTable">
+          <thead>
+            <tr>
+              <th style="width:60px;">Фото</th>
+              <th>Название</th>
+              <th>Артикул</th>
+              <th>Категория</th>
+              <th>Цена</th>
+              <th>Метка</th>
+              <th style="text-align:right;">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="productsBody"></tbody>
+        </table>
+        <div class="tbl-footer">
+          <span id="productsCount">0 товаров</span>
+          <div class="pager" id="productsPager"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ORDERS -->
+    <section class="tab-content" id="tab-orders">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Заказы</div>
+          <div class="page-sub">Все заказы клиентов</div>
+        </div>
+        <button class="btn btn-secondary" onclick="clearOrders()">🗑️ Очистить все</button>
+      </div>
+      <div id="ordersList"></div>
+    </section>
+
+    <!-- CONTACTS -->
+    <section class="tab-content" id="tab-contacts">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Заявки с формы</div>
+          <div class="page-sub">Сообщения от посетителей сайта</div>
+        </div>
+        <button class="btn btn-secondary" onclick="clearContacts()">🗑️ Очистить все</button>
+      </div>
+      <div id="contactsList"></div>
+    </section>
+
+    <!-- PROMOTIONS -->
+    <section class="tab-content" id="tab-promotions">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Акции</div>
+          <div class="page-sub">Управление акциями и спецпредложениями</div>
+        </div>
+        <button class="btn btn-primary" onclick="openPromoModal()">+ Создать акцию</button>
+      </div>
+      <div class="promo-grid" id="promotionsList"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="tab-content" id="tab-settings">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Настройки</div>
+          <div class="page-sub">Контактные данные магазина</div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap" style="padding:28px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+          <div class="form-grp">
+            <label>Телефон 1</label>
+            <input type="tel" id="setPhone1" placeholder="8 (812) 922-86-77">
+          </div>
+          <div class="form-grp">
+            <label>Телефон 2</label>
+            <input type="tel" id="setPhone2" placeholder="+7 911 236-82-77">
+          </div>
+          <div class="form-grp full">
+            <label>Email</label>
+            <input type="email" id="setEmail" placeholder="info@klever.ru">
+          </div>
+          <div class="form-grp full">
+            <label>Адрес магазина</label>
+            <input type="text" id="setAddress" placeholder="Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8">
+          </div>
+          <div class="form-grp">
+            <label>Минимальная сумма заказа (₽)</label>
+            <input type="number" id="setMinOrder" placeholder="5000">
+          </div>
+          <div class="form-grp">
+            <label>Бесплатная доставка от (₽)</label>
+            <input type="number" id="setFreeDelivery" placeholder="0">
+          </div>
+          <div class="form-grp">
+            <label>Стоимость доставки (₽)</label>
+            <input type="number" id="setDeliveryCost" placeholder="0">
+          </div>
+        </div>
+        <div style="margin-top:24px;display:flex;gap:10px;">
+          <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button>
+        </div>
+        <div style="margin-top:20px;padding:14px 18px;background:#fff3ee;border:1.5px solid #ffc4a8;border-radius:12px;font-size:13px;color:#cf7a00;">
+          ⚠️ В демо-версии настройки сохраняются только в этом браузере. Для полной интеграции нужен сервер.
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- МОДАЛКА ТОВАРА -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeProductModal()">✕</button>
+    <div class="modal-title" id="prodModalTitle">Новый товар</div>
+    <div class="modal-sub">Заполните данные о товаре</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Название *</label>
+        <input type="text" id="prodName" placeholder="Например: Белизна 1 л">
+      </div>
+      <div class="form-grp">
+        <label>Артикул *</label>
+        <input type="text" id="prodSku" placeholder="Например: 0070">
+      </div>
+      <div class="form-grp">
+        <label>Цена (₽) *</label>
+        <input type="number" id="prodPrice" placeholder="35">
+      </div>
+      <div class="form-grp">
+        <label>Категория *</label>
+        <select id="prodCat">
+          <option>Бытовая химия</option>
+          <option>Бумажная продукция</option>
+          <option>Одноразовая посуда</option>
+          <option>Средства защиты</option>
+          <option>Упаковка</option>
+          <option>Хозтовары</option>
+          <option>Канцелярия</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Метка</label>
+        <select id="prodBadge">
+          <option value="">Без метки</option>
+          <option value="hit">🔥 Хит</option>
+          <option value="new">✨ Новинка</option>
+          <option value="sale">🏷️ Скидка</option>
+        </select>
+      </div>
+      <div class="form-grp full">
+        <label>Ссылка на фото (URL)</label>
+        <input type="url" id="prodImg" placeholder="https://example.com/image.jpg">
+        <small style="color:#8aaa94;font-size:12px;">Если оставить пустым — будет показываться эмодзи</small>
+      </div>
+      <div class="form-grp full">
+        <label>Описание</label>
+        <textarea id="prodDesc" placeholder="Описание товара..."></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeProductModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveProduct()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА АКЦИИ -->
+<div class="modal-overlay" id="promoModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closePromoModal()">✕</button>
+    <div class="modal-title" id="promoModalTitle">Новая акция</div>
+    <div class="modal-sub">Заполните данные об акции</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Название акции *</label>
+        <input type="text" id="promoName" placeholder="Например: Скидка на бытовую химию">
+      </div>
+      <div class="form-grp">
+        <label>Размер скидки</label>
+        <input type="text" id="promoDisc" placeholder="-15%">
+      </div>
+      <div class="form-grp">
+        <label>Цвет</label>
+        <select id="promoColor">
+          <option value="green">🟢 Зелёный</option>
+          <option value="accent">🟠 Оранжевый</option>
+          <option value="lime">🟡 Лаймовый</option>
+        </select>
+      </div>
+      <div class="form-grp full">
+        <label>Бейдж сверху</label>
+        <input type="text" id="promoBadge" placeholder="Например: Хиты продаж">
+      </div>
+      <div class="form-grp full">
+        <label>Описание *</label>
+        <textarea id="promoDesc" placeholder="Описание условий акции..."></textarea>
+      </div>
+      <div class="form-grp">
+        <label>Срок действия</label>
+        <input type="text" id="promoValid" placeholder="До 31 мая 2026 или Постоянная">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closePromoModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="savePromo()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ===== ТОВАРЫ ПО УМОЛЧАНИЮ (должны быть в начале!) =====
+const DEFAULT_PRODUCTS=[
+{name:'Белизна 1 л',sku:'0070',price:35,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg',badge:'hit'},
+{name:'Мыло хозяйственное 200 гр',sku:'0089',price:45,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/CIcB_yBdgW3wOdpNUApXxQ/200r190/d/5597.jpg'},
+{name:'Стиральный порошок "Ять" 400 гр',sku:'YAT400',price:70,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/dhTHAzontmHvGaCjTiqNhg/200r190/d/7581_1500x1500_3f5.jpg'},
+{name:'Крот — средство от засоров 1 л',sku:'0064',price:70,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/T2RbBuglq47su5JmVxA3-A/200r190/d/8eb077a5582bd8b35386473b42586011.jpg'},
+{name:'Белизна гель 1 л',sku:'0238',price:80,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg',badge:'new'},
+{name:'GOLD WIND освежитель воздуха 300 мл',sku:'0091',price:90,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/vV6C9N5ggHqbiDRbkZkgkA/200r190/d/a5q6yhlgieotk51e5oqgy0-7ff14d0c4d6954f2e49b2ca67166f5e6-600x600.jpg'},
+{name:'Пемолюкс чистящий порошок 400 гр',sku:'PEM400',price:100,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/f4cmduEfuBrx2-TBAaS53g/200r190/d/6f4b1f8d933db7f39ae61eec7692916e_xl.jpg'},
+{name:'Санокс чистящее средство 750 мл',sku:'0067',price:125,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/q81MCCeowB6xMwilGlpAmw/200r190/d/82675-min-1600x1600.jpg'},
+{name:'Адриэль для плит 850 мл',sku:'0062',price:156,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/plsf3qkrce5o7b5HNar-ag/200r190/d/ca8d6ab79cc9028c550f8902bcd6fcf8.png'},
+{name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg',badge:'hit'},
+{name:'Mr. Proper для пола 1 л',sku:'MRP1L',price:330,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/53crVfJsxBm8_P3wVhIiOA/200r190/d/snim1k.png'},
+{name:'Радуга для посуды 5 л',sku:'0047',price:350,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/iAcV8BdnFXyn-mpYQT9YqA/200r190/d/raduga_malina.jpg'},
+{name:'Жидкое мыло-крем с перламутром 5 л',sku:'MILA5L',price:360,cat:'Бытовая химия',img:'https://cloverspb.ru/thumb/2/DeymKn_BfH9gtVm4y51MbQ/200r190/d/perlamutr.jpg'},
+{name:'Help — чистящий порошок 400 гр',sku:'HELP01',price:125,cat:'Бытовая химия',img:''},
+{name:'Rail средство для сантехники 750 мл',sku:'RAIL750',price:190,cat:'Бытовая химия',img:''},
+{name:'GRASS Азелит для чистки 600 мл',sku:'GRASSAZ',price:220,cat:'Бытовая химия',img:''},
+{name:'Domestos гель 1 л',sku:'DOM1L',price:180,cat:'Бытовая химия',img:''},
+{name:'Cif Cream 250 мл',sku:'CIFCR',price:165,cat:'Бытовая химия',img:''},
+{name:'Fairy для посуды 900 мл',sku:'FAIRY900',price:195,cat:'Бытовая химия',img:''},
+{name:'Tide стиральный порошок 3 кг',sku:'TIDE3KG',price:450,cat:'Бытовая химия',img:''},
+{name:'Persil для цветного 2 кг',sku:'PERSIL2',price:540,cat:'Бытовая химия',img:''},
+{name:'Tiret для прочистки труб 1 л',sku:'TIRET1',price:280,cat:'Бытовая химия',img:''},
+{name:'Glorix для пола 1 л',sku:'GLORIX',price:145,cat:'Бытовая химия',img:''},
+{name:'Sanita антиржавчина 500 мл',sku:'SANITA',price:95,cat:'Бытовая химия',img:''},
+{name:'Антисептик для рук 250 мл',sku:'ANTSEP',price:65,cat:'Бытовая химия',img:''},
+{name:'Жидкое мыло «Радуга» 500 мл',sku:'MYLO500',price:75,cat:'Бытовая химия',img:''},
+{name:'Stop засоры гранулы 100 гр',sku:'STOPGR',price:55,cat:'Бытовая химия',img:''},
+{name:'Шуманит для духовок 270 мл',sku:'SHUMAN',price:215,cat:'Бытовая химия',img:''},
+{name:'Frosch для посуды эко 500 мл',sku:'FROSCH',price:165,cat:'Бытовая химия',img:''},
+{name:'Synergetic стиральный гель 1.5 л',sku:'SYNGEL',price:290,cat:'Бытовая химия',img:''},
+{name:'Калгон для стиральных машин 1.6 кг',sku:'KALGON',price:480,cat:'Бытовая химия',img:''},
+{name:'Жидкость для посудомоечных машин 1 л',sku:'PMM1L',price:220,cat:'Бытовая химия',img:''},
+{name:'Соль для посудомоечных машин 1 кг',sku:'SALT1',price:90,cat:'Бытовая химия',img:''},
+{name:'Туалетная бумага 2-сл. 48 рул.',sku:'0112',price:420,cat:'Бумажная продукция',img:'https://cloverspb.ru/thumb/2/lhTW3L4m_5FfXgzSIpZr5A/200r190/d/photo1_0.jpg'},
+{name:'Салфетки бумажные 100 шт',sku:'0201',price:35,cat:'Бумажная продукция',img:'https://cloverspb.ru/thumb/2/pZkvhVnqRxkofy-8niLIDw/200r190/d/ikonka_bumazhnaya_produkciya.png'},
+{name:'Салфетки 24×24 см "Вафля" 1-сл 100 шт',sku:'SALF24',price:15,cat:'Бумажная продукция',img:''},
+{name:'Бумага туалетная "Мягкий знак" 1-сл 54 м',sku:'0207',price:22,cat:'Бумажная продукция',img:''},
+{name:'Салфетки бумажные для диспенсера Lime',sku:'LIMESALF',price:60,cat:'Бумажная продукция',img:''},
+{name:'Бумага туалетная 1-сл серая 200 м',sku:'0101',price:70,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца PRO C-192 V-укладка 250 л',sku:'PRO250',price:85,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца "Фамилия" 2 рул',sku:'FAM2RUL',price:90,cat:'Бумажная продукция',img:''},
+{name:'Туалетная бумага "Мягкий знак" 2-сл 4 рул',sku:'0125',price:90,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца Focus V-укладка 250 л',sku:'FOCUS250V',price:95,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца "Мягкий знак" 2 рул',sku:'0126',price:97,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца Focus Z-укладка 200 л',sku:'FOCUS200Z',price:115,cat:'Бумажная продукция',img:''},
+{name:'Салфетки "PRO" 24×24 см 1-сл 500 л',sku:'PRO500SAL',price:125,cat:'Бумажная продукция',img:''},
+{name:'Бумага туалетная Focus 1-сл 200 м',sku:'FOCUS200T',price:125,cat:'Бумажная продукция',img:''},
+{name:'Туалетная бумага 1-сл 48 рул',sku:'0113',price:320,cat:'Бумажная продукция',img:''},
+{name:'Полотенце рулонное 150 м',sku:'0220',price:180,cat:'Бумажная продукция',img:''},
+{name:'Салфетки 33×33 см 3-сл 20 шт',sku:'SALF33',price:65,cat:'Бумажная продукция',img:''},
+{name:'Туалетная бумага влажная 80 шт',sku:'TWET80',price:110,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца 2-сл 2 рул "Зева"',sku:'ZEWA2',price:145,cat:'Бумажная продукция',img:''},
+{name:'Бумага туалетная Zewa 2-сл 4 рул',sku:'ZEWA4',price:210,cat:'Бумажная продукция',img:''},
+{name:'Салфетки барные 24×24 4-сл цветные',sku:'BAR24',price:195,cat:'Бумажная продукция',img:''},
+{name:'Туалетная бумага 3-сл "Plushe" 12 рул',sku:'PLU12',price:380,cat:'Бумажная продукция',img:''},
+{name:'Бумажные полотенца Tork V-укладка',sku:'TORKV',price:220,cat:'Бумажная продукция',img:''},
+{name:'Универсальные бумажные полотенца 4 рул',sku:'UNI4',price:175,cat:'Бумажная продукция',img:''},
+{name:'Салфетки для уборки 30×30 см 50 шт',sku:'SALF30',price:145,cat:'Бумажная продукция',img:''},
+{name:'Туалетная бумага в упаковке 24 рул',sku:'TPAK24',price:240,cat:'Бумажная продукция',img:''},
+{name:'Стакан пластик 200 мл 100 шт',sku:'0334',price:65,cat:'Одноразовая посуда',img:'https://cloverspb.ru/thumb/2/u8e3DLZgGz2q5Cxjt0EcuQ/200r190/d/photo1_0.jpg'},
+{name:'Тарелка пластик 16,5 см без секций',sku:'TAR165',price:2.7,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка пластик 20 см без секций',sku:'TAR20',price:3.5,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка пластик 22 см 3 секции',sku:'TAR22S',price:4.2,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка пластик 26 см без секций',sku:'TAR26',price:5.8,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка десертная 17 см 100 шт',sku:'TARD17',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка глубокая 500 мл 50 шт',sku:'TARG500',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Миска 500 мл 50 шт',sku:'MISKA500',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Миска суповая 350 мл 50 шт',sku:'MISKA350',price:135,cat:'Одноразовая посуда',img:''},
+{name:'Стакан 100 мл 100 шт',sku:'STAK100',price:45,cat:'Одноразовая посуда',img:''},
+{name:'Стакан 200 мл прозрачный',sku:'STAK200T',price:55,cat:'Одноразовая посуда',img:''},
+{name:'Стакан 300 мл 100 шт',sku:'STAK300',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Стакан 500 мл 100 шт',sku:'STAK500',price:110,cat:'Одноразовая посуда',img:''},
+{name:'Стакан бумажный 250 мл 50 шт',sku:'0340',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Стакан бумажный 300 мл 50 шт',sku:'BUM300',price:110,cat:'Одноразовая посуда',img:''},
+{name:'Стакан бумажный 400 мл 50 шт',sku:'BUM400',price:130,cat:'Одноразовая посуда',img:''},
+{name:'Стакан для чая с ручкой 200 мл',sku:'CHAI200',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Вилки пластик 100 шт',sku:'0362',price:55,cat:'Одноразовая посуда',img:''},
+{name:'Ложки пластик 100 шт',sku:'0363',price:55,cat:'Одноразовая посуда',img:''},
+{name:'Нож пластик 100 шт',sku:'0364',price:55,cat:'Одноразовая посуда',img:''},
+{name:'Ложка десертная 100 шт',sku:'LDES',price:60,cat:'Одноразовая посуда',img:''},
+{name:'Ложка чайная 100 шт',sku:'LCHAI',price:50,cat:'Одноразовая посуда',img:''},
+{name:'Набор столовых приборов в упаковке 50 шт',sku:'NABOR50',price:250,cat:'Одноразовая посуда',img:''},
+{name:'Прозрачные вилки premium 50 шт',sku:'VILPR50',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Прозрачные ножи premium 50 шт',sku:'NOZPR50',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер с крышкой 500 мл 50 шт',sku:'0401',price:190,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер с крышкой 750 мл 50 шт',sku:'KONT750',price:220,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер с крышкой 1000 мл 50 шт',sku:'KONT1000',price:280,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для салата 500 мл',sku:'SALAT500',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер 2-секционный 500 мл',sku:'KONT2S',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер 3-секционный 1000 мл',sku:'KONT3S',price:245,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для супа 500 мл с крышкой',sku:'SUP500',price:175,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для пиццы 30 см 50 шт',sku:'PIZZA30',price:450,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для пиццы 32 см 50 шт',sku:'PIZZA32',price:480,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для пиццы 35 см 50 шт',sku:'PIZZA35',price:530,cat:'Одноразовая посуда',img:''},
+{name:'Ланч-бокс 900 мл 10 шт',sku:'0430',price:120,cat:'Одноразовая посуда',img:''},
+{name:'Ланч-бокс 1000 мл 10 шт',sku:'LANCH1',price:135,cat:'Одноразовая посуда',img:''},
+{name:'Ланч-бокс с приборами 750 мл',sku:'LANCHPR',price:180,cat:'Одноразовая посуда',img:''},
+{name:'Соусник 30 мл 100 шт',sku:'SOUS30',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Соусник 50 мл 100 шт',sku:'SOUS50',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Соусник с крышкой 50 мл 100 шт',sku:'SOUS50K',price:105,cat:'Одноразовая посуда',img:''},
+{name:'Соусник пластик 75 мл 100 шт',sku:'SOUS75',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка ЭКО 18 см крафт 50 шт',sku:'ECO18',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка ЭКО 23 см крафт 50 шт',sku:'ECO23',price:175,cat:'Одноразовая посуда',img:''},
+{name:'Миска ЭКО 500 мл крафт 50 шт',sku:'ECOMISKA',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Стакан ЭКО 250 мл с крышкой 50 шт',sku:'ECO250',price:215,cat:'Одноразовая посуда',img:''},
+{name:'Стакан ЭКО 350 мл 50 шт',sku:'ECO350',price:235,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер ЭКО 500 мл крафт',sku:'ECOCONT',price:245,cat:'Одноразовая посуда',img:''},
+{name:'Зубочистки 1000 шт',sku:'ZUBO1000',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Шпажки бамбук 15 см 100 шт',sku:'SHPAJ15',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Шпажки бамбук 20 см 100 шт',sku:'SHPAJ20',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Шампуры 25 см 100 шт',sku:'SHAMP25',price:110,cat:'Одноразовая посуда',img:''},
+{name:'Шампуры 30 см 100 шт',sku:'SHAMP30',price:135,cat:'Одноразовая посуда',img:''},
+{name:'Палочки для суши 30 пар',sku:'PALOCHKI',price:120,cat:'Одноразовая посуда',img:''},
+{name:'Трубочки коктейльные 250 шт',sku:'TRUB250',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Трубочки бумажные 250 шт',sku:'TRUBB250',price:135,cat:'Одноразовая посуда',img:''},
+{name:'Бутылка ПЭТ 0.5 л',sku:'PET05',price:18,cat:'Одноразовая посуда',img:''},
+{name:'Бутылка ПЭТ 1 л',sku:'PET1',price:28,cat:'Одноразовая посуда',img:''},
+{name:'Бутылка ПЭТ 1.5 л с крышкой',sku:'PET15',price:35,cat:'Одноразовая посуда',img:''},
+{name:'Крышка для ПЭТ-бутылки 100 шт',sku:'KRPET',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Шейкер пластик 500 мл',sku:'SHAKER',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Стакан барный 350 мл 50 шт',sku:'BAR350',price:175,cat:'Одноразовая посуда',img:''},
+{name:'Мерный стакан 50 мл',sku:'MERN',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Капсулы для кексов 100 шт',sku:'CAPCAKE',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Упаковка для торта 25×25 см',sku:'TORT25',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Подложка под торт 30 см',sku:'PODL30',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер-ракушка 500 мл 50 шт',sku:'RAK500',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер-ракушка 750 мл 50 шт',sku:'RAK750',price:225,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер-ракушка 1000 мл 50 шт',sku:'RAK1000',price:265,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка 22 см ассорти цвета 100 шт',sku:'TARASS',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Стакан стеклоподобный 200 мл 100 шт',sku:'STEKL200',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Чашка для кофе 150 мл 50 шт',sku:'COF150',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Крышка для бумажного стакана 50 шт',sku:'KRSTAK',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Крышка-непроливайка для кофе 50 шт',sku:'KRCOF',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Размешиватель для напитков 100 шт',sku:'MIX100',price:45,cat:'Одноразовая посуда',img:''},
+{name:'Палочки для кофе 1000 шт',sku:'COFP1000',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка квадратная 17 см 50 шт',sku:'TARKV17',price:125,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка квадратная 23 см 50 шт',sku:'TARKV23',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Поднос пластик 25×35 см 50 шт',sku:'PODN25',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Стакан граненый одноразовый 200 мл',sku:'STAKGR',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка бумажная 23 см 50 шт',sku:'BUMTAR23',price:135,cat:'Одноразовая посуда',img:''},
+{name:'Миска бумажная 500 мл 50 шт',sku:'BUMMIS',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер бумажный 750 мл',sku:'BUMKONT',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Стакан для глинтвейна с ручкой 250 мл',sku:'GLINT',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Соломка для коктейлей короткая 250 шт',sku:'SOLKOR',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Соломка для коктейлей длинная 250 шт',sku:'SOLDL',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Зонтик для коктейля 100 шт',sku:'ZONTIK',price:55,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер-салатник 750 мл',sku:'SAL750',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для морепродуктов 1 кг',sku:'MORE1KG',price:245,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер плоский 500 мл 50 шт',sku:'PLOS500',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Стакан 100 мл стеклоподобный',sku:'STEKL100',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Стопка одноразовая 30 мл 100 шт',sku:'STOP30',price:45,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка детская 17 см с принтом',sku:'TARDET',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка одноразовая 100 шт',sku:'0350',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Бокал для вина 300 мл 50 шт',sku:'BOKAL300',price:215,cat:'Одноразовая посуда',img:''},
+{name:'Бокал для шампанского 150 мл',sku:'BOKSHAM',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка фольгированная 19 см 50 шт',sku:'FOLT19',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка под пиццу 33 см бумажная',sku:'PIZZAT33',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Палочки для канапе 100 шт',sku:'KANAP',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Ложка для мороженого 100 шт',sku:'MOROZH',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Соусник конический 30 мл',sku:'SOUSKON',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для торта высокий 1000 мл',sku:'TORT1000',price:235,cat:'Одноразовая посуда',img:''},
+{name:'Подложка под торт 25 см',sku:'PODL25',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка для бургера 17 см',sku:'TARBUR',price:65,cat:'Одноразовая посуда',img:''},
+{name:'Бутылка для соусов 500 мл',sku:'BUTSOUS',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Дозатор для пластиковых бутылок',sku:'DOZAT',price:145,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер для роллов 30×20 см',sku:'ROLL30',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Подставка под роллы бамбук',sku:'PODSTAW',price:85,cat:'Одноразовая посуда',img:''},
+{name:'Чашка с крышкой для лапши 700 мл',sku:'LAPSH',price:215,cat:'Одноразовая посуда',img:''},
+{name:'Лоток для еды 250 мл 100 шт',sku:'LOT250',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Лоток для еды 500 мл 100 шт',sku:'LOT500',price:245,cat:'Одноразовая посуда',img:''},
+{name:'Лоток для еды 1000 мл 50 шт',sku:'LOT1000',price:235,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка квадратная 25 см',sku:'KVAD25',price:175,cat:'Одноразовая посуда',img:''},
+{name:'Тарелка прямоугольная 26×17 см',sku:'PROK26',price:165,cat:'Одноразовая посуда',img:''},
+{name:'Контейнер с разделителями 1100 мл',sku:'RAZD1100',price:285,cat:'Одноразовая посуда',img:''},
+{name:'Стакан кофейный двухслойный 250 мл',sku:'KOF2SL',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Крышка купольная для стакана',sku:'KRKUP',price:125,cat:'Одноразовая посуда',img:''},
+{name:'Соломка прочная для смузи 100 шт',sku:'SOLSM',price:115,cat:'Одноразовая посуда',img:''},
+{name:'Шампур плоский 30 см 100 шт',sku:'SHAMPL',price:95,cat:'Одноразовая посуда',img:''},
+{name:'Деревянная ложка 100 шт',sku:'DERL',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Деревянная вилка 100 шт',sku:'DERV',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Деревянный нож 100 шт',sku:'DERN',price:75,cat:'Одноразовая посуда',img:''},
+{name:'Капкейк-форма круглая 50 шт',sku:'KAPKR',price:125,cat:'Одноразовая посуда',img:''},
+{name:'Упаковка для пирожных 4 шт',sku:'PIROZH4',price:195,cat:'Одноразовая посуда',img:''},
+{name:'Бокс для торта 30×30×20 см',sku:'BOXTRT',price:245,cat:'Одноразовая посуда',img:''},
+{name:'Перчатки нитриловые M 100 шт',sku:'0521',price:380,cat:'Средства защиты',img:'https://cloverspb.ru/thumb/2/KlxhSfR7mMCxBdz80FxjwA/200r190/d/photo1_0.jpg',badge:'sale'},
+{name:'Перчатки нитриловые L 100 шт',sku:'0522',price:380,cat:'Средства защиты',img:''},
+{name:'Перчатки нитриловые S 100 шт',sku:'0523',price:380,cat:'Средства защиты',img:''},
+{name:'Перчатки нитриловые XL 100 шт',sku:'0524',price:380,cat:'Средства защиты',img:''},
+{name:'Перчатки латексные M 100 шт',sku:'0530',price:350,cat:'Средства защиты',img:''},
+{name:'Перчатки латексные L 100 шт',sku:'0531',price:350,cat:'Средства защиты',img:''},
+{name:'Перчатки латексные S 100 шт',sku:'0532',price:350,cat:'Средства защиты',img:''},
+{name:'Перчатки виниловые 100 шт',sku:'VINIL',price:290,cat:'Средства защиты',img:''},
+{name:'Перчатки хозяйственные резиновые M',sku:'HOZM',price:95,cat:'Средства защиты',img:''},
+{name:'Перчатки хозяйственные резиновые L',sku:'HOZL',price:95,cat:'Средства защиты',img:''},
+{name:'Перчатки хозяйственные с напылением',sku:'HOZNAP',price:110,cat:'Средства защиты',img:''},
+{name:'Перчатки рабочие х/б 5 пар',sku:'HBPER',price:120,cat:'Средства защиты',img:''},
+{name:'Перчатки с покрытием ПВХ',sku:'PVCPER',price:145,cat:'Средства защиты',img:''},
+{name:'Маска медицинская 50 шт',sku:'0550',price:150,cat:'Средства защиты',img:''},
+{name:'Маска KN95 5 шт',sku:'KN95',price:175,cat:'Средства защиты',img:''},
+{name:'Респиратор FFP2 5 шт',sku:'FFP2',price:285,cat:'Средства защиты',img:''},
+{name:'Бахилы одноразовые 100 шт',sku:'BAHIL',price:195,cat:'Средства защиты',img:''},
+{name:'Бахилы плотные 100 шт',sku:'BAHILPL',price:245,cat:'Средства защиты',img:''},
+{name:'Фартук полиэтиленовый 100 шт',sku:'FART100',price:165,cat:'Средства защиты',img:''},
+{name:'Фартук одноразовый плотный 50 шт',sku:'FARTPL',price:195,cat:'Средства защиты',img:''},
+{name:'Халат одноразовый 5 шт',sku:'HAL5',price:245,cat:'Средства защиты',img:''},
+{name:'Шапочка одноразовая 100 шт',sku:'SHAP100',price:95,cat:'Средства защиты',img:''},
+{name:'Пилотка медицинская 100 шт',sku:'PILOT',price:135,cat:'Средства защиты',img:''},
+{name:'Очки защитные',sku:'OCH',price:195,cat:'Средства защиты',img:''},
+{name:'Перчатки для уборки длинные',sku:'UBORL',price:165,cat:'Средства защиты',img:''},
+{name:'Перчатки одноразовые HDPE 500 шт',sku:'HDPE500',price:245,cat:'Средства защиты',img:''},
+{name:'Маска тканевая многоразовая',sku:'MASKMR',price:95,cat:'Средства защиты',img:''},
+{name:'Пакет фасовочный 24×37 см 500 шт',sku:'0622',price:120,cat:'Упаковка',img:'https://cloverspb.ru/thumb/2/a8dC6mJN7GQK3j0XUbvkNw/200r190/d/photo1_0.jpg'},
+{name:'Пакет-майка 30×55 см 50 шт',sku:'0601',price:75,cat:'Упаковка',img:''},
+{name:'Пакет-майка 28×50 см 100 шт',sku:'0602',price:130,cat:'Упаковка',img:''},
+{name:'Пакет-майка большой 40×60 см 100 шт',sku:'0603',price:195,cat:'Упаковка',img:''},
+{name:'Пакет крафт бумажный 10 шт',sku:'0640',price:90,cat:'Упаковка',img:''},
+{name:'Пакет крафт с ручками средний 10 шт',sku:'KRAFTSR',price:135,cat:'Упаковка',img:''},
+{name:'Пакет крафт большой 10 шт',sku:'KRAFTBL',price:175,cat:'Упаковка',img:''},
+{name:'Вакуумный пакет 20×30 см 10 шт',sku:'0660',price:110,cat:'Упаковка',img:''},
+{name:'Вакуумный пакет 25×35 см 10 шт',sku:'VAC2535',price:135,cat:'Упаковка',img:''},
+{name:'Вакуумный пакет 30×40 см 10 шт',sku:'VAC3040',price:175,cat:'Упаковка',img:''},
+{name:'Фасовочный пакет 18×35 см 1000 шт',sku:'FAS1835',price:95,cat:'Упаковка',img:''},
+{name:'Фасовочный пакет 20×30 см 1000 шт',sku:'FAS2030',price:125,cat:'Упаковка',img:''},
+{name:'Фасовочный пакет 30×40 см 500 шт',sku:'FAS3040',price:195,cat:'Упаковка',img:''},
+{name:'Пакет для мусора с завязками 30 л 20 шт',sku:'MUS30Z',price:165,cat:'Упаковка',img:''},
+{name:'Стрейч-пленка 500 м',sku:'STRECH500',price:295,cat:'Упаковка',img:''},
+{name:'Стрейч-пленка ручная 300 м',sku:'STRECHRU',price:195,cat:'Упаковка',img:''},
+{name:'Шпагат полипропиленовый 100 м',sku:'SHPAG100',price:65,cat:'Упаковка',img:''},
+{name:'Шпагат джутовый 100 м',sku:'SHPAGD',price:95,cat:'Упаковка',img:''},
+{name:'Кондитерский мешок 50 см 100 шт',sku:'KONDM50',price:245,cat:'Упаковка',img:''},
+{name:'Лента упаковочная 20 м',sku:'LENTA20',price:95,cat:'Упаковка',img:''},
+{name:'Скотч прозрачный 50×66 м',sku:'SKOT50',price:75,cat:'Упаковка',img:''},
+{name:'Скотч коричневый упаковочный 50×66 м',sku:'SKOTKOR',price:85,cat:'Упаковка',img:''},
+{name:'Стикеры для маркировки 100 шт',sku:'STIK100',price:75,cat:'Упаковка',img:''},
+{name:'Пакеты zip-lock 18×25 см 100 шт',sku:'ZIP18',price:145,cat:'Упаковка',img:''},
+{name:'Пакеты zip-lock 25×35 см 100 шт',sku:'ZIP25',price:195,cat:'Упаковка',img:''},
+{name:'Пакет с замком "слайдер" 50 шт',sku:'SLIDER',price:165,cat:'Упаковка',img:''},
+{name:'Пузырьковая плёнка 1×10 м',sku:'BUBBLE',price:195,cat:'Упаковка',img:''},
+{name:'Тряпка для пола 50×80 см',sku:'0756',price:90,cat:'Хозтовары',img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'},
+{name:'Губка для посуды 5 шт',sku:'0789',price:45,cat:'Хозтовары',img:''},
+{name:'Губка для посуды 10 шт большая',sku:'GUB10',price:85,cat:'Хозтовары',img:''},
+{name:'Губка металлическая 4 шт',sku:'GUBMET',price:65,cat:'Хозтовары',img:''},
+{name:'Мочалка бамбуковая 3 шт',sku:'MOCHBAM',price:95,cat:'Хозтовары',img:''},
+{name:'Мешки для мусора 30 л 20 шт',sku:'0710',price:60,cat:'Хозтовары',img:''},
+{name:'Мешки для мусора 60 л 20 шт',sku:'0711',price:80,cat:'Хозтовары',img:''},
+{name:'Мешки для мусора 120 л 10 шт',sku:'0712',price:110,cat:'Хозтовары',img:''},
+{name:'Мешки для мусора 240 л 5 шт',sku:'0713',price:145,cat:'Хозтовары',img:''},
+{name:'Мешки с завязками 60 л 15 шт',sku:'MUSZ60',price:165,cat:'Хозтовары',img:''},
+{name:'Фольга алюминиевая 50 м',sku:'0730',price:145,cat:'Хозтовары',img:''},
+{name:'Фольга алюминиевая 100 м',sku:'0731',price:245,cat:'Хозтовары',img:''},
+{name:'Фольга алюминиевая 10 м тонкая',sku:'0732',price:65,cat:'Хозтовары',img:''},
+{name:'Пищевая плёнка 200 м',sku:'PIESHC200',price:145,cat:'Хозтовары',img:''},
+{name:'Пищевая плёнка 30 м',sku:'PIESHC30',price:65,cat:'Хозтовары',img:''},
+{name:'Вафельное полотно 50×50 см',sku:'0760',price:55,cat:'Хозтовары',img:''},
+{name:'Вафельное полотно 50 м рулон',sku:'VAF50M',price:295,cat:'Хозтовары',img:''},
+{name:'Тряпка для стола микрофибра',sku:'TRMIK',price:95,cat:'Хозтовары',img:''},
+{name:'Тряпка влажная 30 шт',sku:'TRVL',price:145,cat:'Хозтовары',img:''},
+{name:'Салфетки для уборки универсал 5 шт',sku:'SALUNI',price:65,cat:'Хозтовары',img:''},
+{name:'Тряпка для пола белая х/б',sku:'TRPOLBL',price:85,cat:'Хозтовары',img:''},
+{name:'Тряпка для пола супервпитывающая',sku:'TRSUP',price:145,cat:'Хозтовары',img:''},
+{name:'Швабра с отжимом',sku:'SHVABR',price:595,cat:'Хозтовары',img:''},
+{name:'Веник синтетический',sku:'VENIK',price:195,cat:'Хозтовары',img:''},
+{name:'Совок с щеткой',sku:'SOVKSH',price:145,cat:'Хозтовары',img:''},
+{name:'Ёршик для унитаза в комплекте',sku:'ERSHIK',price:245,cat:'Хозтовары',img:''},
+{name:'Ручка шариковая синяя 50 шт',sku:'KANC01',price:195,cat:'Канцелярия',img:''},
+{name:'Ручка шариковая чёрная 50 шт',sku:'KANC02',price:195,cat:'Канцелярия',img:''},
+{name:'Карандаш простой HB 100 шт',sku:'KANC03',price:245,cat:'Канцелярия',img:''},
+{name:'Стикеры для заметок 100 шт',sku:'KANC04',price:145,cat:'Канцелярия',img:''},
+{name:'Скрепки 100 шт',sku:'KANC05',price:65,cat:'Канцелярия',img:''},
+{name:'Степлер №24 в комплекте',sku:'KANC06',price:195,cat:'Канцелярия',img:''},
+{name:'Бумага А4 500 листов',sku:'KANC07',price:395,cat:'Канцелярия',img:''},
+{name:'Папка-скоросшиватель 10 шт',sku:'KANC08',price:125,cat:'Канцелярия',img:''}
+];
+
+// ===== АУТЕНТИФИКАЦИЯ =====
+const ADMIN_PASS = 'klever2025';
+
+function doLogin() {
+  const pass = document.getElementById('passInput').value;
+  if (pass === ADMIN_PASS) {
+    sessionStorage.setItem('klever_admin', '1');
+    showAdmin();
+  } else {
+    document.getElementById('loginErr').classList.add('show');
+    document.getElementById('passInput').focus();
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('klever_admin');
+  location.reload();
+}
+
+function showAdmin() {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('adminWrap').classList.add('visible');
+  loadAll();
+}
+
+// ===== ВКЛАДКИ =====
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.side-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'orders') renderOrders();
+  if (name === 'contacts') renderContacts();
+  if (name === 'promotions') renderPromotions();
+  if (name === 'products') renderProducts();
+  if (name === 'dashboard') renderDashboard();
+}
+
+// ===== ДАННЫЕ =====
+const STORAGE_PRODUCTS = 'klever_products_v2';
+const STORAGE_ORDERS = 'klever_orders';
+const STORAGE_CONTACTS = 'klever_contacts';
+const STORAGE_PROMOS = 'klever_promos';
+const STORAGE_SETTINGS = 'klever_settings';
+
+function getProducts() {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(STORAGE_PRODUCTS)); } catch(e) {}
+  if (!stored || !Array.isArray(stored) || stored.length === 0) {
+    // Инициализируем дефолтным списком
+    localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(DEFAULT_PRODUCTS));
+    return DEFAULT_PRODUCTS;
+  }
+  return stored;
+}
+function setProducts(arr) {
+  localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(arr));
+}
+function getOrders() {
+  return JSON.parse(localStorage.getItem(STORAGE_ORDERS) || '[]');
+}
+function getContacts() {
+  return JSON.parse(localStorage.getItem(STORAGE_CONTACTS) || '[]');
+}
+function getPromos() {
+  return JSON.parse(localStorage.getItem(STORAGE_PROMOS) || 'null') || getDefaultPromos();
+}
+function setPromos(arr) {
+  localStorage.setItem(STORAGE_PROMOS, JSON.stringify(arr));
+}
+
+function getDefaultPromos() {
+  return [
+    {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
+    {name:'При заказе от 5 000 ₽', disc:'-20%', color:'accent', badge:'Оптом выгоднее', desc:'Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ', valid:'Постоянная акция'},
+    {name:'Скидка на первый заказ', disc:'-10%', color:'lime', badge:'Новым клиентам', desc:'Скидка 10% для новых покупателей при оформлении первого заказа', valid:'Бессрочно'},
+  ];
+}
+
+function loadAll() {
+  updateCounts();
+  renderDashboard();
+}
+
+function updateCounts() {
+  document.getElementById('cntProducts').textContent = getProducts().length;
+  // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
+  document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
+  document.getElementById('cntContacts').textContent = getContacts().length;
+  document.getElementById('cntPromos').textContent = getPromos().length;
+}
+
+// ===== ДАШБОРД =====
+function renderDashboard() {
+  const allOrders = getOrders();
+  const newOrders = allOrders.filter(o => o.status !== 'done');
+  const doneOrders = allOrders.filter(o => o.status === 'done');
+
+  document.getElementById('dashProducts').textContent = getProducts().length;
+  // Количество зарегистрированных пользователей
+  const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+  document.getElementById('dashUsers').textContent = users.length;
+  document.getElementById('dashOrders').textContent = newOrders.length;
+  document.getElementById('dashContacts').textContent = getContacts().length;
+
+  // Выручка считается только по выполненным заказам
+  const rev = doneOrders.reduce((s, o) => s + o.total, 0);
+  document.getElementById('dashRevenue').textContent = rev.toLocaleString('ru-RU') + ' ₽';
+
+  // Статистика выполненных за периоды
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+  const monthAgo = new Date(today); monthAgo.setMonth(today.getMonth() - 1);
+
+  // Заказ хранится с date в формате локали ru-RU (e.g. "24.05.2026"). Парсим.
+  function parseRuDate(s) {
+    // s может быть "24.05.2026" или "24.05.2026, 14:32"
+    if (!s) return null;
+    const datePart = s.split(',')[0].trim();
+    const parts = datePart.split('.');
+    if (parts.length !== 3) return null;
+    return new Date(+parts[2], +parts[1] - 1, +parts[0]);
+  }
+
+  const inRange = (order, from) => {
+    const d = parseRuDate(order.date);
+    if (!d) return false;
+    return d >= from;
+  };
+
+  const doneToday = doneOrders.filter(o => inRange(o, today));
+  const doneWeek = doneOrders.filter(o => inRange(o, weekAgo));
+  const doneMonth = doneOrders.filter(o => inRange(o, monthAgo));
+
+  document.getElementById('doneToday').textContent = doneToday.length;
+  document.getElementById('doneTodaySum').textContent = doneToday.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
+  document.getElementById('doneWeek').textContent = doneWeek.length;
+  document.getElementById('doneWeekSum').textContent = doneWeek.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
+  document.getElementById('doneMonth').textContent = doneMonth.length;
+  document.getElementById('doneMonthSum').textContent = doneMonth.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
+  document.getElementById('doneAll').textContent = doneOrders.length;
+  document.getElementById('doneAllSum').textContent = doneOrders.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
+
+  // Последние новые заказы
+  const recent = allOrders.slice(-3).reverse();
+  const last = document.getElementById('dashLastOrders');
+  if (recent.length === 0) {
+    last.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
+  } else {
+    last.innerHTML = recent.map(o => orderCardHtml(o)).join('');
+  }
+}
+
+// ===== ТОВАРЫ =====
+let editingSku = null;
+let productsPage = 1;
+const PRODUCTS_PER_PAGE = 20;
+
+function renderProducts() {
+  const q = (document.getElementById('searchProducts').value || '').toLowerCase().trim();
+  const cat = document.getElementById('filterCat').value;
+  let all = getProducts();
+  let filtered = all.filter(p => {
+    const matchQ = !q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
+    const matchC = !cat || p.cat === cat;
+    return matchQ && matchC;
+  });
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
+  if (productsPage > totalPages) productsPage = totalPages;
+  const start = (productsPage - 1) * PRODUCTS_PER_PAGE;
+  const pageItems = filtered.slice(start, start + PRODUCTS_PER_PAGE);
+
+  document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
+
+  if (pageItems.length === 0) {
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+  } else {
+    document.getElementById('productsBody').innerHTML = pageItems.map(p => `
+      <tr>
+        <td><div class="prod-img-cell">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div></td>
+        <td><strong>${p.name}</strong></td>
+        <td><span class="col-num">${p.sku}</span></td>
+        <td>${p.cat}</td>
+        <td><strong>${p.price} ₽</strong></td>
+        <td>${badgeHtml(p.badge)}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.sku}')">Изм.</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.sku}')">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Pagination
+  const pager = document.getElementById('productsPager');
+  if (totalPages <= 1) {
+    pager.innerHTML = '';
+  } else {
+    let html = '';
+    html += `<button onclick="goPage(${productsPage-1})" ${productsPage===1?'disabled':''}>‹</button>`;
+    for (let i=1; i<=totalPages; i++) {
+      if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - productsPage) > 1) {
+        if (i === 3 || i === totalPages - 2) html += '<span style="padding:0 4px;color:#8aaa94;">…</span>';
+        continue;
+      }
+      html += `<button onclick="goPage(${i})" ${i===productsPage?'class="active"':''}>${i}</button>`;
+    }
+    html += `<button onclick="goPage(${productsPage+1})" ${productsPage===totalPages?'disabled':''}>›</button>`;
+    pager.innerHTML = html;
+  }
+}
+
+function goPage(n) {
+  productsPage = n;
+  renderProducts();
+  document.querySelector('.tbl-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function badgeHtml(b) {
+  if (b==='hit') return '<span class="col-badge b-hit">🔥 Хит</span>';
+  if (b==='new') return '<span class="col-badge b-new">✨ Новинка</span>';
+  if (b==='sale') return '<span class="col-badge b-sale">🏷️ Скидка</span>';
+  return '<span style="color:#c0d0c5;">—</span>';
+}
+
+function openProductModal() {
+  editingSku = null;
+  document.getElementById('prodModalTitle').textContent = 'Новый товар';
+  document.getElementById('prodName').value = '';
+  document.getElementById('prodSku').value = '';
+  document.getElementById('prodPrice').value = '';
+  document.getElementById('prodCat').value = 'Бытовая химия';
+  document.getElementById('prodBadge').value = '';
+  document.getElementById('prodImg').value = '';
+  document.getElementById('prodDesc').value = '';
+  document.getElementById('productModal').classList.add('open');
+  document.getElementById('prodName').focus();
+}
+
+function editProduct(sku) {
+  const p = getProducts().find(x => x.sku === sku);
+  if (!p) return;
+  editingSku = sku;
+  document.getElementById('prodModalTitle').textContent = 'Редактирование';
+  document.getElementById('prodName').value = p.name;
+  document.getElementById('prodSku').value = p.sku;
+  document.getElementById('prodPrice').value = p.price;
+  document.getElementById('prodCat').value = p.cat;
+  document.getElementById('prodBadge').value = p.badge || '';
+  document.getElementById('prodImg').value = p.img || '';
+  document.getElementById('prodDesc').value = p.desc || '';
+  document.getElementById('productModal').classList.add('open');
+}
+
+function closeProductModal() {
+  document.getElementById('productModal').classList.remove('open');
+}
+
+function saveProduct() {
+  const name = document.getElementById('prodName').value.trim();
+  const sku = document.getElementById('prodSku').value.trim();
+  const price = parseFloat(document.getElementById('prodPrice').value);
+  const cat = document.getElementById('prodCat').value;
+  const badge = document.getElementById('prodBadge').value;
+  const img = document.getElementById('prodImg').value.trim();
+  const desc = document.getElementById('prodDesc').value.trim();
+
+  if (!name || !sku || !price) {
+    alert('Заполните название, артикул и цену');
+    return;
+  }
+
+  let products = getProducts();
+  const existing = products.find(p => p.sku === sku);
+
+  if (editingSku) {
+    // Редактирование
+    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, cat, badge: badge || undefined, img, desc} : p);
+  } else {
+    // Добавление
+    if (existing) {
+      alert('Товар с таким артикулом уже существует!');
+      return;
+    }
+    products.unshift({name, sku, price, cat, badge: badge || undefined, img, desc, emoji:'📦'});
+  }
+
+  setProducts(products);
+  closeProductModal();
+  renderProducts();
+  updateCounts();
+  toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
+}
+
+function deleteProduct(sku) {
+  if (!confirm('Удалить товар? Это действие необратимо.')) return;
+  setProducts(getProducts().filter(p => p.sku !== sku));
+  renderProducts();
+  updateCounts();
+  toast('🗑️ Товар удалён');
+}
+
+function resetProducts() {
+  if (!confirm('Восстановить стандартный список товаров? Все ваши изменения будут потеряны.')) return;
+  localStorage.removeItem(STORAGE_PRODUCTS);
+  location.reload();
+}
+
+// ===== ЗАКАЗЫ =====
+function renderOrders() {
+  const orders = getOrders().slice().reverse();
+  const list = document.getElementById('ordersList');
+  if (orders.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">Заказов пока нет</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
+  } else {
+    list.innerHTML = orders.map(o => orderCardHtml(o)).join('');
+  }
+}
+
+function orderCardHtml(o) {
+  const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
+  return `
+    <div class="order-card">
+      <div class="order-head">
+        <div>
+          <div class="order-num">#${o.num}</div>
+          <div class="order-date">${o.date}</div>
+        </div>
+        <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
+        <div class="order-total">${o.total.toLocaleString('ru-RU')} ₽</div>
+      </div>
+      <div class="order-body">
+        <div class="order-section">
+          <div class="order-label">Клиент</div>
+          <div class="order-value">
+            <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
+            📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+          </div>
+        </div>
+        <div class="order-section">
+          <div class="order-label">Доставка</div>
+          <div class="order-value">
+            ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
+            ${o.address}
+          </div>
+        </div>
+      </div>
+      ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
+      ${o.comment ? `<div style="margin-top:14px;padding:12px 14px;background:#fff8e8;border-radius:10px;font-size:13px;"><strong>💬 Комментарий:</strong> ${o.comment}</div>` : ''}
+      <div class="order-actions">
+        ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
+        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
+      </div>
+    </div>
+  `;
+}
+
+function completeOrder(num) {
+  const orders = getOrders().map(o => o.num === num ? {...o, status: 'done'} : o);
+  localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
+  renderOrders();
+  renderDashboard();
+  updateCounts();
+}
+
+function reopenOrder(num) {
+  const orders = getOrders().map(o => o.num === num ? {...o, status: 'new'} : o);
+  localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
+  renderOrders();
+  renderDashboard();
+  updateCounts();
+}
+
+function deleteOrder(num) {
+  if (!confirm('Удалить заказ #' + num + '?')) return;
+  localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => o.num !== num)));
+  renderOrders();
+  renderDashboard();
+  updateCounts();
+}
+
+function clearOrders() {
+  if (!confirm('Удалить ВСЕ заказы? Это действие необратимо.')) return;
+  localStorage.removeItem(STORAGE_ORDERS);
+  renderOrders();
+  updateCounts();
+}
+
+// ===== ЗАЯВКИ =====
+function renderContacts() {
+  const list = getContacts().slice().reverse();
+  const c = document.getElementById('contactsList');
+  if (list.length === 0) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">✉️</div><div class="empty-title">Заявок пока нет</div><div>Сообщения с формы обратной связи появятся здесь</div></div>';
+  } else {
+    c.innerHTML = list.map((m, idx) => `
+      <div class="order-card">
+        <div class="order-head">
+          <div>
+            <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:16px;">${m.name}</div>
+            <div class="order-date">${m.date}</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="deleteContact(${list.length - 1 - idx})">🗑️</button>
+        </div>
+        <div class="order-body">
+          <div class="order-section">
+            <div class="order-label">Контакты</div>
+            <div class="order-value">📞 <a href="tel:${m.phone}" style="color:var(--green-dark);">${m.phone}</a></div>
+          </div>
+          <div class="order-section">
+            <div class="order-label">Сообщение</div>
+            <div class="order-value">${m.message}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function deleteContact(idx) {
+  if (!confirm('Удалить заявку?')) return;
+  const all = getContacts();
+  all.splice(idx, 1);
+  localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(all));
+  renderContacts();
+  updateCounts();
+}
+
+function clearContacts() {
+  if (!confirm('Удалить ВСЕ заявки?')) return;
+  localStorage.removeItem(STORAGE_CONTACTS);
+  renderContacts();
+  updateCounts();
+}
+
+// ===== АКЦИИ =====
+let editingPromo = null;
+
+function renderPromotions() {
+  const promos = getPromos();
+  const c = document.getElementById('promotionsList');
+  if (promos.length === 0) {
+    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">🔥</div><div class="empty-title">Акций пока нет</div><div>Создайте первую акцию для привлечения клиентов</div></div>';
+  } else {
+    c.innerHTML = promos.map((p, i) => `
+      <div class="promo-card">
+        <div class="promo-top ${p.color}">
+          ${p.disc ? `<div class="promo-disc" style="color:${p.color==='green'?'#1aab58':p.color==='accent'?'#FF6B35':'#8ab800'}">${p.disc}</div>` : ''}
+          ${p.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">${p.badge}</div>` : ''}
+          <div class="promo-name">${p.name}</div>
+          <div class="promo-desc">${p.desc}</div>
+        </div>
+        <div class="promo-bottom">
+          <span class="promo-validity">${p.valid || 'Бессрочно'}</span>
+          <div class="promo-actions">
+            <button class="btn btn-secondary btn-sm" onclick="editPromo(${i})">Изм.</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function openPromoModal() {
+  editingPromo = null;
+  document.getElementById('promoModalTitle').textContent = 'Новая акция';
+  document.getElementById('promoName').value = '';
+  document.getElementById('promoDisc').value = '';
+  document.getElementById('promoColor').value = 'green';
+  document.getElementById('promoBadge').value = '';
+  document.getElementById('promoDesc').value = '';
+  document.getElementById('promoValid').value = '';
+  document.getElementById('promoModal').classList.add('open');
+}
+
+function editPromo(idx) {
+  const p = getPromos()[idx];
+  editingPromo = idx;
+  document.getElementById('promoModalTitle').textContent = 'Редактирование акции';
+  document.getElementById('promoName').value = p.name;
+  document.getElementById('promoDisc').value = p.disc || '';
+  document.getElementById('promoColor').value = p.color;
+  document.getElementById('promoBadge').value = p.badge || '';
+  document.getElementById('promoDesc').value = p.desc;
+  document.getElementById('promoValid').value = p.valid || '';
+  document.getElementById('promoModal').classList.add('open');
+}
+
+function closePromoModal() {
+  document.getElementById('promoModal').classList.remove('open');
+}
+
+function savePromo() {
+  const promo = {
+    name: document.getElementById('promoName').value.trim(),
+    disc: document.getElementById('promoDisc').value.trim(),
+    color: document.getElementById('promoColor').value,
+    badge: document.getElementById('promoBadge').value.trim(),
+    desc: document.getElementById('promoDesc').value.trim(),
+    valid: document.getElementById('promoValid').value.trim(),
+  };
+
+  if (!promo.name || !promo.desc) {
+    alert('Заполните название и описание');
+    return;
+  }
+
+  const promos = getPromos();
+  if (editingPromo !== null) {
+    promos[editingPromo] = promo;
+  } else {
+    promos.push(promo);
+  }
+  setPromos(promos);
+  closePromoModal();
+  renderPromotions();
+  updateCounts();
+  toast(editingPromo !== null ? '✓ Акция обновлена' : '✓ Акция создана');
+}
+
+function deletePromo(idx) {
+  if (!confirm('Удалить акцию?')) return;
+  const promos = getPromos();
+  promos.splice(idx, 1);
+  setPromos(promos);
+  renderPromotions();
+  updateCounts();
+}
+
+// ===== НАСТРОЙКИ =====
+function loadSettings() {
+  const s = JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || '{}');
+  document.getElementById('setPhone1').value = s.phone1 || '8 (812) 922-86-77';
+  document.getElementById('setPhone2').value = s.phone2 || '+7 911 236-82-77';
+  document.getElementById('setEmail').value = s.email || '9112368277@mail.ru';
+  document.getElementById('setAddress').value = s.address || 'Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8';
+  document.getElementById('setMinOrder').value = s.minOrder || 5000;
+  document.getElementById('setFreeDelivery').value = s.freeDelivery || 0;
+  document.getElementById('setDeliveryCost').value = s.deliveryCost || 0;
+}
+
+function saveSettings() {
+  const s = {
+    phone1: document.getElementById('setPhone1').value,
+    phone2: document.getElementById('setPhone2').value,
+    email: document.getElementById('setEmail').value,
+    address: document.getElementById('setAddress').value,
+    minOrder: parseInt(document.getElementById('setMinOrder').value) || 5000,
+    freeDelivery: parseInt(document.getElementById('setFreeDelivery').value) || 0,
+    deliveryCost: parseInt(document.getElementById('setDeliveryCost').value) || 0,
+  };
+  localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(s));
+  toast('✓ Настройки сохранены');
+}
+
+// ===== TOAST =====
+function toast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#0f1a14;color:white;padding:14px 24px;border-radius:30px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s;box-shadow:0 10px 40px rgba(0,0,0,0.3);';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.style.opacity = '1', 10);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2200);
+}
+
+function plural(n, forms) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return forms[2];
+  if (m10 === 1) return forms[0];
+  if (m10 >= 2 && m10 <= 4) return forms[1];
+  return forms[2];
+}
+
+// При первом запуске — загружаем настройки
+loadSettings();
+
+// Авто-вход если сессия активна (после возврата на админку)
+if (sessionStorage.getItem('klever_admin') === '1') {
+  showAdmin();
+}
+</script>
+</body>
+</html>

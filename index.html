@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clever — Хозтовары и Бытовая химия</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2ECC71;
+    --green-dark: #1aab58;
+    --green-light: #a8f0c6;
+    --lime: #C8F135;
+    --dark: #0f1a14;
+    --dark2: #162119;
+    --gray: #f2f7f4;
+    --text: #1a2e22;
+    --white: #ffffff;
+    --accent: #FF6B35;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Onest', sans-serif;
+    background: var(--white);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--dark);
+    padding: 0 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 70px;
+    border-bottom: 2px solid var(--green);
+  }
+
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900; font-size: 24px;
+    color: var(--white);
+    letter-spacing: -1px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo span { color: var(--lime); }
+
+  nav { display: flex; gap: 32px; align-items: center; }
+  nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: color .2s;
+  }
+  nav a:hover { color: var(--lime); }
+
+  .header-actions { display: flex; gap: 12px; align-items: center; }
+
+  .btn-phone {
+    background: var(--green);
+    color: var(--dark);
+    padding: 10px 20px;
+    border-radius: 40px;
+    font-weight: 700; font-size: 14px;
+    text-decoration: none;
+    transition: background .2s, transform .15s;
+    white-space: nowrap;
+  }
+  .btn-phone:hover { background: var(--lime); transform: scale(1.04); }
+
+  .cart-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px;
+    transition: background .2s;
+  }
+  .cart-btn:hover { background: rgba(255,255,255,0.15); }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--dark);
+    padding: 80px 40px 90px;
+    display: grid; grid-template-columns: 1fr 480px;
+    gap: 60px; align-items: center;
+    min-height: 520px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(46,204,113,0.12), transparent);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(200,241,53,0.12);
+    border: 1px solid var(--lime);
+    color: var(--lime);
+    padding: 6px 16px; border-radius: 40px;
+    font-size: 12px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    animation: fadeUp .6s ease both;
+  }
+
+  .hero h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(36px, 4.5vw, 60px);
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    animation: fadeUp .7s .1s ease both;
+  }
+  .hero h1 em { color: var(--green); font-style: normal; }
+
+  .hero p {
+    color: rgba(255,255,255,0.6);
+    font-size: 17px; line-height: 1.6;
+    max-width: 480px;
+    margin-bottom: 36px;
+    animation: fadeUp .7s .2s ease both;
+  }
+
+  .hero-btns {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    animation: fadeUp .7s .3s ease both;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: var(--dark);
+    padding: 16px 32px; border-radius: 50px;
+    font-weight: 700; font-size: 16px;
+    text-decoration: none;
+    transition: all .2s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--lime); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(46,204,113,0.35); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--white);
+    padding: 16px 32px; border-radius: 50px;
+    font-weight: 600; font-size: 16px;
+    text-decoration: none;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    transition: all .2s;
+    display: inline-block;
+  }
+  .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,0.07); }
+
+  /* hero visual */
+  .hero-visual {
+    position: relative; height: 360px;
+    animation: fadeUp .8s .15s ease both;
+  }
+
+  .hero-card {
+    background: var(--dark2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 28px;
+    position: absolute;
+  }
+
+  .hero-card.main-card {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: space-between;
+    background: linear-gradient(135deg, #162119, #0d1a10);
+  }
+
+  .card-emoji { font-size: 48px; }
+  .card-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px; }
+  .card-sub { color: rgba(255,255,255,0.45); font-size: 13px; }
+  .card-price {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 28px; font-weight: 900;
+    color: var(--lime);
+  }
+  .card-badge {
+    background: var(--green);
+    color: var(--dark);
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    display: inline-block; margin-top: 8px;
+  }
+
+  .float-chip {
+    position: absolute;
+    background: var(--lime);
+    color: var(--dark);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-weight: 700; font-size: 13px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    animation: float 3s ease-in-out infinite;
+  }
+  .float-chip.c1 { top: -14px; right: 20px; animation-delay: 0s; }
+  .float-chip.c2 { bottom: 20px; left: -20px; animation-delay: 1.2s; background: var(--accent); color: white; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* ── TICKER ── */
+  .ticker {
+    background: var(--green);
+    padding: 14px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-track {
+    display: inline-flex; gap: 40px;
+    animation: ticker 25s linear infinite;
+  }
+  .ticker-item {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--dark);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .ticker-dot { width: 6px; height: 6px; background: var(--dark); border-radius: 50%; opacity: .5; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ── STATS ── */
+  .stats {
+    background: var(--gray);
+    padding: 48px 40px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+  }
+  .stat {
+    background: white;
+    padding: 32px 28px;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 40px; font-weight: 900;
+    color: var(--green-dark);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-label { color: #6b8a74; font-size: 14px; font-weight: 500; }
+
+  /* ── CATEGORIES ── */
+  .categories { padding: 80px 40px; }
+
+  .section-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 48px;
+  }
+
+  .section-tag {
+    display: inline-block;
+    background: var(--green-light);
+    color: var(--green-dark);
+    padding: 5px 14px; border-radius: 30px;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+  }
+
+  .see-all {
+    color: var(--green-dark);
+    font-weight: 600; font-size: 14px;
+    text-decoration: none;
+    display: flex; align-items: center; gap: 6px;
+    transition: gap .2s;
+  }
+  .see-all:hover { gap: 10px; }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .cat-card {
+    border-radius: 20px;
+    padding: 32px 24px;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+    position: relative; overflow: hidden;
+    text-decoration: none;
+    display: block;
+    min-height: 200px;
+  }
+  .cat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
+
+  .cat-card.c1 { background: linear-gradient(135deg, #e8faf0, #c8f5dc); }
+  .cat-card.c2 { background: linear-gradient(135deg, #fff8e6, #ffe9a8); }
+  .cat-card.c3 { background: linear-gradient(135deg, #e8f4ff, #b8d8ff); }
+  .cat-card.c4 { background: linear-gradient(135deg, #fff0f0, #ffd0d0); }
+  .cat-card.c5 { background: linear-gradient(135deg, #f5e8ff, #ddb8ff); }
+  .cat-card.c6 { background: linear-gradient(135deg, #e8fff8, #b8f0e4); }
+  .cat-card.c7 { background: linear-gradient(135deg, #fff5e8, #ffd8a8); }
+
+  .cat-icon { font-size: 44px; margin-bottom: 16px; display: block; }
+  .cat-name {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 15px; font-weight: 700;
+    color: var(--text);
+    line-height: 1.3; margin-bottom: 8px;
+  }
+  .cat-count {
+    font-size: 13px; color: #6b8a74; font-weight: 500;
+  }
+
+  .cat-arrow {
+    position: absolute; bottom: 24px; right: 24px;
+    width: 36px; height: 36px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: background .2s, transform .2s;
+  }
+  .cat-card:hover .cat-arrow { background: var(--green); transform: rotate(-45deg); }
+
+  /* ── FEATURED PRODUCTS ── */
+  .products { padding: 0 40px 80px; }
+
+  .prod-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .prod-card {
+    background: var(--gray);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    cursor: pointer;
+  }
+  .prod-card:hover { transform: translateY(-4px); box-shadow: 0 16px 50px rgba(0,0,0,0.1); }
+
+  .prod-img {
+    background: white;
+    height: 180px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px;
+    position: relative;
+  }
+
+  .prod-badge {
+    position: absolute; top: 12px; left: 12px;
+    background: var(--accent);
+    color: white;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+
+  .prod-info { padding: 20px; }
+  .prod-name {
+    font-weight: 600; font-size: 15px;
+    margin-bottom: 4px; color: var(--text);
+    line-height: 1.4;
+  }
+  .prod-sku { font-size: 12px; color: #8aaa94; margin-bottom: 14px; }
+  .prod-footer { display: flex; align-items: center; justify-content: space-between; }
+  .prod-price {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 20px; font-weight: 900;
+    color: var(--green-dark);
+  }
+  .prod-price span { font-size: 13px; color: #8aaa94; font-weight: 400; font-family: 'Onest', sans-serif; }
+
+  .btn-add {
+    width: 40px; height: 40px;
+    background: var(--green);
+    border: none; border-radius: 50%;
+    font-size: 20px; color: var(--dark);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    transition: background .2s, transform .15s;
+  }
+  .btn-add:hover { background: var(--lime); transform: scale(1.1); }
+
+  /* ── WHY US ── */
+  .why {
+    background: var(--dark);
+    padding: 80px 40px;
+    position: relative; overflow: hidden;
+  }
+  .why::before {
+    content: '';
+    position: absolute; top: -60px; right: -60px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(46,204,113,0.1), transparent 70%);
+    pointer-events: none;
+  }
+
+  .why .section-title { color: white; }
+  .why .section-tag { background: rgba(200,241,53,0.15); color: var(--lime); }
+
+  .why-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 20px; margin-top: 48px;
+  }
+
+  .why-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 32px 24px;
+    transition: border-color .2s, background .2s;
+  }
+  .why-card:hover {
+    border-color: rgba(46,204,113,0.4);
+    background: rgba(46,204,113,0.05);
+  }
+
+  .why-icon {
+    width: 56px; height: 56px;
+    background: rgba(46,204,113,0.12);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin-bottom: 20px;
+  }
+  .why-title { font-weight: 700; font-size: 17px; color: white; margin-bottom: 10px; }
+  .why-text { color: rgba(255,255,255,0.5); font-size: 14px; line-height: 1.6; }
+
+  /* ── CTA BANNER ── */
+  .cta-banner {
+    margin: 80px 40px;
+    background: var(--green);
+    border-radius: 28px;
+    padding: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 40px;
+    position: relative; overflow: hidden;
+  }
+  .cta-banner::before {
+    content: '🍀';
+    position: absolute; right: 200px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 180px; opacity: .12;
+    pointer-events: none;
+  }
+
+  .cta-content {}
+  .cta-eyebrow {
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    color: rgba(0,0,0,0.5); margin-bottom: 12px;
+  }
+  .cta-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(24px, 3vw, 38px);
+    font-weight: 900;
+    color: var(--dark);
+    line-height: 1.15; letter-spacing: -1.5px;
+    max-width: 500px;
+    margin-bottom: 8px;
+  }
+  .cta-sub { color: rgba(0,0,0,0.55); font-size: 16px; }
+
+  .btn-dark {
+    background: var(--dark);
+    color: white;
+    padding: 18px 36px; border-radius: 50px;
+    font-weight: 700; font-size: 16px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all .2s;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .btn-dark:hover { background: #0a1209; transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--dark2);
+    padding: 60px 40px 30px;
+    border-top: 2px solid rgba(46,204,113,0.2);
+  }
+
+  .footer-grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 48px; margin-bottom: 48px;
+  }
+
+  .footer-logo {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900; font-size: 22px;
+    color: white; margin-bottom: 14px;
+    letter-spacing: -1px;
+  }
+  .footer-logo span { color: var(--lime); }
+  .footer-desc { color: rgba(255,255,255,0.4); font-size: 14px; line-height: 1.7; margin-bottom: 24px; max-width: 260px; }
+
+  .footer-contact a {
+    color: var(--green);
+    font-weight: 600; font-size: 16px;
+    text-decoration: none; display: block; margin-bottom: 6px;
+  }
+  .footer-contact .addr { color: rgba(255,255,255,0.35); font-size: 13px; margin-top: 8px; }
+
+  .footer-col h4 {
+    font-weight: 700; font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  .footer-col ul { list-style: none; }
+  .footer-col ul li { margin-bottom: 10px; }
+  .footer-col ul li a {
+    color: rgba(255,255,255,0.6);
+    text-decoration: none; font-size: 14px;
+    transition: color .2s;
+  }
+  .footer-col ul li a:hover { color: var(--green); }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-bottom p { color: rgba(255,255,255,0.25); font-size: 13px; }
+
+  .social-links { display: flex; gap: 10px; }
+  .social-link {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; transition: background .2s;
+    text-decoration: none;
+  }
+  .social-link:hover { background: var(--green); }
+
+  /* ── HERO PRODUCT CARDS ── */
+  .hero-prod-card {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 14px 16px;
+    text-decoration: none; color: white;
+    transition: background .2s, border-color .2s, transform .2s;
+    margin-bottom: 12px;
+  }
+  .hero-prod-card:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(46,204,113,0.4);
+    transform: translateX(4px);
+  }
+  .hero-prod-img {
+    width: 52px; height: 52px; flex-shrink: 0;
+    background: white; border-radius: 10px;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  .hero-prod-img img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+  .hero-prod-info { flex: 1; min-width: 0; }
+  .hero-prod-name { font-weight: 600; font-size: 14px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hero-prod-cat { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+  .hero-prod-price {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 16px; font-weight: 900;
+    color: var(--lime); flex-shrink: 0;
+  }
+
+  
+
+  /* animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    header { padding: 0 20px; }
+    nav { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 50px 20px; }
+    .hero-visual { display: none; }
+    .stats { grid-template-columns: repeat(2, 1fr); padding: 24px 20px; }
+    .cat-grid { grid-template-columns: repeat(2, 1fr); padding: 0 20px; }
+    .categories { padding: 50px 20px; }
+    .prod-grid { grid-template-columns: repeat(2, 1fr); padding: 0; }
+    .products { padding: 0 20px 50px; }
+    .why-grid { grid-template-columns: repeat(2, 1fr); }
+    .why { padding: 50px 20px; }
+    .cta-banner { flex-direction: column; padding: 40px 28px; margin: 40px 20px; }
+    .cta-banner::before { display: none; }
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+    footer { padding: 40px 20px 24px; }
+  }
+</style>
+<style id="cart-inline-styles">
+.cart-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:background .2s,transform .15s;flex-shrink:0;padding:0;}
+.cart-btn:hover{background:rgba(255,255,255,0.15);transform:scale(1.05);}
+.cart-badge{position:absolute;top:-4px;right:-4px;background:#FF6B35;color:white;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid #0f1a14;font-family:'Unbounded',sans-serif;}
+.header-actions{display:flex;gap:12px;align-items:center;}
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;backdrop-filter:blur(2px);}
+.cart-overlay.open{opacity:1;visibility:visible;}
+.cart-panel{position:fixed;right:0;top:0;bottom:0;width:440px;max-width:100%;background:white;z-index:201;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,0.15);}
+.cart-panel.open{transform:translateX(0);}
+.cart-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px;border-bottom:1px solid #e0ece4;background:#0f1a14;color:white;}
+.cart-header h3{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;display:flex;align-items:center;gap:10px;}
+.cart-close{width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.cart-close:hover{background:rgba(255,255,255,0.15);}
+.cart-items{flex:1;overflow-y:auto;padding:20px 28px;}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px 20px;}
+.cart-item{display:grid;grid-template-columns:64px 1fr auto;gap:14px;padding:16px 0;border-bottom:1px solid #e8f4ec;align-items:flex-start;}
+.cart-item:last-child{border-bottom:none;}
+.cart-item-img{width:64px;height:64px;background:#f2f7f4;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.cart-item-img img{width:100%;height:100%;object-fit:contain;padding:6px;}
+.cart-item-name{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:4px;color:#1a2e22;}
+.cart-item-sku{font-size:12px;color:#8aaa94;margin-bottom:12px;}
+.cart-item-controls{display:flex;align-items:center;gap:8px;}
+.qty-btn{width:28px;height:28px;background:#f2f7f4;border:1px solid #d0e8d8;border-radius:8px;font-size:16px;font-weight:700;color:#1aab58;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{background:#e0ece4;}
+.qty-val{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;min-width:24px;text-align:center;}
+.remove-btn{margin-left:8px;background:none;border:none;color:#FF3B6B;font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.remove-btn:hover{background:#ffe8ee;}
+.cart-item-price{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:#1aab58;white-space:nowrap;}
+.cart-footer{padding:20px 28px;border-top:1px solid #e0ece4;background:#f2f7f4;}
+.cart-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:16px;}
+.cart-total-price{font-family:'Unbounded',sans-serif;font-size:24px;font-weight:900;color:#1aab58;}
+.btn-checkout{width:100%;padding:16px;background:#2ECC71;border:none;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:#0f1a14;cursor:pointer;transition:all .2s;}
+.btn-checkout:hover{background:#C8F135;transform:translateY(-2px);}
+.cart-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f1a14;color:white;padding:14px 24px;border-radius:30px;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:300;opacity:0;transition:opacity .3s,transform .3s;display:flex;align-items:center;gap:10px;max-width:90%;}
+.cart-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+
+</head>
+<body>
+<style id="preloader-style">
+#klever-preloader{position:fixed;inset:0;background:#0f1a14;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#klever-preloader.hidden{opacity:0;pointer-events:none;}
+#klever-preloader .pre-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:42px;color:white;letter-spacing:-1.5px;display:flex;align-items:center;gap:14px;margin-bottom:32px;}
+#klever-preloader .pre-logo .leaf{font-size:48px;animation:preSpin 1.5s ease-in-out infinite;display:inline-block;}
+#klever-preloader .pre-logo span{color:#C8F135;}
+#klever-preloader .pre-bar{width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+#klever-preloader .pre-bar::after{content:'';display:block;width:40%;height:100%;background:linear-gradient(90deg, transparent, #2ECC71, transparent);animation:preLoad 1.2s ease-in-out infinite;}
+@keyframes preSpin{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+@keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
+</style>
+<div id="klever-preloader">
+  <div class="pre-logo"><span class="leaf">🍀</span> <span>Clever</span></div>
+  <div class="pre-bar"></div>
+</div>
+<script id="preloader-script">
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var p = document.getElementById('klever-preloader');
+    if (p) {
+      p.classList.add('hidden');
+      setTimeout(function(){ p.remove(); }, 400);
+    }
+  }, 200);
+});
+// Fallback - если что-то застряло, убираем через 5 секунд
+setTimeout(function(){
+  var p = document.getElementById('klever-preloader');
+  if (p) { p.classList.add('hidden'); setTimeout(function(){ p.remove(); }, 400); }
+}, 5000);
+</script>
+
+<!-- HEADER -->
+<header>
+  <a href="index.html" class="logo" style="text-decoration:none;">🍀 <span>Clever</span></a>
+  <nav>
+    <a href="catalog.html">Каталог</a>
+    <a href="sales.html">Акции</a>
+    <a href="wholesale.html">Оптовикам</a>
+    <a href="delivery.html">Доставка</a>
+    <a href="about.html">О нас</a>
+    <a href="contacts.html">Контакты</a>
+  </nav>
+  <div class="header-actions">
+    <a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+    <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a>
+    <button class="cart-btn" onclick="openCart()">
+      🛒
+      <span class="cart-badge" id="cartBadge" style="display:none;"></span>
+    </button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+
+  
+
+  <div class="hero-content">
+    <div class="hero-tag">⚡ Быстрая доставка по СПб</div>
+    <h1>Clever — <em>товары для HoReCa</em></h1>
+    <div class="hero-btns">
+      <a href="catalog.html" class="btn-primary">Смотреть каталог →</a>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <a href="product.html?sku=0070" class="hero-prod-card" style="animation: fadeUp .7s .1s ease both;">
+      <div class="hero-prod-img" data-emoji="🫙">
+        <img src="https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg" alt="Белизна">
+      </div>
+      <div class="hero-prod-info">
+        <div class="hero-prod-name">Белизна 1 л</div>
+        <div class="hero-prod-cat">Бытовая химия · Арт. 0070</div>
+      </div>
+      <div class="hero-prod-price">35 ₽</div>
+    </a>
+
+    <a href="product.html?sku=0058" class="hero-prod-card" style="animation: fadeUp .7s .2s ease both;">
+      <div class="hero-prod-img" data-emoji="💧">
+        <img src="https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg" alt="Unicum">
+      </div>
+      <div class="hero-prod-info">
+        <div class="hero-prod-name">Жироудалитель Unicum Gold 500 мл</div>
+        <div class="hero-prod-cat">Бытовая химия · Арт. 0058</div>
+      </div>
+      <div class="hero-prod-price">275 ₽</div>
+    </a>
+
+    <a href="product.html?sku=0756" class="hero-prod-card" style="animation: fadeUp .7s .3s ease both;">
+      <div class="hero-prod-img" data-emoji="🧹">
+        <img src="https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg" alt="Тряпка">
+      </div>
+      <div class="hero-prod-info">
+        <div class="hero-prod-name">Тряпка для пола 50×80 см</div>
+        <div class="hero-prod-cat">Хозтовары · Арт. 0756</div>
+      </div>
+      <div class="hero-prod-price">90 ₽</div>
+    </a>
+
+    <div class="float-chip c1">🚚 Доставка за 1 день</div>
+    <div class="float-chip c2">🔥 Акции каждую неделю</div>
+  </div>
+</section>
+
+
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track">
+    <span class="ticker-item">Бумажная продукция <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Одноразовая посуда <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Бытовая химия <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Средства защиты <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Упаковка <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Хозтовары <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Канцелярия <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Оптовые скидки <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Бумажная продукция <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Одноразовая посуда <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Бытовая химия <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Средства защиты <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Упаковка <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Хозтовары <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Канцелярия <span class="ticker-dot"></span></span>
+    <span class="ticker-item">Оптовые скидки <span class="ticker-dot"></span></span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">272</div>
+    <div class="stat-label">Товаров в каталоге</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">7</div>
+    <div class="stat-label">Категорий товаров</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">1 день</div>
+    <div class="stat-label">Срок доставки по СПб</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">Гарантия обмена и возврата</div>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<section class="categories">
+  <div class="section-header">
+    <div>
+      <div class="section-tag">Каталог</div>
+      <div class="section-title">Наши категории</div>
+    </div>
+    <a href="catalog.html" class="see-all">Все категории →</a>
+  </div>
+  <div class="cat-grid">
+    <a href="catalog.html?cat=бумажная" class="cat-card c1">
+      <span class="cat-icon">🧻</span>
+      <div class="cat-name">Бумажная продукция</div>
+      <div class="cat-count">26 товаров</div>
+      <div class="cat-arrow">→</div>
+    </a>
+    <a href="catalog.html?cat=одноразовая" class="cat-card c2">
+      <span class="cat-icon">🥡</span>
+      <div class="cat-name">Одноразовая посуда</div>
+      <div class="cat-count">125 товаров</div>
+      <div class="cat-arrow">→</div>
+    </a>
+    <a href="catalog.html?cat=бытовая" class="cat-card c3">
+      <span class="cat-icon">🧴</span>
+      <div class="cat-name">Бытовая химия</div>
+      <div class="cat-count">33 товара</div>
+      <div class="cat-arrow">→</div>
+    </a>
+    <a href="catalog.html?cat=защита" class="cat-card c4">
+      <span class="cat-icon">🧤</span>
+      <div class="cat-name">Средства защиты</div>
+      <div class="cat-count">27 товаров</div>
+      <div class="cat-arrow">→</div>
+    </a>
+    <a href="catalog.html?cat=упаковка" class="cat-card c5">
+      <span class="cat-icon">📦</span>
+      <div class="cat-name">Упаковка</div>
+      <div class="cat-count">27 товаров</div>
+      <div class="cat-arrow">→</div>
+    </a>
+    <a href="catalog.html?cat=хозтовары" class="cat-card c6">
+      <span class="cat-icon">🧹</span>
+      <div class="cat-name">Хозтовары</div>
+      <div class="cat-count">26 товаров</div>
+      <div class="cat-arrow">→</div>
+    </a>
+    <a href="catalog.html?cat=канцелярия" class="cat-card c7">
+      <span class="cat-icon">📎</span>
+      <div class="cat-name">Канцелярия</div>
+      <div class="cat-count">8 товаров</div>
+      <div class="cat-arrow">→</div>
+    </a>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="products">
+  <div class="section-header">
+    <div>
+      <div class="section-tag">Популярное</div>
+      <div class="section-title">Хиты продаж</div>
+    </div>
+    <a href="catalog.html" class="see-all">Все товары →</a>
+  </div>
+  <div class="prod-grid">
+    <a href="product.html?sku=0070" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
+      <div class="prod-img" style="background:white;">
+        <img src="https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg" alt="Белизна 1 л" style="width:100%;height:100%;object-fit:contain;padding:16px;">
+        <div class="prod-badge">ХИТ</div>
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">Белизна 1 л</div>
+        <div class="prod-sku">Арт. 0070</div>
+        <div class="prod-footer">
+          <div class="prod-price">35 ₽ <span>/ шт</span></div>
+          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg'})">+</button>
+        </div>
+      </div>
+    </a>
+    <a href="product.html?sku=0238" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
+      <div class="prod-img" style="background:white;">
+        <img src="https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg" alt="Белизна гель" style="width:100%;height:100%;object-fit:contain;padding:16px;">
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">Белизна гель 1 л</div>
+        <div class="prod-sku">Арт. 0238</div>
+        <div class="prod-footer">
+          <div class="prod-price">80 ₽ <span>/ шт</span></div>
+          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Белизна гель 1 л',sku:'0238',price:80,img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg'})">+</button>
+        </div>
+      </div>
+    </a>
+    <a href="product.html?sku=0756" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
+      <div class="prod-img" style="background:white;">
+        <img src="https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg" alt="Тряпка для пола" style="width:100%;height:100%;object-fit:contain;padding:16px;">
+        <div class="prod-badge" style="background:#2ECC71;color:#0f1a14">НОВИНКА</div>
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">Тряпка для пола 50×80 см</div>
+        <div class="prod-sku">Арт. 0756</div>
+        <div class="prod-footer">
+          <div class="prod-price">90 ₽ <span>/ шт</span></div>
+          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Тряпка для пола 50×80 см',sku:'0756',price:90,img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'})">+</button>
+        </div>
+      </div>
+    </a>
+    <a href="product.html?sku=0058" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
+      <div class="prod-img" style="background:white;">
+        <img src="https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg" alt="Unicum Gold" style="width:100%;height:100%;object-fit:contain;padding:16px;">
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">Жироудалитель Unicum Gold 500 мл</div>
+        <div class="prod-sku">Арт. 0058</div>
+        <div class="prod-footer">
+          <div class="prod-price">275 ₽ <span>/ шт</span></div>
+          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg'})">+</button>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- WHY US -->
+<section class="why">
+  <div class="section-tag">Наши преимущества</div>
+  <div class="section-title">Почему выбирают нас</div>
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon">💰</div>
+      <div class="why-title">Низкие цены</div>
+      <div class="why-text">Работаем напрямую с производителями — без посредников и наценок.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">✅</div>
+      <div class="why-title">Качественный товар</div>
+      <div class="why-text">Каждая позиция проходит контроль качества перед попаданием на склад.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🚚</div>
+      <div class="why-title">Оперативная доставка</div>
+      <div class="why-text">Доставляем по Санкт-Петербургу в течение одного рабочего дня.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🔄</div>
+      <div class="why-title">Возврат и обмен</div>
+      <div class="why-text">Гарантируем обмен товара и полный возврат средств без лишних вопросов.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<div class="cta-banner">
+  <div class="cta-content">
+    <div class="cta-eyebrow">Специально для бизнеса</div>
+    <div class="cta-title">Оптовые закупки<br>— выгоднее вместе</div>
+    <div class="cta-sub">Индивидуальные условия, счета для юрлиц, персональный менеджер</div>
+  </div>
+  <a href="wholesale.html" class="btn-dark">Стать оптовым покупателем →</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">🍀 <span>Clever</span></div>
+      <div class="footer-desc">Производство, продажа и доставка хозяйственных товаров и бытовой химии в Санкт-Петербурге.</div>
+      <div class="footer-contact">
+        <a href="tel:+78129228677">8 (812) 922-86-77</a>
+        <a href="tel:+79112368277">+7 911 236-82-77</a>
+        <div class="addr">Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8</div>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Каталог</h4>
+      <ul>
+        <li><a href="catalog.html">Бумажная продукция</a></li>
+        <li><a href="catalog.html">Одноразовая посуда</a></li>
+        <li><a href="catalog.html">Бытовая химия</a></li>
+        <li><a href="catalog.html">Средства защиты</a></li>
+        <li><a href="catalog.html">Упаковка</a></li>
+        <li><a href="catalog.html">Хозтовары</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Компания</h4>
+      <ul>
+        <li><a href="about.html">О нас</a></li>
+        <li><a href="sales.html">Акции</a></li>
+        <li><a href="wholesale.html">Оптовикам</a></li>
+        <li><a href="contacts.html">Контакты</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Покупателям</h4>
+      <ul>
+        <li><a href="delivery.html">Доставка</a></li>
+        <li><a href="delivery.html">Оплата</a></li>
+        <li><a href="about.html">Условия возврата</a></li>
+        <li><a href="contacts.html">Личный кабинет</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 ООО «Клевер». Все права защищены.</p>
+    <div class="social-links">
+      <a href="https://vk.com" target="_blank" class="social-link">VK</a>
+      <a href="https://t.me" target="_blank" class="social-link">TG</a>
+      <a href="https://wa.me/79112368277" target="_blank" class="social-link">WA</a>
+    </div>
+  </div>
+<div style="display:flex;justify-content:flex-end;padding:8px 40px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:16px;"><a href="admin.html" style="color:rgba(255,255,255,0.15);font-size:11px;">⚙️ Админка</a></div></footer>
+<!-- КОРЗИНА -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<aside class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <h3>🛒 Корзина</h3>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      <span>Итого:</span>
+      <span class="cart-total-price" id="cartTotal">0 ₽</span>
+    </div>
+    <button class="btn-checkout" onclick="checkout()">Оформить заказ →</button>
+  </div>
+</aside>
+
+<script id="cart-inline-script">
+const CART_KEY='klever_cart';
+function getCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}catch(e){return[];}}
+function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartBadge();}
+function addToCart(p){const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:1});saveCart(c);showAddedToast(p.name);}
+function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();}
+function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();}
+function getCartTotal(){return getCart().reduce((s,i)=>s+i.price*i.qty,0);}
+function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
+function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
+function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartPanel').classList.add('open');document.body.style.overflow='hidden';renderCart();}
+function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
+function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="font-size:56px;margin-bottom:16px;">🛒</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>'<div class="cart-item"><div class="cart-item-img">'+(i.img?'<img src="'+i.img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>').join('');total.textContent=getCartTotal()+' ₽';}
+function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+document.addEventListener('DOMContentLoaded',updateCartBadge);
+</script>
+
+</body>
+</html>
