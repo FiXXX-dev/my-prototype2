@@ -127,14 +127,28 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
 /* ORDERS */
 .order-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;padding:20px;margin-bottom:14px;}
-.order-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;padding-bottom:14px;border-bottom:1px solid #e8f4ec;}
+.order-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.order-head-main{display:flex;align-items:center;gap:14px;flex:1;flex-wrap:wrap;}
 .order-num{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;color:var(--green-dark);}
 .order-date{font-size:13px;color:#8aaa94;}
 .order-total{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;}
 .order-status{padding:5px 14px;border-radius:30px;font-size:11px;font-weight:700;}
 .status-new{background:#fff3ee;color:var(--accent);}
 .status-done{background:#e8faf0;color:var(--green-dark);}
+.order-toggle{background:#f2f7f4;border:1px solid #d0e8d8;color:#1aab58;width:32px;height:32px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .25s,background .2s;flex-shrink:0;}
+.order-toggle:hover{background:#e0ece4;}
+.order-card[data-expanded="true"] .order-toggle{transform:rotate(180deg);}
+.order-collapse{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+.order-card[data-expanded="true"] .order-collapse{max-height:2000px;}
+.order-collapse-inner{padding-top:14px;margin-top:14px;border-top:1px solid #e8f4ec;}
 .order-body{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+/* ORDER FILTER TABS */
+.order-filter-tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid #e0ece4;padding-bottom:0;flex-wrap:wrap;}
+.order-filter-tab{background:none;border:none;padding:10px 18px;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;color:#8aaa94;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s;}
+.order-filter-tab:hover{color:var(--green-dark);}
+.order-filter-tab.active{color:var(--green-dark);border-bottom-color:var(--green);}
+.order-filter-tab .count{display:inline-block;background:#f2f7f4;color:#1aab58;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;font-family:'Unbounded',sans-serif;}
+.order-filter-tab.active .count{background:var(--green);color:white;}
 .order-section{}
 .order-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8aaa94;margin-bottom:8px;}
 .order-value{font-size:14px;line-height:1.6;}
@@ -344,6 +358,11 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-sub">Все заказы клиентов</div>
         </div>
         <button class="btn btn-secondary" onclick="clearOrders()">🗑️ Очистить все</button>
+      </div>
+      <div class="order-filter-tabs">
+        <button class="order-filter-tab active" data-filter="active" onclick="setOrdersFilter('active', this)">Активные <span class="count" id="cntFilterActive">0</span></button>
+        <button class="order-filter-tab" data-filter="done" onclick="setOrdersFilter('done', this)">Выполненные <span class="count" id="cntFilterDone">0</span></button>
+        <button class="order-filter-tab" data-filter="all" onclick="setOrdersFilter('all', this)">Все <span class="count" id="cntFilterAll">0</span></button>
       </div>
       <div id="ordersList"></div>
     </section>
@@ -1116,11 +1135,49 @@ function resetProducts() {
 }
 
 // ===== ЗАКАЗЫ =====
+let ordersFilter = 'active';
+const expandedOrders = new Set();
+
+function setOrdersFilter(f, el) {
+  ordersFilter = f;
+  document.querySelectorAll('.order-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+  renderOrders();
+}
+
+function updateOrderFilterCounts() {
+  const all = getOrders();
+  const active = all.filter(o => o.status !== 'done').length;
+  const done = all.filter(o => o.status === 'done').length;
+  const elA = document.getElementById('cntFilterActive');
+  const elD = document.getElementById('cntFilterDone');
+  const elAll = document.getElementById('cntFilterAll');
+  if (elA) elA.textContent = active;
+  if (elD) elD.textContent = done;
+  if (elAll) elAll.textContent = all.length;
+}
+
+function toggleOrderCard(num) {
+  const card = document.querySelector('.order-card[data-num="' + num + '"]');
+  if (!card) return;
+  const isOpen = card.getAttribute('data-expanded') === 'true';
+  if (isOpen) {
+    card.setAttribute('data-expanded', 'false');
+    expandedOrders.delete(String(num));
+  } else {
+    card.setAttribute('data-expanded', 'true');
+    expandedOrders.add(String(num));
+  }
+}
+
 function renderOrders() {
-  const orders = getOrders().slice().reverse();
+  let orders = getOrders().slice().reverse();
+  if (ordersFilter === 'active') orders = orders.filter(o => o.status !== 'done');
+  else if (ordersFilter === 'done') orders = orders.filter(o => o.status === 'done');
   const list = document.getElementById('ordersList');
+  updateOrderFilterCounts();
   if (orders.length === 0) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">Заказов пока нет</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
+    const msg = ordersFilter === 'done' ? 'Выполненных заказов пока нет' : ordersFilter === 'active' ? 'Активных заказов нет' : 'Заказов пока нет';
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">'+msg+'</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
   } else {
     list.innerHTML = orders.map(o => orderCardHtml(o)).join('');
   }
@@ -1128,38 +1185,44 @@ function renderOrders() {
 
 function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
+  const expanded = expandedOrders.has(String(o.num));
   return `
-    <div class="order-card">
+    <div class="order-card" data-num="${o.num}" data-expanded="${expanded}">
       <div class="order-head">
-        <div>
-          <div class="order-num">#${o.num}</div>
-          <div class="order-date">${o.date}</div>
+        <div class="order-head-main">
+          <div>
+            <div class="order-num">#${o.num}</div>
+            <div class="order-date">${o.date}</div>
+          </div>
+          <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
+          <div class="order-total" style="margin-left:auto;">${o.total.toLocaleString('ru-RU')} ₽</div>
         </div>
-        <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
-        <div class="order-total">${o.total.toLocaleString('ru-RU')} ₽</div>
+        <button class="order-toggle" onclick="toggleOrderCard(${o.num})" title="Развернуть/свернуть">▼</button>
       </div>
-      <div class="order-body">
-        <div class="order-section">
-          <div class="order-label">Клиент</div>
-          <div class="order-value">
-            <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
-            📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+      <div class="order-collapse"><div class="order-collapse-inner">
+        <div class="order-body">
+          <div class="order-section">
+            <div class="order-label">Клиент</div>
+            <div class="order-value">
+              <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
+              📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+            </div>
+          </div>
+          <div class="order-section">
+            <div class="order-label">Доставка</div>
+            <div class="order-value">
+              ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
+              ${o.address}
+            </div>
           </div>
         </div>
-        <div class="order-section">
-          <div class="order-label">Доставка</div>
-          <div class="order-value">
-            ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
-            ${o.address}
-          </div>
+        ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
+        ${o.comment ? `<div style="margin-top:14px;padding:12px 14px;background:#fff8e8;border-radius:10px;font-size:13px;"><strong>💬 Комментарий:</strong> ${o.comment}</div>` : ''}
+        <div class="order-actions">
+          ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
         </div>
-      </div>
-      ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
-      ${o.comment ? `<div style="margin-top:14px;padding:12px 14px;background:#fff8e8;border-radius:10px;font-size:13px;"><strong>💬 Комментарий:</strong> ${o.comment}</div>` : ''}
-      <div class="order-actions">
-        ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
-        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
-      </div>
+      </div></div>
     </div>
   `;
 }
