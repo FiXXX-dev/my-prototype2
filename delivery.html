@@ -302,4 +302,117 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 })();
 </script>
 
+<style id="klever-mobile-header-tweak">@media(max-width:900px){.btn-phone{display:none !important;}.header-actions{gap:8px;}}
+</style>
+<style id="burger-menu-styles">
+.mobile-burger-btn{display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:22px;align-items:center;justify-content:center;padding:0;flex-shrink:0;transition:background .2s;}
+.mobile-burger-btn:hover{background:rgba(255,255,255,0.15);}
+.mobile-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9100;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;backdrop-filter:blur(2px);}
+.mobile-menu-overlay.open{opacity:1;visibility:visible;}
+.mobile-menu-panel{position:fixed;top:0;right:0;bottom:0;width:320px;max-width:88%;background:#0f1a14;color:white;z-index:9101;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,0.4);}
+.mobile-menu-panel.open{transform:translateX(0);}
+.mobile-menu-head{padding:22px 24px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;}
+.mobile-menu-head .mm-title{font-family:'Unbounded',sans-serif;font-weight:900;font-size:18px;letter-spacing:-0.5px;color:#C8F135;}
+.mobile-menu-close{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mobile-menu-close:hover{background:rgba(255,255,255,0.18);}
+.mobile-menu-links{display:flex;flex-direction:column;padding:14px 12px;gap:2px;}
+.mobile-menu-links a{display:flex;align-items:center;gap:12px;padding:14px 16px;color:rgba(255,255,255,0.85);text-decoration:none;font-family:'Onest',sans-serif;font-size:15px;font-weight:500;border-radius:12px;transition:background .2s,color .2s;}
+.mobile-menu-links a:hover,.mobile-menu-links a.active{background:rgba(46,204,113,0.12);color:#C8F135;}
+.mobile-menu-actions{margin-top:auto;padding:18px 16px 24px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:10px;}
+.mobile-menu-actions a,.mobile-menu-actions button{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;color:white;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;text-decoration:none;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.mobile-menu-actions a:hover,.mobile-menu-actions button:hover{background:rgba(255,255,255,0.12);}
+.mobile-menu-actions .mm-cart-badge{background:#FF6B35;color:white;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 7px;}
+.mobile-menu-actions .mm-cart-badge.empty{display:none;}
+.mobile-menu-phone{display:flex;align-items:center;justify-content:center;gap:8px;background:#2ECC71 !important;color:#0f1a14 !important;border:none !important;font-weight:700 !important;}
+@media(max-width:900px){
+  .mobile-burger-btn{display:inline-flex !important;}
+}
+</style>
+<script id="burger-menu-script">
+(function(){
+  function buildMenu(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.mobile-burger-btn')) return;
+    // Get nav links (mainnav)
+    const navAnchors = header.querySelectorAll('nav a');
+    const links = [...navAnchors].map(a => {
+      const isActive = a.classList.contains('active');
+      const href = a.getAttribute('href') || '#';
+      const text = a.textContent.trim();
+      return '<a href="'+href+'" '+(isActive?'class="active"':'')+'>'+text+'</a>';
+    }).join('');
+    // Find phone link
+    let phoneHref = 'tel:+78129228677', phoneText = '📞 Позвонить';
+    const phoneEl = header.querySelector('.btn-phone, a[href^="tel:"]');
+    if (phoneEl) { phoneHref = phoneEl.getAttribute('href'); phoneText = phoneEl.textContent.trim(); }
+    // Build menu HTML
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-menu-overlay';
+    overlay.id = 'mobileMenuOverlay';
+    overlay.onclick = closeMenu;
+    const panel = document.createElement('aside');
+    panel.className = 'mobile-menu-panel';
+    panel.id = 'mobileMenuPanel';
+    panel.innerHTML = '<div class="mobile-menu-head">'
+      + '<span class="mm-title">🍀 Меню</span>'
+      + '<button class="mobile-menu-close" onclick="window.__kleverCloseMobileMenu()">✕</button>'
+      + '</div>'
+      + '<div class="mobile-menu-links">'+links+'</div>'
+      + '<div class="mobile-menu-actions">'
+      + '<a href="account.html">👤 Личный кабинет</a>'
+      + '<button id="mmCartBtn">🛒 Корзина <span class="mm-cart-badge empty" id="mmCartBadge">0</span></button>'
+      + '<a href="'+phoneHref+'" class="mobile-menu-phone">'+phoneText+'</a>'
+      + '</div>';
+    document.body.appendChild(overlay);
+    document.body.appendChild(panel);
+    // Cart button
+    const cartBtn = panel.querySelector('#mmCartBtn');
+    cartBtn.onclick = function(){
+      closeMenu();
+      setTimeout(function(){ if (typeof openCart === 'function') openCart(); }, 280);
+    };
+    // Burger button — insert into header
+    const burger = document.createElement('button');
+    burger.className = 'mobile-burger-btn';
+    burger.setAttribute('aria-label','Открыть меню');
+    burger.innerHTML = '☰';
+    burger.onclick = openMenu;
+    const actions = header.querySelector('.header-actions');
+    if (actions) actions.appendChild(burger);
+    else header.appendChild(burger);
+    updateMmCart();
+  }
+  function openMenu(){
+    document.getElementById('mobileMenuOverlay').classList.add('open');
+    document.getElementById('mobileMenuPanel').classList.add('open');
+    document.body.style.overflow='hidden';
+    updateMmCart();
+  }
+  function closeMenu(){
+    const o = document.getElementById('mobileMenuOverlay');
+    const p = document.getElementById('mobileMenuPanel');
+    if (o) o.classList.remove('open');
+    if (p) p.classList.remove('open');
+    document.body.style.overflow='';
+  }
+  function updateMmCart(){
+    const badge = document.getElementById('mmCartBadge');
+    if (!badge) return;
+    let count = 0;
+    try { const c = JSON.parse(localStorage.getItem('klever_cart')) || []; count = c.reduce((s,i)=>s+(i.qty||0),0); } catch(e){}
+    badge.textContent = count;
+    if (count > 0) badge.classList.remove('empty'); else badge.classList.add('empty');
+  }
+  window.__kleverCloseMobileMenu = closeMenu;
+  window.__kleverUpdateMmCart = updateMmCart;
+  document.addEventListener('DOMContentLoaded', buildMenu);
+  // Refresh badge when cart changes (same tab via custom polling; cross-tab via storage)
+  window.addEventListener('storage', e => { if (e.key === 'klever_cart') updateMmCart(); });
+  // Patch updateCartBadge if exists to also sync mm
+  const _origInterval = setInterval(function(){ if (typeof updateCartBadge === 'function') { const _orig = updateCartBadge; window.updateCartBadge = function(){ _orig(); updateMmCart(); }; clearInterval(_origInterval); } }, 100);
+  setTimeout(function(){ clearInterval(_origInterval); }, 3000);
+})();
+</script>
+
 </body></html>
