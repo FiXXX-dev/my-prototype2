@@ -143,45 +143,65 @@ setTimeout(function(){
 <div class="page-content">
   <div class="section-tag">Актуальные акции</div>
   <div class="section-title">Сейчас действуют</div>
-  <div class="sales-grid">
-    <div class="sale-card">
-      <div class="sale-top green">
-        <div class="sale-badge">Хиты продаж</div>
-        <div class="sale-discount">-15%</div>
-        <div class="sale-title">Скидка на бытовую химию</div>
-        <div class="sale-desc">Белизна, жироудалители, чистящие средства — минус 15% на весь раздел</div>
-      </div>
-      <div class="sale-bottom">
-        <div class="sale-validity">До 31 мая 2025</div>
-        <a href="catalog.html" class="sale-btn">Смотреть товары →</a>
-      </div>
-    </div>
-    <div class="sale-card">
-      <div class="sale-top accent">
-        <div class="sale-badge">Оптом выгоднее</div>
-        <div class="sale-discount">-20%</div>
-        <div class="sale-title">При заказе от 5000 ₽</div>
-        <div class="sale-desc">Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ</div>
-      </div>
-      <div class="sale-bottom">
-        <div class="sale-validity">Постоянная акция</div>
-        <a href="catalog.html" class="sale-btn">Перейти в каталог →</a>
-      </div>
-    </div>
-    <div class="sale-card">
-      <div class="sale-top lime">
-        <div class="sale-badge">Новым клиентам</div>
-        <div class="sale-discount">-10%</div>
-        <div class="sale-title">Скидка на первый заказ</div>
-        <div class="sale-desc">Скидка 10% для новых покупателей при оформлении первого заказа</div>
-      </div>
-      <div class="sale-bottom">
-        <div class="sale-validity">Бессрочно</div>
-        <a href="contacts.html" class="sale-btn">Получить скидку →</a>
-      </div>
-    </div>
+  <div class="sales-grid" id="salesGrid"></div>
+  <div id="salesEmpty" style="display:none;text-align:center;padding:60px 20px;color:#8aaa94;">
+    <div style="font-size:56px;margin-bottom:16px;">🔥</div>
+    <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:20px;margin-bottom:8px;color:#1a2e22;">Акций пока нет</div>
+    <div>Скоро здесь появятся выгодные предложения</div>
   </div>
 </div>
+<script id="promos-render-script">
+(function(){
+  const PROMOS_KEY = 'klever_promos';
+  const DEFAULT_PROMOS = [
+    {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
+    {name:'При заказе от 5 000 ₽', disc:'-20%', color:'accent', badge:'Оптом выгоднее', desc:'Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ', valid:'Постоянная акция'},
+    {name:'Скидка на первый заказ', disc:'-10%', color:'lime', badge:'Новым клиентам', desc:'Скидка 10% для новых покупателей при оформлении первого заказа', valid:'Бессрочно'},
+  ];
+  function getPromos(){
+    try{
+      const raw = localStorage.getItem(PROMOS_KEY);
+      if (raw === null) return DEFAULT_PROMOS;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : DEFAULT_PROMOS;
+    }catch(e){ return DEFAULT_PROMOS; }
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function render(){
+    const grid = document.getElementById('salesGrid');
+    const empty = document.getElementById('salesEmpty');
+    if (!grid) return;
+    const promos = getPromos();
+    if (!promos.length){
+      grid.innerHTML = '';
+      grid.style.display = 'none';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    grid.style.display = '';
+    if (empty) empty.style.display = 'none';
+    grid.innerHTML = promos.map(p => {
+      const color = ['green','accent','lime'].includes(p.color) ? p.color : 'green';
+      const link = color === 'lime' ? 'contacts.html' : 'catalog.html';
+      const btnText = color === 'lime' ? 'Получить скидку →' : 'Смотреть товары →';
+      return '<div class="sale-card">'
+        + '<div class="sale-top '+color+'">'
+        + (p.badge ? '<div class="sale-badge">'+esc(p.badge)+'</div>' : '')
+        + (p.disc ? '<div class="sale-discount">'+esc(p.disc)+'</div>' : '')
+        + '<div class="sale-title">'+esc(p.name||'')+'</div>'
+        + '<div class="sale-desc">'+esc(p.desc||'')+'</div>'
+        + '</div>'
+        + '<div class="sale-bottom">'
+        + '<div class="sale-validity">'+esc(p.valid||'Бессрочно')+'</div>'
+        + '<a href="'+link+'" class="sale-btn">'+btnText+'</a>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+  document.addEventListener('DOMContentLoaded', render);
+  window.addEventListener('storage', e => { if (e.key === PROMOS_KEY) render(); });
+})();
+</script>
 <footer>
   <div class="footer-logo">🍀 <span>Clever</span></div>
   <p>© 2025 ООО «Клевер». Все права защищены.</p>

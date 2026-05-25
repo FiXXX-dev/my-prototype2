@@ -921,6 +921,82 @@ setTimeout(function(){
   </div>
 </section>
 
+<!-- PROMOS -->
+<section class="promos-section" style="padding:0 40px 80px;">
+  <div class="section-header">
+    <div>
+      <div class="section-tag" style="background:rgba(255,107,53,0.12);color:#FF6B35;">🔥 Скидки</div>
+      <div class="section-title">Акции и предложения</div>
+    </div>
+    <a href="sales.html" class="see-all">Все акции →</a>
+  </div>
+  <div class="home-promos-grid" id="homePromosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;"></div>
+</section>
+<style id="home-promos-styles">
+  .home-promo-card{border-radius:20px;overflow:hidden;border:1.5px solid #e0ece4;transition:transform .2s,box-shadow .2s;background:white;}
+  .home-promo-card:hover{transform:translateY(-4px);box-shadow:0 16px 50px rgba(0,0,0,0.1);}
+  .home-promo-top{padding:28px;position:relative;}
+  .home-promo-top.green{background:linear-gradient(135deg,#1aab58,#2ECC71);}
+  .home-promo-top.accent{background:linear-gradient(135deg,#FF6B35,#ff9a70);}
+  .home-promo-top.lime{background:linear-gradient(135deg,#8ab800,#C8F135);}
+  .home-promo-badge{display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+  .home-promo-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;color:white;line-height:1.2;letter-spacing:-0.5px;margin-bottom:8px;padding-right:60px;}
+  .home-promo-desc{color:rgba(255,255,255,0.75);font-size:14px;line-height:1.5;}
+  .home-promo-disc{position:absolute;top:20px;right:20px;background:white;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:900;color:#FF6B35;}
+  .home-promo-bottom{padding:18px 28px;display:flex;justify-content:space-between;align-items:center;}
+  .home-promo-validity{font-size:12px;color:#8aaa94;}
+  .home-promo-btn{display:inline-block;background:var(--green);color:var(--dark);padding:8px 16px;border-radius:30px;font-weight:700;font-size:12px;text-decoration:none;transition:background .2s;}
+  .home-promo-btn:hover{background:var(--lime);}
+  @media(max-width:900px){.home-promos-grid{grid-template-columns:1fr !important;}}
+</style>
+<script id="home-promos-script">
+(function(){
+  const PROMOS_KEY = 'klever_promos';
+  const DEFAULT_PROMOS = [
+    {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
+    {name:'При заказе от 5 000 ₽', disc:'-20%', color:'accent', badge:'Оптом выгоднее', desc:'Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ', valid:'Постоянная акция'},
+    {name:'Скидка на первый заказ', disc:'-10%', color:'lime', badge:'Новым клиентам', desc:'Скидка 10% для новых покупателей при оформлении первого заказа', valid:'Бессрочно'},
+  ];
+  function getPromos(){
+    try{
+      const raw = localStorage.getItem(PROMOS_KEY);
+      if (raw === null) return DEFAULT_PROMOS;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : DEFAULT_PROMOS;
+    }catch(e){ return DEFAULT_PROMOS; }
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function renderHomePromos(){
+    const grid = document.getElementById('homePromosGrid');
+    if (!grid) return;
+    const section = grid.closest('.promos-section');
+    const promos = getPromos().slice(0, 3);
+    if (!promos.length){
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = '';
+    grid.innerHTML = promos.map(p => {
+      const color = ['green','accent','lime'].includes(p.color) ? p.color : 'green';
+      return '<a href="sales.html" class="home-promo-card" style="text-decoration:none;color:inherit;">'
+        + '<div class="home-promo-top '+color+'">'
+        + (p.badge ? '<div class="home-promo-badge">'+esc(p.badge)+'</div>' : '')
+        + (p.disc ? '<div class="home-promo-disc">'+esc(p.disc)+'</div>' : '')
+        + '<div class="home-promo-title">'+esc(p.name||'')+'</div>'
+        + '<div class="home-promo-desc">'+esc(p.desc||'')+'</div>'
+        + '</div>'
+        + '<div class="home-promo-bottom">'
+        + '<span class="home-promo-validity">'+esc(p.valid||'Бессрочно')+'</span>'
+        + '<span class="home-promo-btn">Подробнее →</span>'
+        + '</div>'
+        + '</a>';
+    }).join('');
+  }
+  document.addEventListener('DOMContentLoaded', renderHomePromos);
+  window.addEventListener('storage', e => { if (e.key === PROMOS_KEY) renderHomePromos(); });
+})();
+</script>
+
 <!-- WHY US -->
 <section class="why">
   <div class="section-tag">Наши преимущества</div>
