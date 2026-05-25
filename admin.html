@@ -219,6 +219,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <button class="side-link" onclick="showTab('orders', this)">🛍️ Заказы <span class="count" id="cntOrders">0</span></button>
       <button class="side-link" onclick="showTab('contacts', this)">✉️ Заявки <span class="count" id="cntContacts">0</span></button>
       <button class="side-link" onclick="showTab('promotions', this)">🔥 Акции <span class="count" id="cntPromos">0</span></button>
+      <button class="side-link" onclick="showTab('news', this)">📢 Новости <span class="count" id="cntNews">0</span></button>
       <button class="side-link" onclick="showTab('settings', this)">⚙️ Настройки</button>
     </nav>
     <div class="side-bottom">
@@ -395,6 +396,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <div class="promo-grid" id="promotionsList"></div>
     </section>
 
+    <!-- NEWS -->
+    <section class="tab-content" id="tab-news">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Новости и нововведения</div>
+          <div class="page-sub">Всплывающие уведомления для клиентов на сайте</div>
+        </div>
+        <button class="btn btn-primary" onclick="openNewsModal()">+ Создать новость</button>
+      </div>
+      <div id="newsList"></div>
+    </section>
+
     <!-- SETTINGS -->
     <section class="tab-content" id="tab-settings">
       <div class="page-header">
@@ -543,6 +556,44 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closePromoModal()">Отмена</button>
       <button class="btn btn-primary" onclick="savePromo()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS MODAL -->
+<div class="modal-overlay" id="newsModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeNewsModal()">✕</button>
+    <div class="modal-title" id="newsModalTitle">Новая новость</div>
+    <div class="modal-sub">Появится во всплывающей модалке у клиентов</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Заголовок *</label>
+        <input type="text" id="newsTitle" placeholder="Например: Новая категория товаров!">
+      </div>
+      <div class="form-grp full">
+        <label>Текст *</label>
+        <textarea id="newsText" placeholder="Расскажите клиентам о новом..."></textarea>
+      </div>
+      <div class="form-grp">
+        <label>Цвет плашки</label>
+        <select id="newsColor">
+          <option value="green">🟢 Зелёный</option>
+          <option value="orange">🟠 Оранжевый</option>
+          <option value="blue">🔵 Синий</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Статус</label>
+        <select id="newsActive">
+          <option value="true">✓ Активна</option>
+          <option value="false">⏸ Деактивирована</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeNewsModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveNews()">💾 Сохранить</button>
     </div>
   </div>
 </div>
@@ -859,6 +910,7 @@ function showTab(name, btn) {
   if (name === 'orders') renderOrders();
   if (name === 'contacts') renderContacts();
   if (name === 'promotions') renderPromotions();
+  if (name === 'news') renderNews();
   if (name === 'products') renderProducts();
   if (name === 'dashboard') renderDashboard();
 }
@@ -868,6 +920,7 @@ const STORAGE_PRODUCTS = 'klever_products_v2';
 const STORAGE_ORDERS = 'klever_orders';
 const STORAGE_CONTACTS = 'klever_contacts';
 const STORAGE_PROMOS = 'klever_promos';
+const STORAGE_NEWS = 'klever_news';
 const STORAGE_SETTINGS = 'klever_settings';
 
 function getProducts() {
@@ -896,6 +949,14 @@ function setPromos(arr) {
   localStorage.setItem(STORAGE_PROMOS, JSON.stringify(arr));
 }
 
+function getNews() {
+  try { const arr = JSON.parse(localStorage.getItem(STORAGE_NEWS)); return Array.isArray(arr) ? arr : []; }
+  catch(e) { return []; }
+}
+function setNews(arr) {
+  localStorage.setItem(STORAGE_NEWS, JSON.stringify(arr));
+}
+
 function getDefaultPromos() {
   return [
     {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
@@ -915,6 +976,9 @@ function updateCounts() {
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
   document.getElementById('cntContacts').textContent = getContacts().length;
   document.getElementById('cntPromos').textContent = getPromos().length;
+  const newsCount = getNews().filter(n => n.active).length;
+  const cntNewsEl = document.getElementById('cntNews');
+  if (cntNewsEl) cntNewsEl.textContent = newsCount;
 }
 
 // ===== ДАШБОРД =====
@@ -1412,6 +1476,109 @@ function deletePromo(idx) {
   promos.splice(idx, 1);
   setPromos(promos);
   renderPromotions();
+  updateCounts();
+}
+
+// ===== НОВОСТИ =====
+let editingNewsId = null;
+const NEWS_COLOR_GRADIENT = {
+  green: 'linear-gradient(135deg,#1aab58,#2ECC71)',
+  orange: 'linear-gradient(135deg,#FF6B35,#ff9a70)',
+  blue: 'linear-gradient(135deg,#1e6fb8,#4a9ce0)'
+};
+const NEWS_COLOR_LABEL = { green: '🟢 Зелёный', orange: '🟠 Оранжевый', blue: '🔵 Синий' };
+
+function escNews(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderNews() {
+  const list = getNews().slice().reverse();
+  const c = document.getElementById('newsList');
+  if (!c) return;
+  if (list.length === 0) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">Новостей пока нет</div><div>Создайте первое уведомление для клиентов</div></div>';
+    return;
+  }
+  c.innerHTML = list.map(n => {
+    const grad = NEWS_COLOR_GRADIENT[n.color] || NEWS_COLOR_GRADIENT.green;
+    const date = n.created ? new Date(n.created).toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    return `<div class="order-card" style="overflow:hidden;padding:0;">
+      <div style="padding:18px 22px;background:${grad};color:white;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-family:Unbounded,sans-serif;font-size:17px;font-weight:900;letter-spacing:-0.3px;">${escNews(n.title)}</div>
+          ${date ? `<div style="opacity:0.8;font-size:12px;margin-top:4px;">📅 ${date}</div>` : ''}
+        </div>
+        <span style="background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:30px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">${n.active ? '✓ Активна' : '⏸ Неактивна'}</span>
+      </div>
+      <div style="padding:18px 22px;background:white;">
+        <div style="font-size:14px;line-height:1.6;color:#1a2e22;margin-bottom:14px;white-space:pre-wrap;">${escNews(n.text)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn ${n.active ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="toggleNewsActive(${n.id})">${n.active ? '⏸ Деактивировать' : '✓ Активировать'}</button>
+          <button class="btn btn-secondary btn-sm" onclick="editNews(${n.id})">Изм.</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteNews(${n.id})">🗑️ Удалить</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNewsModal() {
+  editingNewsId = null;
+  document.getElementById('newsModalTitle').textContent = 'Новая новость';
+  document.getElementById('newsTitle').value = '';
+  document.getElementById('newsText').value = '';
+  document.getElementById('newsColor').value = 'green';
+  document.getElementById('newsActive').value = 'true';
+  document.getElementById('newsModal').classList.add('open');
+  document.getElementById('newsTitle').focus();
+}
+
+function editNews(id) {
+  const n = getNews().find(x => x.id === id);
+  if (!n) return;
+  editingNewsId = id;
+  document.getElementById('newsModalTitle').textContent = 'Редактирование новости';
+  document.getElementById('newsTitle').value = n.title || '';
+  document.getElementById('newsText').value = n.text || '';
+  document.getElementById('newsColor').value = n.color || 'green';
+  document.getElementById('newsActive').value = n.active ? 'true' : 'false';
+  document.getElementById('newsModal').classList.add('open');
+}
+
+function closeNewsModal() {
+  document.getElementById('newsModal').classList.remove('open');
+}
+
+function saveNews() {
+  const title = document.getElementById('newsTitle').value.trim();
+  const text = document.getElementById('newsText').value.trim();
+  const color = document.getElementById('newsColor').value;
+  const active = document.getElementById('newsActive').value === 'true';
+  if (!title || !text) { alert('Заполните заголовок и текст'); return; }
+  const news = getNews();
+  if (editingNewsId !== null) {
+    const idx = news.findIndex(n => n.id === editingNewsId);
+    if (idx >= 0) news[idx] = { ...news[idx], title, text, color, active };
+  } else {
+    news.push({ id: Date.now(), title, text, color, active, created: Date.now() });
+  }
+  setNews(news);
+  closeNewsModal();
+  renderNews();
+  updateCounts();
+  toast(editingNewsId !== null ? '✓ Новость обновлена' : '✓ Новость создана');
+}
+
+function toggleNewsActive(id) {
+  const news = getNews().map(n => n.id === id ? { ...n, active: !n.active } : n);
+  setNews(news);
+  renderNews();
+  updateCounts();
+}
+
+function deleteNews(id) {
+  if (!confirm('Удалить новость?')) return;
+  setNews(getNews().filter(n => n.id !== id));
+  renderNews();
   updateCounts();
 }
 
