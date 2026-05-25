@@ -94,6 +94,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .tbl .col-num{font-family:'Unbounded',sans-serif;font-weight:700;color:var(--green-dark);}
 .tbl .col-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
 .col-badge.b-hit{background:#fff3ee;color:var(--accent);}
+.hit-star{background:none;border:none;cursor:pointer;font-size:22px;line-height:1;padding:4px 8px;border-radius:8px;color:#c0d0c5;transition:transform .15s,background .2s,color .2s;}
+.hit-star:hover{background:#f2f7f4;transform:scale(1.15);}
+.hit-star.on{color:#FF6B35;text-shadow:0 0 8px rgba(255,107,53,0.4);}
 .col-badge.b-new{background:#e8faf0;color:var(--green-dark);}
 .col-badge.b-sale{background:#ffe8ee;color:var(--danger);}
 
@@ -338,6 +341,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
               <th>Категория</th>
               <th>Цена</th>
               <th>Метка</th>
+              <th style="text-align:center;width:70px;" title="Хит продаж">Хит</th>
               <th style="text-align:right;">Действия</th>
             </tr>
           </thead>
@@ -999,7 +1003,7 @@ function renderProducts() {
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
   if (pageItems.length === 0) {
-    document.getElementById('productsBody').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
     document.getElementById('productsBody').innerHTML = pageItems.map(p => `
       <tr>
@@ -1009,6 +1013,9 @@ function renderProducts() {
         <td>${p.cat}</td>
         <td><strong>${p.price} ₽</strong></td>
         <td>${badgeHtml(p.badge)}</td>
+        <td style="text-align:center;">
+          <button class="hit-star ${p.isHit ? 'on' : ''}" onclick="toggleHit('${p.sku}')" title="${p.isHit ? 'Убрать из хитов' : 'Сделать хитом продаж'}">${p.isHit ? '⭐' : '☆'}</button>
+        </td>
         <td>
           <div class="actions">
             <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.sku}')">Изм.</button>
@@ -1042,6 +1049,14 @@ function goPage(n) {
   productsPage = n;
   renderProducts();
   document.querySelector('.tbl-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function toggleHit(sku) {
+  const products = getProducts().map(p => p.sku === sku ? {...p, isHit: !p.isHit} : p);
+  setProducts(products);
+  renderProducts();
+  const p = products.find(x => x.sku === sku);
+  toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
 }
 
 function badgeHtml(b) {

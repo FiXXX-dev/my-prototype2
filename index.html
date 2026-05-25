@@ -754,6 +754,25 @@ setTimeout(function(){
     <div class="float-chip c2">🔥 Акции каждую неделю</div>
   </div>
 </section>
+<script id="hero-sync-script">
+document.addEventListener('DOMContentLoaded', function(){
+  let products = [];
+  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
+  if (!products.length) return;
+  document.querySelectorAll('.hero-prod-card').forEach(card => {
+    const m = (card.getAttribute('href') || '').match(/sku=([^&]+)/);
+    if (!m) return;
+    const p = products.find(x => x.sku === m[1]);
+    if (!p) return;
+    const img = card.querySelector('img');
+    if (img && p.img) img.src = p.img;
+    const nameEl = card.querySelector('.hero-prod-name');
+    if (nameEl) nameEl.textContent = p.name;
+    const priceEl = card.querySelector('.hero-prod-price');
+    if (priceEl) priceEl.textContent = p.price + ' ₽';
+  });
+});
+</script>
 
 
 
@@ -863,63 +882,72 @@ setTimeout(function(){
     </div>
     <a href="catalog.html" class="see-all">Все товары →</a>
   </div>
-  <div class="prod-grid">
-    <a href="product.html?sku=0070" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg" alt="Белизна 1 л" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-        <div class="prod-badge">ХИТ</div>
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Белизна 1 л</div>
-        <div class="prod-sku">Арт. 0070</div>
-        <div class="prod-footer">
-          <div class="prod-price">35 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-    <a href="product.html?sku=0238" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg" alt="Белизна гель" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Белизна гель 1 л</div>
-        <div class="prod-sku">Арт. 0238</div>
-        <div class="prod-footer">
-          <div class="prod-price">80 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Белизна гель 1 л',sku:'0238',price:80,img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-    <a href="product.html?sku=0756" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg" alt="Тряпка для пола" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-        <div class="prod-badge" style="background:#2ECC71;color:#0f1a14">НОВИНКА</div>
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Тряпка для пола 50×80 см</div>
-        <div class="prod-sku">Арт. 0756</div>
-        <div class="prod-footer">
-          <div class="prod-price">90 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Тряпка для пола 50×80 см',sku:'0756',price:90,img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-    <a href="product.html?sku=0058" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg" alt="Unicum Gold" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Жироудалитель Unicum Gold 500 мл</div>
-        <div class="prod-sku">Арт. 0058</div>
-        <div class="prod-footer">
-          <div class="prod-price">275 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-  </div>
+  <div class="prod-grid" id="hitsGrid"></div>
 </section>
+<script id="home-hits-script">
+(function(){
+  const PRODUCTS_KEY = 'klever_products_v2';
+  const FALLBACK_HIT_SKUS = ['0070','0238','0756','0058'];
+  const FALLBACK_PRODUCTS = [
+    {name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg',badge:'hit'},
+    {name:'Белизна гель 1 л',sku:'0238',price:80,img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg'},
+    {name:'Тряпка для пола 50×80 см',sku:'0756',price:90,img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'},
+    {name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg',badge:'hit'},
+  ];
+  function getProducts(){
+    try{ const arr = JSON.parse(localStorage.getItem(PRODUCTS_KEY)); return Array.isArray(arr) ? arr : null; }catch(e){ return null; }
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function getHits(){
+    const products = getProducts();
+    if (!products || !products.length) return FALLBACK_PRODUCTS;
+    let hits = products.filter(p => p.isHit === true);
+    if (!hits.length) {
+      // Fallback chain: items with badge:'hit', then the 4 default SKUs
+      hits = products.filter(p => p.badge === 'hit');
+      if (!hits.length) {
+        hits = FALLBACK_HIT_SKUS.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
+      }
+    }
+    return hits;
+  }
+  function badgeHtml(p){
+    if (p.isHit || p.badge === 'hit') return '<div class="prod-badge">ХИТ</div>';
+    if (p.badge === 'new') return '<div class="prod-badge" style="background:#2ECC71;color:#0f1a14">НОВИНКА</div>';
+    if (p.badge === 'sale') return '<div class="prod-badge" style="background:#FF6B35;color:white">СКИДКА</div>';
+    return '';
+  }
+  function renderHits(){
+    const grid = document.getElementById('hitsGrid');
+    if (!grid) return;
+    let hits = getHits().slice(0, 4);
+    if (!hits.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#8aaa94;"><div style="font-size:56px;margin-bottom:16px;">⭐</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;color:#1a2e22;margin-bottom:8px;">Хиты не выбраны</div><div>Отметьте товары как «хит продаж» в админке</div></div>';
+      return;
+    }
+    let html = hits.map(p => {
+      const imgSrc = p.img ? '<img src="'+esc(p.img)+'" alt="'+esc(p.name)+'" style="width:100%;height:100%;object-fit:contain;padding:16px;" onerror="this.outerHTML=\'<span style=font-size:48px>📦</span>\'">' : '<span style="font-size:48px">📦</span>';
+      const cartData = JSON.stringify({name:p.name,sku:p.sku,price:p.price,img:p.img||''}).replace(/"/g,'&quot;');
+      return '<a href="product.html?sku='+esc(p.sku)+'" class="prod-card" style="text-decoration:none;color:inherit;display:block;">'
+        + '<div class="prod-img" style="background:white;">'+imgSrc+badgeHtml(p)+'</div>'
+        + '<div class="prod-info">'
+        + '<div class="prod-name">'+esc(p.name)+'</div>'
+        + '<div class="prod-sku">Арт. '+esc(p.sku)+'</div>'
+        + '<div class="prod-footer">'
+        + '<div class="prod-price">'+esc(p.price)+' ₽ <span>/ шт</span></div>'
+        + '<button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart('+cartData+')">+</button>'
+        + '</div></div></a>';
+    }).join('');
+    // Placeholder if less than 4
+    for (let i = hits.length; i < 4; i++) {
+      html += '<div style="border:2px dashed #d0e8d8;border-radius:20px;display:flex;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:#8aaa94;min-height:280px;"><div><div style="font-size:36px;margin-bottom:10px;">⭐</div><div style="font-size:13px;line-height:1.5;">Выберите хиты<br>в админке</div></div></div>';
+    }
+    grid.innerHTML = html;
+  }
+  document.addEventListener('DOMContentLoaded', renderHits);
+  window.addEventListener('storage', e => { if (e.key === PRODUCTS_KEY) renderHits(); });
+})();
+</script>
 
 <!-- PROMOS -->
 <section class="promos-section" style="padding:0 40px 80px;">
@@ -1115,7 +1143,8 @@ function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
 function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
 function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartPanel').classList.add('open');document.body.style.overflow='hidden';renderCart();}
 function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
-function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="font-size:56px;margin-bottom:16px;">🛒</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>'<div class="cart-item"><div class="cart-item-img">'+(i.img?'<img src="'+i.img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>').join('');total.textContent=getCartTotal()+' ₽';}
+function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
+function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="font-size:56px;margin-bottom:16px;">🛒</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');total.textContent=getCartTotal()+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
 function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded',updateCartBadge);

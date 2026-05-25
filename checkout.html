@@ -485,11 +485,18 @@ function updateSummary() {
     courierLabel.style.color = '#1aab58';
   }
 
+  // Helper: latest image from products store
+  const getProdImg = (sku, fallback) => {
+    try { const arr = JSON.parse(localStorage.getItem('klever_products_v2')) || []; const p = arr.find(x => x.sku === sku); return (p && p.img) || fallback || ''; }
+    catch(e) { return fallback || ''; }
+  };
   // Список товаров с кнопками управления
-  document.getElementById('summaryItems').innerHTML = cart.map(i => `
+  document.getElementById('summaryItems').innerHTML = cart.map(i => {
+    const _img = getProdImg(i.sku, i.img);
+    return `
     <div class="summary-item">
       <div class="summary-item-img">
-        ${i.img ? `<img src="${i.img}" alt="" onerror="this.outerHTML='<span>📦</span>'">` : '📦'}
+        ${_img ? `<img src="${_img}" alt="" onerror="this.outerHTML='<span>📦</span>'">` : '📦'}
       </div>
       <div class="summary-item-info">
         <div class="summary-item-name">${i.name}</div>
@@ -505,7 +512,7 @@ function updateSummary() {
         <div class="summary-item-price">${i.qty * i.price} ₽</div>
       </div>
     </div>
-  `).join('') || '<div style="color:#8aaa94;font-size:14px;text-align:center;padding:20px;">Корзина пуста</div>';
+  `;}).join('') || '<div style="color:#8aaa94;font-size:14px;text-align:center;padding:20px;">Корзина пуста</div>';
 
   const count = cart.reduce((s, i) => s + i.qty, 0);
   document.getElementById('summaryCount').textContent = count + ' шт.';
