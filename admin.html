@@ -94,6 +94,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .tbl .col-num{font-family:'Unbounded',sans-serif;font-weight:700;color:var(--green-dark);}
 .tbl .col-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
 .col-badge.b-hit{background:#fff3ee;color:var(--accent);}
+.hit-star{background:none;border:none;cursor:pointer;font-size:22px;line-height:1;padding:4px 8px;border-radius:8px;color:#c0d0c5;transition:transform .15s,background .2s,color .2s;}
+.hit-star:hover{background:#f2f7f4;transform:scale(1.15);}
+.hit-star.on{color:#FF6B35;text-shadow:0 0 8px rgba(255,107,53,0.4);}
 .col-badge.b-new{background:#e8faf0;color:var(--green-dark);}
 .col-badge.b-sale{background:#ffe8ee;color:var(--danger);}
 
@@ -127,14 +130,28 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
 /* ORDERS */
 .order-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;padding:20px;margin-bottom:14px;}
-.order-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;padding-bottom:14px;border-bottom:1px solid #e8f4ec;}
+.order-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.order-head-main{display:flex;align-items:center;gap:14px;flex:1;flex-wrap:wrap;}
 .order-num{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;color:var(--green-dark);}
 .order-date{font-size:13px;color:#8aaa94;}
 .order-total{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;}
 .order-status{padding:5px 14px;border-radius:30px;font-size:11px;font-weight:700;}
 .status-new{background:#fff3ee;color:var(--accent);}
 .status-done{background:#e8faf0;color:var(--green-dark);}
+.order-toggle{background:#f2f7f4;border:1px solid #d0e8d8;color:#1aab58;width:32px;height:32px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .25s,background .2s;flex-shrink:0;}
+.order-toggle:hover{background:#e0ece4;}
+.order-card[data-expanded="true"] .order-toggle{transform:rotate(180deg);}
+.order-collapse{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+.order-card[data-expanded="true"] .order-collapse{max-height:2000px;}
+.order-collapse-inner{padding-top:14px;margin-top:14px;border-top:1px solid #e8f4ec;}
 .order-body{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+/* ORDER FILTER TABS */
+.order-filter-tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid #e0ece4;padding-bottom:0;flex-wrap:wrap;}
+.order-filter-tab{background:none;border:none;padding:10px 18px;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;color:#8aaa94;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s;}
+.order-filter-tab:hover{color:var(--green-dark);}
+.order-filter-tab.active{color:var(--green-dark);border-bottom-color:var(--green);}
+.order-filter-tab .count{display:inline-block;background:#f2f7f4;color:#1aab58;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;font-family:'Unbounded',sans-serif;}
+.order-filter-tab.active .count{background:var(--green);color:white;}
 .order-section{}
 .order-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8aaa94;margin-bottom:8px;}
 .order-value{font-size:14px;line-height:1.6;}
@@ -159,15 +176,30 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 /* RESPONSIVE */
 @media(max-width:900px){
   .admin-wrap.visible{grid-template-columns:1fr;}
-  .sidebar{position:relative;height:auto;flex-direction:row;flex-wrap:wrap;padding:14px;}
-  .side-logo{margin:0;flex:1;}
-  .side-nav{flex-direction:row;flex-wrap:wrap;width:100%;margin-top:14px;}
-  .side-bottom{display:none;}
-  .main{padding:20px;}
+  .sidebar{position:relative;height:auto;padding:14px 16px;display:flex;flex-direction:column;align-items:stretch;gap:12px;}
+  .side-logo{margin:0;align-self:flex-start;}
+  .side-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;width:100%;margin-top:0;gap:6px;padding-bottom:4px;}
+  .side-nav::-webkit-scrollbar{height:4px;}
+  .side-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px;}
+  .side-link{flex-shrink:0;white-space:nowrap;padding:9px 13px;font-size:13px;}
+  .side-bottom{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:0;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;}
+  .side-user{font-size:12px;}
+  .main{padding:18px 16px;}
   .stats-grid{grid-template-columns:1fr 1fr;}
   .promo-grid{grid-template-columns:1fr;}
   .modal-form{grid-template-columns:1fr;}
   .order-body{grid-template-columns:1fr;}
+  .order-head-main{gap:8px;}
+  .order-num{font-size:16px;}
+  .order-total{font-size:18px;}
+  .order-status{font-size:10px;padding:4px 10px;}
+  .page-header{flex-direction:column;align-items:stretch;gap:12px;}
+  .toolbar{flex-direction:column;align-items:stretch;}
+  .toolbar-select{min-width:0;width:100%;}
+  .tbl-wrap{overflow-x:auto;}
+  .tbl{min-width:680px;}
+  .order-filter-tabs{overflow-x:auto;}
+  .order-filter-tab{white-space:nowrap;font-size:13px;padding:9px 14px;}
 }
 </style>
 </head>
@@ -202,6 +234,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <button class="side-link" onclick="showTab('orders', this)">🛍️ Заказы <span class="count" id="cntOrders">0</span></button>
       <button class="side-link" onclick="showTab('contacts', this)">✉️ Заявки <span class="count" id="cntContacts">0</span></button>
       <button class="side-link" onclick="showTab('promotions', this)">🔥 Акции <span class="count" id="cntPromos">0</span></button>
+      <button class="side-link" onclick="showTab('news', this)">📢 Новости <span class="count" id="cntNews">0</span></button>
       <button class="side-link" onclick="showTab('settings', this)">⚙️ Настройки</button>
     </nav>
     <div class="side-bottom">
@@ -324,6 +357,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
               <th>Категория</th>
               <th>Цена</th>
               <th>Метка</th>
+              <th style="text-align:center;width:70px;" title="Хит продаж">Хит</th>
               <th style="text-align:right;">Действия</th>
             </tr>
           </thead>
@@ -344,6 +378,11 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-sub">Все заказы клиентов</div>
         </div>
         <button class="btn btn-secondary" onclick="clearOrders()">🗑️ Очистить все</button>
+      </div>
+      <div class="order-filter-tabs">
+        <button class="order-filter-tab active" data-filter="active" onclick="setOrdersFilter('active', this)">Активные <span class="count" id="cntFilterActive">0</span></button>
+        <button class="order-filter-tab" data-filter="done" onclick="setOrdersFilter('done', this)">Выполненные <span class="count" id="cntFilterDone">0</span></button>
+        <button class="order-filter-tab" data-filter="all" onclick="setOrdersFilter('all', this)">Все <span class="count" id="cntFilterAll">0</span></button>
       </div>
       <div id="ordersList"></div>
     </section>
@@ -370,6 +409,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <button class="btn btn-primary" onclick="openPromoModal()">+ Создать акцию</button>
       </div>
       <div class="promo-grid" id="promotionsList"></div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="tab-content" id="tab-news">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Новости и нововведения</div>
+          <div class="page-sub">Всплывающие уведомления для клиентов на сайте</div>
+        </div>
+        <button class="btn btn-primary" onclick="openNewsModal()">+ Создать новость</button>
+      </div>
+      <div id="newsList"></div>
     </section>
 
     <!-- SETTINGS -->
@@ -520,6 +571,44 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closePromoModal()">Отмена</button>
       <button class="btn btn-primary" onclick="savePromo()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS MODAL -->
+<div class="modal-overlay" id="newsModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeNewsModal()">✕</button>
+    <div class="modal-title" id="newsModalTitle">Новая новость</div>
+    <div class="modal-sub">Появится во всплывающей модалке у клиентов</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Заголовок *</label>
+        <input type="text" id="newsTitle" placeholder="Например: Новая категория товаров!">
+      </div>
+      <div class="form-grp full">
+        <label>Текст *</label>
+        <textarea id="newsText" placeholder="Расскажите клиентам о новом..."></textarea>
+      </div>
+      <div class="form-grp">
+        <label>Цвет плашки</label>
+        <select id="newsColor">
+          <option value="green">🟢 Зелёный</option>
+          <option value="orange">🟠 Оранжевый</option>
+          <option value="blue">🔵 Синий</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Статус</label>
+        <select id="newsActive">
+          <option value="true">✓ Активна</option>
+          <option value="false">⏸ Деактивирована</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeNewsModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveNews()">💾 Сохранить</button>
     </div>
   </div>
 </div>
@@ -836,6 +925,7 @@ function showTab(name, btn) {
   if (name === 'orders') renderOrders();
   if (name === 'contacts') renderContacts();
   if (name === 'promotions') renderPromotions();
+  if (name === 'news') renderNews();
   if (name === 'products') renderProducts();
   if (name === 'dashboard') renderDashboard();
 }
@@ -845,6 +935,7 @@ const STORAGE_PRODUCTS = 'klever_products_v2';
 const STORAGE_ORDERS = 'klever_orders';
 const STORAGE_CONTACTS = 'klever_contacts';
 const STORAGE_PROMOS = 'klever_promos';
+const STORAGE_NEWS = 'klever_news';
 const STORAGE_SETTINGS = 'klever_settings';
 
 function getProducts() {
@@ -873,6 +964,14 @@ function setPromos(arr) {
   localStorage.setItem(STORAGE_PROMOS, JSON.stringify(arr));
 }
 
+function getNews() {
+  try { const arr = JSON.parse(localStorage.getItem(STORAGE_NEWS)); return Array.isArray(arr) ? arr : []; }
+  catch(e) { return []; }
+}
+function setNews(arr) {
+  localStorage.setItem(STORAGE_NEWS, JSON.stringify(arr));
+}
+
 function getDefaultPromos() {
   return [
     {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
@@ -892,6 +991,9 @@ function updateCounts() {
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
   document.getElementById('cntContacts').textContent = getContacts().length;
   document.getElementById('cntPromos').textContent = getPromos().length;
+  const newsCount = getNews().filter(n => n.active).length;
+  const cntNewsEl = document.getElementById('cntNews');
+  if (cntNewsEl) cntNewsEl.textContent = newsCount;
 }
 
 // ===== ДАШБОРД =====
@@ -980,7 +1082,7 @@ function renderProducts() {
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
   if (pageItems.length === 0) {
-    document.getElementById('productsBody').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
     document.getElementById('productsBody').innerHTML = pageItems.map(p => `
       <tr>
@@ -990,6 +1092,9 @@ function renderProducts() {
         <td>${p.cat}</td>
         <td><strong>${p.price} ₽</strong></td>
         <td>${badgeHtml(p.badge)}</td>
+        <td style="text-align:center;">
+          <button class="hit-star ${p.isHit ? 'on' : ''}" onclick="toggleHit('${p.sku}')" title="${p.isHit ? 'Убрать из хитов' : 'Сделать хитом продаж'}">${p.isHit ? '⭐' : '☆'}</button>
+        </td>
         <td>
           <div class="actions">
             <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.sku}')">Изм.</button>
@@ -1023,6 +1128,14 @@ function goPage(n) {
   productsPage = n;
   renderProducts();
   document.querySelector('.tbl-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function toggleHit(sku) {
+  const products = getProducts().map(p => p.sku === sku ? {...p, isHit: !p.isHit} : p);
+  setProducts(products);
+  renderProducts();
+  const p = products.find(x => x.sku === sku);
+  toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
 }
 
 function badgeHtml(b) {
@@ -1116,11 +1229,49 @@ function resetProducts() {
 }
 
 // ===== ЗАКАЗЫ =====
+let ordersFilter = 'active';
+const expandedOrders = new Set();
+
+function setOrdersFilter(f, el) {
+  ordersFilter = f;
+  document.querySelectorAll('.order-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+  renderOrders();
+}
+
+function updateOrderFilterCounts() {
+  const all = getOrders();
+  const active = all.filter(o => o.status !== 'done').length;
+  const done = all.filter(o => o.status === 'done').length;
+  const elA = document.getElementById('cntFilterActive');
+  const elD = document.getElementById('cntFilterDone');
+  const elAll = document.getElementById('cntFilterAll');
+  if (elA) elA.textContent = active;
+  if (elD) elD.textContent = done;
+  if (elAll) elAll.textContent = all.length;
+}
+
+function toggleOrderCard(num) {
+  const card = document.querySelector('.order-card[data-num="' + num + '"]');
+  if (!card) return;
+  const isOpen = card.getAttribute('data-expanded') === 'true';
+  if (isOpen) {
+    card.setAttribute('data-expanded', 'false');
+    expandedOrders.delete(String(num));
+  } else {
+    card.setAttribute('data-expanded', 'true');
+    expandedOrders.add(String(num));
+  }
+}
+
 function renderOrders() {
-  const orders = getOrders().slice().reverse();
+  let orders = getOrders().slice().reverse();
+  if (ordersFilter === 'active') orders = orders.filter(o => o.status !== 'done');
+  else if (ordersFilter === 'done') orders = orders.filter(o => o.status === 'done');
   const list = document.getElementById('ordersList');
+  updateOrderFilterCounts();
   if (orders.length === 0) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">Заказов пока нет</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
+    const msg = ordersFilter === 'done' ? 'Выполненных заказов пока нет' : ordersFilter === 'active' ? 'Активных заказов нет' : 'Заказов пока нет';
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">'+msg+'</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
   } else {
     list.innerHTML = orders.map(o => orderCardHtml(o)).join('');
   }
@@ -1128,38 +1279,44 @@ function renderOrders() {
 
 function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
+  const expanded = expandedOrders.has(String(o.num));
   return `
-    <div class="order-card">
+    <div class="order-card" data-num="${o.num}" data-expanded="${expanded}">
       <div class="order-head">
-        <div>
-          <div class="order-num">#${o.num}</div>
-          <div class="order-date">${o.date}</div>
+        <div class="order-head-main">
+          <div>
+            <div class="order-num">#${o.num}</div>
+            <div class="order-date">${o.date}</div>
+          </div>
+          <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
+          <div class="order-total" style="margin-left:auto;">${o.total.toLocaleString('ru-RU')} ₽</div>
         </div>
-        <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
-        <div class="order-total">${o.total.toLocaleString('ru-RU')} ₽</div>
+        <button class="order-toggle" onclick="toggleOrderCard(${o.num})" title="Развернуть/свернуть">▼</button>
       </div>
-      <div class="order-body">
-        <div class="order-section">
-          <div class="order-label">Клиент</div>
-          <div class="order-value">
-            <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
-            📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+      <div class="order-collapse"><div class="order-collapse-inner">
+        <div class="order-body">
+          <div class="order-section">
+            <div class="order-label">Клиент</div>
+            <div class="order-value">
+              <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
+              📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+            </div>
+          </div>
+          <div class="order-section">
+            <div class="order-label">Доставка</div>
+            <div class="order-value">
+              ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
+              ${o.address}
+            </div>
           </div>
         </div>
-        <div class="order-section">
-          <div class="order-label">Доставка</div>
-          <div class="order-value">
-            ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
-            ${o.address}
-          </div>
+        ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
+        ${o.comment ? `<div style="margin-top:14px;padding:12px 14px;background:#fff8e8;border-radius:10px;font-size:13px;"><strong>💬 Комментарий:</strong> ${o.comment}</div>` : ''}
+        <div class="order-actions">
+          ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
         </div>
-      </div>
-      ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
-      ${o.comment ? `<div style="margin-top:14px;padding:12px 14px;background:#fff8e8;border-radius:10px;font-size:13px;"><strong>💬 Комментарий:</strong> ${o.comment}</div>` : ''}
-      <div class="order-actions">
-        ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
-        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
-      </div>
+      </div></div>
     </div>
   `;
 }
@@ -1334,6 +1491,109 @@ function deletePromo(idx) {
   promos.splice(idx, 1);
   setPromos(promos);
   renderPromotions();
+  updateCounts();
+}
+
+// ===== НОВОСТИ =====
+let editingNewsId = null;
+const NEWS_COLOR_GRADIENT = {
+  green: 'linear-gradient(135deg,#1aab58,#2ECC71)',
+  orange: 'linear-gradient(135deg,#FF6B35,#ff9a70)',
+  blue: 'linear-gradient(135deg,#1e6fb8,#4a9ce0)'
+};
+const NEWS_COLOR_LABEL = { green: '🟢 Зелёный', orange: '🟠 Оранжевый', blue: '🔵 Синий' };
+
+function escNews(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderNews() {
+  const list = getNews().slice().reverse();
+  const c = document.getElementById('newsList');
+  if (!c) return;
+  if (list.length === 0) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">Новостей пока нет</div><div>Создайте первое уведомление для клиентов</div></div>';
+    return;
+  }
+  c.innerHTML = list.map(n => {
+    const grad = NEWS_COLOR_GRADIENT[n.color] || NEWS_COLOR_GRADIENT.green;
+    const date = n.created ? new Date(n.created).toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    return `<div class="order-card" style="overflow:hidden;padding:0;">
+      <div style="padding:18px 22px;background:${grad};color:white;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-family:Unbounded,sans-serif;font-size:17px;font-weight:900;letter-spacing:-0.3px;">${escNews(n.title)}</div>
+          ${date ? `<div style="opacity:0.8;font-size:12px;margin-top:4px;">📅 ${date}</div>` : ''}
+        </div>
+        <span style="background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:30px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">${n.active ? '✓ Активна' : '⏸ Неактивна'}</span>
+      </div>
+      <div style="padding:18px 22px;background:white;">
+        <div style="font-size:14px;line-height:1.6;color:#1a2e22;margin-bottom:14px;white-space:pre-wrap;">${escNews(n.text)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn ${n.active ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="toggleNewsActive(${n.id})">${n.active ? '⏸ Деактивировать' : '✓ Активировать'}</button>
+          <button class="btn btn-secondary btn-sm" onclick="editNews(${n.id})">Изм.</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteNews(${n.id})">🗑️ Удалить</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNewsModal() {
+  editingNewsId = null;
+  document.getElementById('newsModalTitle').textContent = 'Новая новость';
+  document.getElementById('newsTitle').value = '';
+  document.getElementById('newsText').value = '';
+  document.getElementById('newsColor').value = 'green';
+  document.getElementById('newsActive').value = 'true';
+  document.getElementById('newsModal').classList.add('open');
+  document.getElementById('newsTitle').focus();
+}
+
+function editNews(id) {
+  const n = getNews().find(x => x.id === id);
+  if (!n) return;
+  editingNewsId = id;
+  document.getElementById('newsModalTitle').textContent = 'Редактирование новости';
+  document.getElementById('newsTitle').value = n.title || '';
+  document.getElementById('newsText').value = n.text || '';
+  document.getElementById('newsColor').value = n.color || 'green';
+  document.getElementById('newsActive').value = n.active ? 'true' : 'false';
+  document.getElementById('newsModal').classList.add('open');
+}
+
+function closeNewsModal() {
+  document.getElementById('newsModal').classList.remove('open');
+}
+
+function saveNews() {
+  const title = document.getElementById('newsTitle').value.trim();
+  const text = document.getElementById('newsText').value.trim();
+  const color = document.getElementById('newsColor').value;
+  const active = document.getElementById('newsActive').value === 'true';
+  if (!title || !text) { alert('Заполните заголовок и текст'); return; }
+  const news = getNews();
+  if (editingNewsId !== null) {
+    const idx = news.findIndex(n => n.id === editingNewsId);
+    if (idx >= 0) news[idx] = { ...news[idx], title, text, color, active };
+  } else {
+    news.push({ id: Date.now(), title, text, color, active, created: Date.now() });
+  }
+  setNews(news);
+  closeNewsModal();
+  renderNews();
+  updateCounts();
+  toast(editingNewsId !== null ? '✓ Новость обновлена' : '✓ Новость создана');
+}
+
+function toggleNewsActive(id) {
+  const news = getNews().map(n => n.id === id ? { ...n, active: !n.active } : n);
+  setNews(news);
+  renderNews();
+  updateCounts();
+}
+
+function deleteNews(id) {
+  if (!confirm('Удалить новость?')) return;
+  setNews(getNews().filter(n => n.id !== id));
+  renderNews();
   updateCounts();
 }
 

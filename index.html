@@ -603,12 +603,19 @@
     .categories { padding: 50px 20px; }
     .prod-grid { grid-template-columns: repeat(2, 1fr); padding: 0; }
     .products { padding: 0 20px 50px; }
+    .promos-section { padding: 0 20px 50px !important; }
     .why-grid { grid-template-columns: repeat(2, 1fr); }
     .why { padding: 50px 20px; }
     .cta-banner { flex-direction: column; padding: 40px 28px; margin: 40px 20px; }
     .cta-banner::before { display: none; }
     .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
     footer { padding: 40px 20px 24px; }
+    .section-header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 28px; }
+  }
+  @media (max-width: 480px) {
+    .prod-grid { grid-template-columns: 1fr; }
+    .cat-grid { grid-template-columns: 1fr; }
+    .why-grid { grid-template-columns: 1fr; }
   }
 </style>
 <style id="cart-inline-styles">
@@ -754,6 +761,25 @@ setTimeout(function(){
     <div class="float-chip c2">🔥 Акции каждую неделю</div>
   </div>
 </section>
+<script id="hero-sync-script">
+document.addEventListener('DOMContentLoaded', function(){
+  let products = [];
+  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
+  if (!products.length) return;
+  document.querySelectorAll('.hero-prod-card').forEach(card => {
+    const m = (card.getAttribute('href') || '').match(/sku=([^&]+)/);
+    if (!m) return;
+    const p = products.find(x => x.sku === m[1]);
+    if (!p) return;
+    const img = card.querySelector('img');
+    if (img && p.img) img.src = p.img;
+    const nameEl = card.querySelector('.hero-prod-name');
+    if (nameEl) nameEl.textContent = p.name;
+    const priceEl = card.querySelector('.hero-prod-price');
+    if (priceEl) priceEl.textContent = p.price + ' ₽';
+  });
+});
+</script>
 
 
 
@@ -863,63 +889,148 @@ setTimeout(function(){
     </div>
     <a href="catalog.html" class="see-all">Все товары →</a>
   </div>
-  <div class="prod-grid">
-    <a href="product.html?sku=0070" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg" alt="Белизна 1 л" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-        <div class="prod-badge">ХИТ</div>
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Белизна 1 л</div>
-        <div class="prod-sku">Арт. 0070</div>
-        <div class="prod-footer">
-          <div class="prod-price">35 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-    <a href="product.html?sku=0238" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg" alt="Белизна гель" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Белизна гель 1 л</div>
-        <div class="prod-sku">Арт. 0238</div>
-        <div class="prod-footer">
-          <div class="prod-price">80 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Белизна гель 1 л',sku:'0238',price:80,img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-    <a href="product.html?sku=0756" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg" alt="Тряпка для пола" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-        <div class="prod-badge" style="background:#2ECC71;color:#0f1a14">НОВИНКА</div>
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Тряпка для пола 50×80 см</div>
-        <div class="prod-sku">Арт. 0756</div>
-        <div class="prod-footer">
-          <div class="prod-price">90 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Тряпка для пола 50×80 см',sku:'0756',price:90,img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-    <a href="product.html?sku=0058" class="prod-card" style="text-decoration:none;color:inherit;display:block;">
-      <div class="prod-img" style="background:white;">
-        <img src="https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg" alt="Unicum Gold" style="width:100%;height:100%;object-fit:contain;padding:16px;">
-      </div>
-      <div class="prod-info">
-        <div class="prod-name">Жироудалитель Unicum Gold 500 мл</div>
-        <div class="prod-sku">Арт. 0058</div>
-        <div class="prod-footer">
-          <div class="prod-price">275 ₽ <span>/ шт</span></div>
-          <button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart({name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg'})">+</button>
-        </div>
-      </div>
-    </a>
-  </div>
+  <div class="prod-grid" id="hitsGrid"></div>
 </section>
+<script id="home-hits-script">
+(function(){
+  const PRODUCTS_KEY = 'klever_products_v2';
+  const FALLBACK_HIT_SKUS = ['0070','0238','0756','0058'];
+  const FALLBACK_PRODUCTS = [
+    {name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg',badge:'hit'},
+    {name:'Белизна гель 1 л',sku:'0238',price:80,img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg'},
+    {name:'Тряпка для пола 50×80 см',sku:'0756',price:90,img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'},
+    {name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg',badge:'hit'},
+  ];
+  function getProducts(){
+    try{ const arr = JSON.parse(localStorage.getItem(PRODUCTS_KEY)); return Array.isArray(arr) ? arr : null; }catch(e){ return null; }
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function getHits(){
+    const products = getProducts();
+    if (!products || !products.length) return FALLBACK_PRODUCTS;
+    let hits = products.filter(p => p.isHit === true);
+    if (!hits.length) {
+      // Fallback chain: items with badge:'hit', then the 4 default SKUs
+      hits = products.filter(p => p.badge === 'hit');
+      if (!hits.length) {
+        hits = FALLBACK_HIT_SKUS.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
+      }
+    }
+    return hits;
+  }
+  function badgeHtml(p){
+    if (p.isHit || p.badge === 'hit') return '<div class="prod-badge">ХИТ</div>';
+    if (p.badge === 'new') return '<div class="prod-badge" style="background:#2ECC71;color:#0f1a14">НОВИНКА</div>';
+    if (p.badge === 'sale') return '<div class="prod-badge" style="background:#FF6B35;color:white">СКИДКА</div>';
+    return '';
+  }
+  function renderHits(){
+    const grid = document.getElementById('hitsGrid');
+    if (!grid) return;
+    let hits = getHits().slice(0, 4);
+    if (!hits.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#8aaa94;"><div style="font-size:56px;margin-bottom:16px;">⭐</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;color:#1a2e22;margin-bottom:8px;">Хиты не выбраны</div><div>Отметьте товары как «хит продаж» в админке</div></div>';
+      return;
+    }
+    let html = hits.map(p => {
+      const imgSrc = p.img ? '<img src="'+esc(p.img)+'" alt="'+esc(p.name)+'" style="width:100%;height:100%;object-fit:contain;padding:16px;" onerror="this.outerHTML=\'<span style=font-size:48px>📦</span>\'">' : '<span style="font-size:48px">📦</span>';
+      const cartData = JSON.stringify({name:p.name,sku:p.sku,price:p.price,img:p.img||''}).replace(/"/g,'&quot;');
+      return '<a href="product.html?sku='+esc(p.sku)+'" class="prod-card" style="text-decoration:none;color:inherit;display:block;">'
+        + '<div class="prod-img" style="background:white;">'+imgSrc+badgeHtml(p)+'</div>'
+        + '<div class="prod-info">'
+        + '<div class="prod-name">'+esc(p.name)+'</div>'
+        + '<div class="prod-sku">Арт. '+esc(p.sku)+'</div>'
+        + '<div class="prod-footer">'
+        + '<div class="prod-price">'+esc(p.price)+' ₽ <span>/ шт</span></div>'
+        + '<button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart('+cartData+')">+</button>'
+        + '</div></div></a>';
+    }).join('');
+    // Placeholder if less than 4
+    for (let i = hits.length; i < 4; i++) {
+      html += '<div style="border:2px dashed #d0e8d8;border-radius:20px;display:flex;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:#8aaa94;min-height:280px;"><div><div style="font-size:36px;margin-bottom:10px;">⭐</div><div style="font-size:13px;line-height:1.5;">Выберите хиты<br>в админке</div></div></div>';
+    }
+    grid.innerHTML = html;
+  }
+  document.addEventListener('DOMContentLoaded', renderHits);
+  window.addEventListener('storage', e => { if (e.key === PRODUCTS_KEY) renderHits(); });
+})();
+</script>
+
+<!-- PROMOS -->
+<section class="promos-section" style="padding:0 40px 80px;">
+  <div class="section-header">
+    <div>
+      <div class="section-tag" style="background:rgba(255,107,53,0.12);color:#FF6B35;">🔥 Скидки</div>
+      <div class="section-title">Акции и предложения</div>
+    </div>
+    <a href="sales.html" class="see-all">Все акции →</a>
+  </div>
+  <div class="home-promos-grid" id="homePromosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;"></div>
+</section>
+<style id="home-promos-styles">
+  .home-promo-card{border-radius:20px;overflow:hidden;border:1.5px solid #e0ece4;transition:transform .2s,box-shadow .2s;background:white;}
+  .home-promo-card:hover{transform:translateY(-4px);box-shadow:0 16px 50px rgba(0,0,0,0.1);}
+  .home-promo-top{padding:28px;position:relative;}
+  .home-promo-top.green{background:linear-gradient(135deg,#1aab58,#2ECC71);}
+  .home-promo-top.accent{background:linear-gradient(135deg,#FF6B35,#ff9a70);}
+  .home-promo-top.lime{background:linear-gradient(135deg,#8ab800,#C8F135);}
+  .home-promo-badge{display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+  .home-promo-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;color:white;line-height:1.2;letter-spacing:-0.5px;margin-bottom:8px;padding-right:60px;}
+  .home-promo-desc{color:rgba(255,255,255,0.75);font-size:14px;line-height:1.5;}
+  .home-promo-disc{position:absolute;top:20px;right:20px;background:white;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:900;color:#FF6B35;}
+  .home-promo-bottom{padding:18px 28px;display:flex;justify-content:space-between;align-items:center;}
+  .home-promo-validity{font-size:12px;color:#8aaa94;}
+  .home-promo-btn{display:inline-block;background:var(--green);color:var(--dark);padding:8px 16px;border-radius:30px;font-weight:700;font-size:12px;text-decoration:none;transition:background .2s;}
+  .home-promo-btn:hover{background:var(--lime);}
+  @media(max-width:900px){.home-promos-grid{grid-template-columns:1fr !important;}}
+</style>
+<script id="home-promos-script">
+(function(){
+  const PROMOS_KEY = 'klever_promos';
+  const DEFAULT_PROMOS = [
+    {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
+    {name:'При заказе от 5 000 ₽', disc:'-20%', color:'accent', badge:'Оптом выгоднее', desc:'Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ', valid:'Постоянная акция'},
+    {name:'Скидка на первый заказ', disc:'-10%', color:'lime', badge:'Новым клиентам', desc:'Скидка 10% для новых покупателей при оформлении первого заказа', valid:'Бессрочно'},
+  ];
+  function getPromos(){
+    try{
+      const raw = localStorage.getItem(PROMOS_KEY);
+      if (raw === null) return DEFAULT_PROMOS;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : DEFAULT_PROMOS;
+    }catch(e){ return DEFAULT_PROMOS; }
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function renderHomePromos(){
+    const grid = document.getElementById('homePromosGrid');
+    if (!grid) return;
+    const section = grid.closest('.promos-section');
+    const promos = getPromos().slice(0, 3);
+    if (!promos.length){
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = '';
+    grid.innerHTML = promos.map(p => {
+      const color = ['green','accent','lime'].includes(p.color) ? p.color : 'green';
+      return '<a href="sales.html" class="home-promo-card" style="text-decoration:none;color:inherit;">'
+        + '<div class="home-promo-top '+color+'">'
+        + (p.badge ? '<div class="home-promo-badge">'+esc(p.badge)+'</div>' : '')
+        + (p.disc ? '<div class="home-promo-disc">'+esc(p.disc)+'</div>' : '')
+        + '<div class="home-promo-title">'+esc(p.name||'')+'</div>'
+        + '<div class="home-promo-desc">'+esc(p.desc||'')+'</div>'
+        + '</div>'
+        + '<div class="home-promo-bottom">'
+        + '<span class="home-promo-validity">'+esc(p.valid||'Бессрочно')+'</span>'
+        + '<span class="home-promo-btn">Подробнее →</span>'
+        + '</div>'
+        + '</a>';
+    }).join('');
+  }
+  document.addEventListener('DOMContentLoaded', renderHomePromos);
+  window.addEventListener('storage', e => { if (e.key === PROMOS_KEY) renderHomePromos(); });
+})();
+</script>
 
 <!-- WHY US -->
 <section class="why">
@@ -1039,10 +1150,194 @@ function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
 function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
 function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartPanel').classList.add('open');document.body.style.overflow='hidden';renderCart();}
 function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
-function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="font-size:56px;margin-bottom:16px;">🛒</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>'<div class="cart-item"><div class="cart-item-img">'+(i.img?'<img src="'+i.img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>').join('');total.textContent=getCartTotal()+' ₽';}
+function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
+function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="font-size:56px;margin-bottom:16px;">🛒</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');total.textContent=getCartTotal()+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
 function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded',updateCartBadge);
+</script>
+
+<style id="news-modal-styles">
+.klever-news-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;}
+.klever-news-overlay.open{opacity:1;visibility:visible;}
+.klever-news-modal{background:white;border-radius:24px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.3);transform:translateY(20px) scale(.96);transition:transform .3s ease;}
+.klever-news-overlay.open .klever-news-modal{transform:translateY(0) scale(1);}
+.klever-news-banner{padding:32px 28px;color:white;font-family:'Unbounded',sans-serif;}
+.klever-news-banner.green{background:linear-gradient(135deg,#1aab58,#2ECC71);}
+.klever-news-banner.orange{background:linear-gradient(135deg,#FF6B35,#ff9a70);}
+.klever-news-banner.blue{background:linear-gradient(135deg,#1e6fb8,#4a9ce0);}
+.klever-news-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;opacity:0.85;margin-bottom:10px;}
+.klever-news-title{font-size:22px;font-weight:900;letter-spacing:-0.5px;line-height:1.2;}
+.klever-news-body{padding:24px 28px;font-family:'Onest',sans-serif;}
+.klever-news-text{font-size:15px;line-height:1.55;color:#1a2e22;white-space:pre-wrap;margin-bottom:22px;}
+.klever-news-btn{display:block;width:100%;background:#2ECC71;color:#0f1a14;border:none;padding:14px 20px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background .2s,transform .15s;}
+.klever-news-btn:hover{background:#C8F135;transform:translateY(-1px);}
+</style>
+<div class="klever-news-overlay" id="kleverNewsOverlay">
+  <div class="klever-news-modal">
+    <div class="klever-news-banner" id="kleverNewsBanner">
+      <div class="klever-news-eyebrow">📢 Новость</div>
+      <div class="klever-news-title" id="kleverNewsTitle"></div>
+    </div>
+    <div class="klever-news-body">
+      <div class="klever-news-text" id="kleverNewsText"></div>
+      <button class="klever-news-btn" onclick="kleverNewsDismiss()">Понятно</button>
+    </div>
+  </div>
+</div>
+<script id="news-modal-script">
+(function(){
+  const NEWS_KEY = 'klever_news';
+  const SEEN_KEY = 'klever_news_seen';
+  function getNews(){ try{ const a=JSON.parse(localStorage.getItem(NEWS_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function getSeen(){ try{ const a=JSON.parse(localStorage.getItem(SEEN_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function setSeen(a){ localStorage.setItem(SEEN_KEY, JSON.stringify(a)); }
+  let currentNews = null;
+  function pickNext(){
+    const seen = getSeen();
+    return getNews().find(n => n.active && !seen.includes(n.id));
+  }
+  function show(n){
+    currentNews = n;
+    const banner = document.getElementById('kleverNewsBanner');
+    banner.classList.remove('green','orange','blue');
+    banner.classList.add(['green','orange','blue'].includes(n.color) ? n.color : 'green');
+    document.getElementById('kleverNewsTitle').textContent = n.title || '';
+    document.getElementById('kleverNewsText').textContent = n.text || '';
+    document.getElementById('kleverNewsOverlay').classList.add('open');
+  }
+  window.kleverNewsDismiss = function(){
+    if (currentNews) {
+      const seen = getSeen();
+      if (!seen.includes(currentNews.id)) { seen.push(currentNews.id); setSeen(seen); }
+    }
+    document.getElementById('kleverNewsOverlay').classList.remove('open');
+    currentNews = null;
+    setTimeout(function(){
+      const next = pickNext();
+      if (next) show(next);
+    }, 400);
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      const n = pickNext();
+      if (n) show(n);
+    }, 800);
+  });
+})();
+</script>
+
+<style id="klever-mobile-header-tweak">@media(max-width:900px){.btn-phone{display:none !important;}.header-actions{gap:8px;}}
+</style>
+<style id="burger-menu-styles">
+.mobile-burger-btn{display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:22px;align-items:center;justify-content:center;padding:0;flex-shrink:0;transition:background .2s;}
+.mobile-burger-btn:hover{background:rgba(255,255,255,0.15);}
+.mobile-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9100;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;backdrop-filter:blur(2px);}
+.mobile-menu-overlay.open{opacity:1;visibility:visible;}
+.mobile-menu-panel{position:fixed;top:0;right:0;bottom:0;width:320px;max-width:88%;background:#0f1a14;color:white;z-index:9101;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,0.4);}
+.mobile-menu-panel.open{transform:translateX(0);}
+.mobile-menu-head{padding:22px 24px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;}
+.mobile-menu-head .mm-title{font-family:'Unbounded',sans-serif;font-weight:900;font-size:18px;letter-spacing:-0.5px;color:#C8F135;}
+.mobile-menu-close{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mobile-menu-close:hover{background:rgba(255,255,255,0.18);}
+.mobile-menu-links{display:flex;flex-direction:column;padding:14px 12px;gap:2px;}
+.mobile-menu-links a{display:flex;align-items:center;gap:12px;padding:14px 16px;color:rgba(255,255,255,0.85);text-decoration:none;font-family:'Onest',sans-serif;font-size:15px;font-weight:500;border-radius:12px;transition:background .2s,color .2s;}
+.mobile-menu-links a:hover,.mobile-menu-links a.active{background:rgba(46,204,113,0.12);color:#C8F135;}
+.mobile-menu-actions{margin-top:auto;padding:18px 16px 24px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:10px;}
+.mobile-menu-actions a,.mobile-menu-actions button{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;color:white;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;text-decoration:none;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.mobile-menu-actions a:hover,.mobile-menu-actions button:hover{background:rgba(255,255,255,0.12);}
+.mobile-menu-actions .mm-cart-badge{background:#FF6B35;color:white;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 7px;}
+.mobile-menu-actions .mm-cart-badge.empty{display:none;}
+.mobile-menu-phone{display:flex;align-items:center;justify-content:center;gap:8px;background:#2ECC71 !important;color:#0f1a14 !important;border:none !important;font-weight:700 !important;}
+@media(max-width:900px){
+  .mobile-burger-btn{display:inline-flex !important;}
+}
+</style>
+<script id="burger-menu-script">
+(function(){
+  function buildMenu(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.mobile-burger-btn')) return;
+    // Get nav links (mainnav)
+    const navAnchors = header.querySelectorAll('nav a');
+    const links = [...navAnchors].map(a => {
+      const isActive = a.classList.contains('active');
+      const href = a.getAttribute('href') || '#';
+      const text = a.textContent.trim();
+      return '<a href="'+href+'" '+(isActive?'class="active"':'')+'>'+text+'</a>';
+    }).join('');
+    // Find phone link
+    let phoneHref = 'tel:+78129228677', phoneText = '📞 Позвонить';
+    const phoneEl = header.querySelector('.btn-phone, a[href^="tel:"]');
+    if (phoneEl) { phoneHref = phoneEl.getAttribute('href'); phoneText = phoneEl.textContent.trim(); }
+    // Build menu HTML
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-menu-overlay';
+    overlay.id = 'mobileMenuOverlay';
+    overlay.onclick = closeMenu;
+    const panel = document.createElement('aside');
+    panel.className = 'mobile-menu-panel';
+    panel.id = 'mobileMenuPanel';
+    panel.innerHTML = '<div class="mobile-menu-head">'
+      + '<span class="mm-title">🍀 Меню</span>'
+      + '<button class="mobile-menu-close" onclick="window.__kleverCloseMobileMenu()">✕</button>'
+      + '</div>'
+      + '<div class="mobile-menu-links">'+links+'</div>'
+      + '<div class="mobile-menu-actions">'
+      + '<a href="account.html">👤 Личный кабинет</a>'
+      + '<button id="mmCartBtn">🛒 Корзина <span class="mm-cart-badge empty" id="mmCartBadge">0</span></button>'
+      + '<a href="'+phoneHref+'" class="mobile-menu-phone">'+phoneText+'</a>'
+      + '</div>';
+    document.body.appendChild(overlay);
+    document.body.appendChild(panel);
+    // Cart button
+    const cartBtn = panel.querySelector('#mmCartBtn');
+    cartBtn.onclick = function(){
+      closeMenu();
+      setTimeout(function(){ if (typeof openCart === 'function') openCart(); }, 280);
+    };
+    // Burger button — insert into header
+    const burger = document.createElement('button');
+    burger.className = 'mobile-burger-btn';
+    burger.setAttribute('aria-label','Открыть меню');
+    burger.innerHTML = '☰';
+    burger.onclick = openMenu;
+    const actions = header.querySelector('.header-actions');
+    if (actions) actions.appendChild(burger);
+    else header.appendChild(burger);
+    updateMmCart();
+  }
+  function openMenu(){
+    document.getElementById('mobileMenuOverlay').classList.add('open');
+    document.getElementById('mobileMenuPanel').classList.add('open');
+    document.body.style.overflow='hidden';
+    updateMmCart();
+  }
+  function closeMenu(){
+    const o = document.getElementById('mobileMenuOverlay');
+    const p = document.getElementById('mobileMenuPanel');
+    if (o) o.classList.remove('open');
+    if (p) p.classList.remove('open');
+    document.body.style.overflow='';
+  }
+  function updateMmCart(){
+    const badge = document.getElementById('mmCartBadge');
+    if (!badge) return;
+    let count = 0;
+    try { const c = JSON.parse(localStorage.getItem('klever_cart')) || []; count = c.reduce((s,i)=>s+(i.qty||0),0); } catch(e){}
+    badge.textContent = count;
+    if (count > 0) badge.classList.remove('empty'); else badge.classList.add('empty');
+  }
+  window.__kleverCloseMobileMenu = closeMenu;
+  window.__kleverUpdateMmCart = updateMmCart;
+  document.addEventListener('DOMContentLoaded', buildMenu);
+  // Refresh badge when cart changes (same tab via custom polling; cross-tab via storage)
+  window.addEventListener('storage', e => { if (e.key === 'klever_cart') updateMmCart(); });
+  // Patch updateCartBadge if exists to also sync mm
+  const _origInterval = setInterval(function(){ if (typeof updateCartBadge === 'function') { const _orig = updateCartBadge; window.updateCartBadge = function(){ _orig(); updateMmCart(); }; clearInterval(_origInterval); } }, 100);
+  setTimeout(function(){ clearInterval(_origInterval); }, 3000);
+})();
 </script>
 
 </body>
