@@ -28,6 +28,8 @@ nav a:hover{color:var(--lime);}
 /* LEFT - FORMS */
 .checkout-left{}
 .step{background:white;border-radius:20px;padding:32px;margin-bottom:20px;border:1.5px solid #e0ece4;}
+.payment-step{overflow:hidden;transition:max-height .3s ease, opacity .3s ease, padding .3s ease, margin-bottom .3s ease, border-width .3s ease;max-height:1500px;opacity:1;}
+.payment-step.hidden{max-height:0;opacity:0;padding-top:0;padding-bottom:0;margin-bottom:0;border-top-width:0;border-bottom-width:0;pointer-events:none;}
 .step-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;letter-spacing:-0.5px;margin-bottom:24px;display:flex;align-items:center;gap:12px;}
 .step-num{width:32px;height:32px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--dark);flex-shrink:0;font-family:'Unbounded',sans-serif;}
 
@@ -335,7 +337,7 @@ setTimeout(function(){
     </div>
 
     <!-- ШАГ 3 — СПОСОБ ОПЛАТЫ -->
-    <div class="step">
+    <div class="step payment-step" id="paymentStep">
       <div class="step-title"><span class="step-num">3</span> Способ оплаты</div>
 
       <div class="payment-options">
@@ -519,6 +521,23 @@ function selectDelivery(method) {
 
   const addrForm = document.getElementById('addressForm');
   addrForm.classList.toggle('visible', method === 'courier');
+
+  const paymentStep = document.getElementById('paymentStep');
+  if (paymentStep) {
+    const isPickup = method === 'pickup';
+    paymentStep.classList.toggle('hidden', isPickup);
+    if (isPickup) {
+      // При самовывозе используем оплату наличными по умолчанию (передаём курьеру/при получении не актуально)
+      paymentMethod = 'cash';
+      const cashRadio = document.querySelector('input[name="paymentMethod"][value="cash"]');
+      if (cashRadio) cashRadio.checked = true;
+      document.querySelectorAll('.payment-option').forEach(el => el.classList.toggle('selected', el.dataset.pay === 'cash'));
+      const invForm = document.getElementById('invoiceForm');
+      if (invForm) invForm.classList.remove('visible');
+      clearError('invoiceCompany', 'invoiceCompanyErr');
+      clearError('invoiceInn', 'invoiceInnErr');
+    }
+  }
 
   updateSummary();
 }
