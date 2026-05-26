@@ -1582,5 +1582,107 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 })();
 </script>
 
+<style id="klever-recent-styles">
+.klever-recent{max-width:1200px;margin:0 auto 60px;padding:0 40px;}
+.klever-recent-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;}
+.klever-recent-title{font-family:'Unbounded',sans-serif;font-size:clamp(22px,3vw,30px);font-weight:900;letter-spacing:-1px;color:#1a2e22;}
+.klever-recent-strip{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 16px;scrollbar-width:thin;scrollbar-color:#d0e8d8 transparent;-webkit-overflow-scrolling:touch;}
+.klever-recent-strip::-webkit-scrollbar{height:6px;}
+.klever-recent-strip::-webkit-scrollbar-thumb{background:#d0e8d8;border-radius:3px;}
+.klever-recent-card{flex:0 0 220px;background:#f2f7f4;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;scroll-snap-align:start;border:1.5px solid transparent;transition:transform .2s,box-shadow .2s,border-color .2s;}
+.klever-recent-card:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(0,0,0,0.08);border-color:#a8f0c6;}
+.klever-recent-img{background:white;height:140px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.klever-recent-img img{width:100%;height:100%;object-fit:contain;padding:12px;}
+.klever-recent-info{padding:14px;}
+.klever-recent-name{font-size:13.5px;font-weight:600;line-height:1.35;color:#1a2e22;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;}
+.klever-recent-foot{display:flex;justify-content:space-between;align-items:center;}
+.klever-recent-price{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;color:#1aab58;}
+.klever-recent-add{width:34px;height:34px;background:#2ECC71;border:none;border-radius:50%;font-size:18px;color:#0f1a14;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;padding:0;transition:background .2s,transform .15s;}
+.klever-recent-add:hover{background:#C8F135;transform:scale(1.1);}
+@media(max-width:600px){
+  .klever-recent{padding:0 16px;margin-bottom:40px;}
+  .klever-recent-card{flex:0 0 160px;}
+  .klever-recent-img{height:110px;}
+}
+</style>
+<script id="klever-recent-script">
+(function(){
+  const KEY = 'klever_recently_viewed';
+  const MAX = 12;
+  function getList(){
+    try { const a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a : []; } catch(e) { return []; }
+  }
+  function setList(a){ localStorage.setItem(KEY, JSON.stringify(a.slice(0, MAX))); }
+  function getProducts(){
+    try { const a = JSON.parse(localStorage.getItem('klever_products_v2')); return Array.isArray(a) ? a : []; } catch(e) { return []; }
+  }
+  function escHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  // Track current product if on product.html
+  function trackCurrent(){
+    if (!/product\.html/i.test(location.pathname)) return;
+    const sku = new URLSearchParams(location.search).get('sku');
+    if (!sku) return;
+    const list = getList().filter(s => s !== sku);
+    list.unshift(sku);
+    setList(list);
+  }
+  function render(){
+    const host = document.getElementById('kleverRecentSection');
+    if (!host) return;
+    let list = getList();
+    // On product page, exclude current sku
+    if (/product\.html/i.test(location.pathname)) {
+      const curSku = new URLSearchParams(location.search).get('sku');
+      list = list.filter(s => s !== curSku);
+    }
+    if (!list.length) { host.style.display = 'none'; return; }
+    const products = getProducts();
+    const items = list.map(s => products.find(p => p.sku === s)).filter(Boolean).slice(0, 12);
+    if (!items.length) { host.style.display = 'none'; return; }
+    host.style.display = '';
+    const strip = host.querySelector('.klever-recent-strip');
+    strip.innerHTML = items.map(p => {
+      const imgHtml = p.img ? '<img src="'+escHtml(p.img)+'" alt="" onerror="this.outerHTML=\'<span style=font-size:42px>📦</span>\'">' : '<span style="font-size:42px">📦</span>';
+      const cartData = escHtml(JSON.stringify({name:p.name,sku:p.sku,price:p.price,img:p.img||''}));
+      return '<a href="product.html?sku='+escHtml(p.sku)+'" class="klever-recent-card">'
+        + '<div class="klever-recent-img">'+imgHtml+'</div>'
+        + '<div class="klever-recent-info">'
+        + '<div class="klever-recent-name">'+escHtml(p.name)+'</div>'
+        + '<div class="klever-recent-foot">'
+        + '<div class="klever-recent-price">'+escHtml(p.price)+' ₽</div>'
+        + '<button class="klever-recent-add" onclick="event.preventDefault();event.stopPropagation();kleverRecentAdd('+cartData+')" aria-label="В корзину">+</button>'
+        + '</div></div></a>';
+    }).join('');
+  }
+  window.kleverRecentAdd = function(p){
+    if (typeof addToCart === 'function') { addToCart(p); return; }
+    try {
+      const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
+      const ex = cart.find(i => i.sku === p.sku);
+      if (ex) ex.qty++; else cart.push({...p, qty:1});
+      localStorage.setItem('klever_cart', JSON.stringify(cart));
+    } catch(e){}
+    if (typeof updateCartBadge === 'function') updateCartBadge();
+    if (typeof window.__kleverUpdateMmCart === 'function') window.__kleverUpdateMmCart();
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    trackCurrent();
+    // Inject block before footer if not already there
+    if (!document.getElementById('kleverRecentSection')){
+      const sec = document.createElement('section');
+      sec.id = 'kleverRecentSection';
+      sec.className = 'klever-recent';
+      sec.innerHTML = '<div class="klever-recent-head"><div class="klever-recent-title">Вы недавно смотрели</div></div><div class="klever-recent-strip"></div>';
+      const footer = document.querySelector('footer');
+      if (footer) footer.parentNode.insertBefore(sec, footer);
+      else document.body.appendChild(sec);
+    }
+    // Delay slightly to let product page write its track
+    setTimeout(render, 50);
+  });
+  window.addEventListener('storage', e => { if (e.key === KEY || e.key === 'klever_products_v2') render(); });
+})();
+</script>
+
 </body>
 </html>
