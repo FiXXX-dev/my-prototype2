@@ -536,4 +536,73 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 })();
 </script>
 
+<style id="klever-fab-styles">
+.klever-fab{position:fixed;bottom:24px;right:24px;z-index:150;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:14px;}
+.klever-fab-main{width:56px;height:56px;border-radius:50%;background:#2ECC71;color:#0f1a14;border:none;cursor:pointer;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(46,204,113,0.4),0 4px 12px rgba(0,0,0,0.15);transition:transform .25s ease,background .2s,box-shadow .2s;}
+.klever-fab-main:hover{background:#C8F135;transform:scale(1.06);}
+.klever-fab.open .klever-fab-main{transform:rotate(135deg);background:#0f1a14;color:white;}
+.klever-fab-items{display:flex;flex-direction:column;gap:12px;align-items:flex-end;pointer-events:none;}
+.klever-fab-item{opacity:0;transform:translateY(10px) scale(0.85);transition:opacity .2s ease,transform .25s ease;pointer-events:none;display:flex;align-items:center;gap:10px;}
+.klever-fab.open .klever-fab-item{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+.klever-fab.open .klever-fab-item:nth-child(1){transition-delay:0.05s;}
+.klever-fab.open .klever-fab-item:nth-child(2){transition-delay:0.1s;}
+.klever-fab.open .klever-fab-item:nth-child(3){transition-delay:0.15s;}
+.klever-fab-tooltip{background:#0f1a14;color:white;padding:7px 12px;border-radius:8px;font-size:13px;font-weight:600;font-family:'Onest',sans-serif;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.25);opacity:0;transform:translateX(8px);transition:opacity .15s,transform .15s;pointer-events:none;}
+.klever-fab-item:hover .klever-fab-tooltip{opacity:1;transform:translateX(0);}
+.klever-fab-btn{width:48px;height:48px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 6px 16px rgba(0,0,0,0.18);transition:transform .15s,box-shadow .2s;flex-shrink:0;}
+.klever-fab-btn:hover{transform:scale(1.1);box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+.klever-fab-btn.whatsapp{background:#25D366;}
+.klever-fab-btn.telegram{background:#0088cc;}
+.klever-fab-btn.max{background:#FF6600;}
+.klever-fab-btn svg{width:24px;height:24px;}
+.klever-fab-btn .max-letter{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;letter-spacing:-1px;line-height:1;}
+@media(max-width:600px){.klever-fab{bottom:80px;right:18px;}}
+</style>
+<div class="klever-fab" id="kleverFab">
+  <button class="klever-fab-main" id="kleverFabMain" aria-label="Связаться с нами">💬</button>
+  <div class="klever-fab-items" id="kleverFabItems"></div>
+</div>
+<script id="klever-fab-script">
+(function(){
+  const ICONS = {
+    whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.057 20.85h-.005a8.9 8.9 0 0 1-4.54-1.244l-.325-.193-3.374.885.9-3.288-.211-.337a8.879 8.879 0 0 1-1.367-4.738c.002-4.911 4.001-8.911 8.92-8.911 2.382 0 4.622.928 6.305 2.612a8.86 8.86 0 0 1 2.612 6.305c-.003 4.911-4.002 8.91-8.916 8.91zM20.52 3.449C18.244 1.245 15.222 0 12.057 0 5.534 0 .222 5.31.22 11.836c0 2.086.546 4.122 1.585 5.916L.122 24l6.401-1.68a11.886 11.886 0 0 0 5.69 1.45h.005c6.521 0 11.832-5.31 11.835-11.836a11.831 11.831 0 0 0-3.527-8.485"/></svg>',
+    telegram: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>',
+    max: '<span class="max-letter">M</span>'
+  };
+  const LABELS = { whatsapp: 'WhatsApp', telegram: 'Telegram', max: 'Max' };
+  function getSettings(){
+    try { return JSON.parse(localStorage.getItem('klever_settings') || '{}') || {}; } catch(e) { return {}; }
+  }
+  function defaults(){
+    return { whatsapp: 'https://wa.me/79119228677', telegram: 'https://t.me/cleverspb', max: '' };
+  }
+  function render(){
+    const wrap = document.getElementById('kleverFabItems');
+    if (!wrap) return;
+    const s = Object.assign({}, defaults(), getSettings());
+    const order = ['whatsapp','telegram','max'];
+    wrap.innerHTML = order.filter(k => (s[k]||'').trim()).map(k => {
+      const url = s[k];
+      const icon = ICONS[k];
+      return '<div class="klever-fab-item">'
+        + '<span class="klever-fab-tooltip">'+LABELS[k]+'</span>'
+        + '<a class="klever-fab-btn '+k+'" href="'+url+'" target="_blank" rel="noopener" aria-label="'+LABELS[k]+'">'+icon+'</a>'
+        + '</div>';
+    }).join('');
+  }
+  function toggle(){
+    document.getElementById('kleverFab').classList.toggle('open');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    render();
+    document.getElementById('kleverFabMain').addEventListener('click', toggle);
+    document.addEventListener('click', e => {
+      const fab = document.getElementById('kleverFab');
+      if (fab.classList.contains('open') && !fab.contains(e.target)) fab.classList.remove('open');
+    });
+  });
+  window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+})();
+</script>
+
 </body></html>
