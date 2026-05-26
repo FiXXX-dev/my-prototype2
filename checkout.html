@@ -962,5 +962,137 @@ prefillInvoiceFromUser();
 })();
 </script>
 
+<style id="klever-search-styles">
+.search-trigger{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .2s,transform .15s;}
+.search-trigger:hover{background:rgba(255,255,255,0.15);transform:scale(1.05);}
+.klever-search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);z-index:8500;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;}
+.klever-search-overlay.open{opacity:1;visibility:visible;}
+.klever-search-panel{position:fixed;top:0;left:0;right:0;background:#0f1a14;border-bottom:2px solid #2ECC71;z-index:8501;transform:translateY(-100%);transition:transform .3s ease;padding:18px 24px;}
+.klever-search-panel.open{transform:translateY(0);}
+.klever-search-row{display:flex;gap:10px;align-items:center;max-width:900px;margin:0 auto;}
+.klever-search-input{flex:1;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);border-radius:14px;padding:14px 18px;font-family:'Onest',sans-serif;font-size:15px;color:white;outline:none;transition:border-color .2s,background .2s;min-width:0;}
+.klever-search-input:focus{border-color:#2ECC71;background:rgba(255,255,255,0.12);}
+.klever-search-input::placeholder{color:rgba(255,255,255,0.4);}
+.klever-search-close{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:46px;height:46px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;}
+.klever-search-close:hover{background:rgba(255,255,255,0.18);}
+.klever-search-results{max-width:900px;margin:14px auto 0;background:white;border-radius:16px;max-height:60vh;overflow-y:auto;display:none;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.klever-search-results.has-content{display:block;}
+.klever-search-result{display:grid;grid-template-columns:54px 1fr auto auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid #e8f4ec;text-decoration:none;color:inherit;transition:background .15s;}
+.klever-search-result:last-child{border-bottom:none;}
+.klever-search-result:hover{background:#f2f7f4;}
+.klever-search-result-img{width:54px;height:54px;background:#f2f7f4;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.klever-search-result-img img{width:100%;height:100%;object-fit:contain;padding:5px;}
+.klever-search-result-name{font-size:14px;font-weight:600;color:#1a2e22;line-height:1.35;}
+.klever-search-result-sku{font-size:12px;color:#8aaa94;margin-top:2px;}
+.klever-search-result-price{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;color:#1aab58;white-space:nowrap;}
+.klever-search-result-add{background:#2ECC71;color:#0f1a14;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;padding:0;transition:background .2s,transform .15s;}
+.klever-search-result-add:hover{background:#C8F135;transform:scale(1.1);}
+.klever-search-empty{padding:40px 20px;text-align:center;color:#8aaa94;font-size:14px;}
+.klever-search-empty .emoji{font-size:44px;margin-bottom:10px;display:block;}
+@media(max-width:600px){
+  .klever-search-panel{padding:14px 14px;}
+  .klever-search-input{padding:12px 14px;font-size:14px;}
+  .klever-search-close{width:42px;height:42px;}
+  .klever-search-results{max-height:70vh;border-radius:12px;}
+  .klever-search-result{grid-template-columns:46px 1fr auto;gap:10px;padding:11px 12px;}
+  .klever-search-result-price{display:none;}
+  .klever-search-result-add{width:34px;height:34px;font-size:16px;}
+  .klever-search-result-name{font-size:13px;}
+}
+</style>
+<div class="klever-search-overlay" id="kleverSearchOverlay"></div>
+<div class="klever-search-panel" id="kleverSearchPanel">
+  <div class="klever-search-row">
+    <input type="text" class="klever-search-input" id="kleverSearchInput" placeholder="Поиск по названию или артикулу..." autocomplete="off">
+    <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="klever-search-results" id="kleverSearchResults"></div>
+</div>
+<script id="klever-search-script">
+(function(){
+  let debounceT = null;
+  function getProducts(){
+    try{ const a=JSON.parse(localStorage.getItem('klever_products_v2')); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+  }
+  function escHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function openSearch(){
+    document.getElementById('kleverSearchOverlay').classList.add('open');
+    document.getElementById('kleverSearchPanel').classList.add('open');
+    document.body.style.overflow='hidden';
+    setTimeout(()=>document.getElementById('kleverSearchInput').focus(), 100);
+  }
+  function closeSearch(){
+    document.getElementById('kleverSearchOverlay').classList.remove('open');
+    document.getElementById('kleverSearchPanel').classList.remove('open');
+    document.body.style.overflow='';
+    document.getElementById('kleverSearchInput').value='';
+    const r = document.getElementById('kleverSearchResults');
+    r.classList.remove('has-content'); r.innerHTML='';
+  }
+  function render(query){
+    const box = document.getElementById('kleverSearchResults');
+    const q = query.trim().toLowerCase();
+    if (!q){ box.classList.remove('has-content'); box.innerHTML=''; return; }
+    const all = getProducts();
+    const matches = all.filter(p => {
+      const n = (p.name||'').toLowerCase();
+      const s = (p.sku||'').toString().toLowerCase();
+      return n.includes(q) || s.includes(q);
+    }).slice(0, 8);
+    box.classList.add('has-content');
+    if (matches.length === 0){
+      box.innerHTML = '<div class="klever-search-empty"><span class="emoji">🔍</span>Ничего не найдено по запросу «'+escHtml(query)+'»</div>';
+      return;
+    }
+    box.innerHTML = matches.map(p => {
+      const imgHtml = p.img ? '<img src="'+escHtml(p.img)+'" alt="" onerror="this.outerHTML=\'<span style=font-size:22px>📦</span>\'">' : '<span style="font-size:22px">📦</span>';
+      const cartData = escHtml(JSON.stringify({name:p.name,sku:p.sku,price:p.price,img:p.img||''}));
+      return '<a href="product.html?sku='+escHtml(p.sku)+'" class="klever-search-result">'
+        + '<div class="klever-search-result-img">'+imgHtml+'</div>'
+        + '<div><div class="klever-search-result-name">'+escHtml(p.name)+'</div><div class="klever-search-result-sku">Арт. '+escHtml(p.sku)+'</div></div>'
+        + '<div class="klever-search-result-price">'+escHtml(p.price)+' ₽</div>'
+        + '<button class="klever-search-result-add" onclick="event.preventDefault();event.stopPropagation();kleverSearchAdd('+cartData+')" aria-label="В корзину">+</button>'
+        + '</a>';
+    }).join('');
+  }
+  window.kleverSearchClose = closeSearch;
+  window.kleverSearchAdd = function(p){
+    if (typeof addToCart === 'function') { addToCart(p); return; }
+    try {
+      const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
+      const ex = cart.find(i => i.sku === p.sku);
+      if (ex) ex.qty++; else cart.push({...p, qty:1});
+      localStorage.setItem('klever_cart', JSON.stringify(cart));
+    } catch(e){}
+    if (typeof updateCartBadge === 'function') updateCartBadge();
+    if (typeof window.__kleverUpdateMmCart === 'function') window.__kleverUpdateMmCart();
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.search-trigger')) return;
+    const btn = document.createElement('button');
+    btn.className = 'search-trigger';
+    btn.setAttribute('aria-label','Поиск');
+    btn.innerHTML = '🔍';
+    btn.onclick = openSearch;
+    const actions = header.querySelector('.header-actions');
+    if (actions){
+      const phoneBtn = actions.querySelector('.btn-phone');
+      if (phoneBtn && phoneBtn.nextSibling) actions.insertBefore(btn, phoneBtn.nextSibling);
+      else actions.insertBefore(btn, actions.firstChild);
+    } else { header.appendChild(btn); }
+    const input = document.getElementById('kleverSearchInput');
+    input.addEventListener('input', e => {
+      clearTimeout(debounceT);
+      const q = e.target.value;
+      debounceT = setTimeout(()=>render(q), 300);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('kleverSearchPanel').classList.contains('open')) closeSearch(); });
+    document.getElementById('kleverSearchOverlay').addEventListener('click', closeSearch);
+  });
+})();
+</script>
+
 </body>
 </html>
