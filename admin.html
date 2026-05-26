@@ -1250,8 +1250,8 @@ function updateOrderFilterCounts() {
   if (elAll) elAll.textContent = all.length;
 }
 
-function toggleOrderCard(num) {
-  const card = document.querySelector('.order-card[data-num="' + num + '"]');
+function toggleOrderCard(btn, num) {
+  const card = btn.closest('.order-card');
   if (!card) return;
   const isOpen = card.getAttribute('data-expanded') === 'true';
   if (isOpen) {
@@ -1291,7 +1291,7 @@ function orderCardHtml(o) {
           <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
           <div class="order-total" style="margin-left:auto;">${o.total.toLocaleString('ru-RU')} ₽</div>
         </div>
-        <button class="order-toggle" onclick="toggleOrderCard(${o.num})" title="Развернуть/свернуть">▼</button>
+        <button class="order-toggle" onclick="toggleOrderCard(this, ${o.num})" title="Развернуть/свернуть">▼</button>
       </div>
       <div class="order-collapse"><div class="order-collapse-inner">
         <div class="order-body">
