@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Оформление заказа — КЛЕВЕР</title>
+<title data-i18n="checkout.title">Оформление заказа — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--white:#ffffff;--accent:#FF6B35;}
@@ -208,15 +208,15 @@ setTimeout(function(){
 <header>
   <a href="index.html" class="logo">🍀 <span>Clever</span></a>
   <nav>
-    <a href="catalog.html">Каталог</a><a href="delivery.html">Доставка</a>
-    <a href="about.html">О нас</a><a href="contacts.html">Контакты</a>
+    <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
+    <a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a></div>
+  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a></div>
 </header>
 
 <div class="breadcrumb">
   <a href="index.html">Главная</a><span>→</span>
-  <a href="catalog.html">Каталог</a><span>→</span>
+  <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><span>→</span>
   Оформление заказа
 </div>
 
@@ -233,7 +233,7 @@ setTimeout(function(){
     <span style="font-size:24px;">💰</span>
     <div style="font-size:13px;line-height:1.4;">
       <strong style="display:block;color:#cf7a00;">Минимальная сумма — 5 000 ₽</strong>
-      <span style="color:#8a6a2a;">При меньшей сумме заказ не оформляется</span>
+      <span style="color:#8a6a2a;"><span data-i18n="checkout.min_warn_desc">При меньшей сумме заказ не оформляется</span></span>
     </div>
   </div>
 </div>
@@ -246,14 +246,14 @@ setTimeout(function(){
 
     <!-- ШАГ 1 — ДОСТАВКА -->
     <div class="step">
-      <div class="step-title"><span class="step-num">1</span> Способ получения</div>
+      <div class="step-title"><span class="step-num">1</span> <span data-i18n="checkout.step1">Способ получения</span></div>
 
       <div class="delivery-options">
         <div class="delivery-option selected" id="optCourier" onclick="selectDelivery('courier')">
           <input type="radio" name="delivery" value="courier" checked>
           <span class="delivery-option-icon">🚚</span>
-          <div class="delivery-option-title">Курьером</div>
-          <div class="delivery-option-desc">По Санкт-Петербургу, 1 рабочий день</div>
+          <div class="delivery-option-title" data-i18n="checkout.option_courier">Курьером</div>
+          <div class="delivery-option-desc" data-i18n="checkout.option_courier_desc">По Санкт-Петербургу, 1 рабочий день</div>
           <div class="delivery-option-price" id="courierPriceLabel">Бесплатно</div>
           <div style="font-size:11px;color:#1aab58;font-weight:700;margin-top:4px;">🎉 Всегда бесплатно</div>
           <div class="check-mark"></div>
@@ -261,8 +261,8 @@ setTimeout(function(){
         <div class="delivery-option" id="optPickup" onclick="selectDelivery('pickup')">
           <input type="radio" name="delivery" value="pickup">
           <span class="delivery-option-icon">🏪</span>
-          <div class="delivery-option-title">Самовывоз</div>
-          <div class="delivery-option-desc">ул. Софийская 4 к 3, пав. 29/8<br>Пн–Пт 9:00–18:00, Сб 10:00–16:00</div>
+          <div class="delivery-option-title" data-i18n="checkout.option_pickup">Самовывоз</div>
+          <div class="delivery-option-desc"><span data-i18n="checkout.option_pickup_desc">ул. Софийская 4 к 3, пав. 29/8</span><br><span data-i18n="checkout.option_pickup_hours">Пн–Пт 9:00–18:00, Сб 10:00–16:00</span></div>
           <div class="delivery-option-price">Бесплатно</div>
           <div class="check-mark"></div>
         </div>
@@ -273,26 +273,26 @@ setTimeout(function(){
         <hr class="section-divider">
         <div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text);">📍 Адрес доставки</div>
         <div class="form-group">
-          <label>Адрес <span class="req">*</span></label>
-          <input type="text" id="address" placeholder="Улица, дом, квартира/офис">
-          <div class="error-hint" id="addressErr">Укажите адрес доставки</div>
+          <label><span data-i18n="checkout.addr_label">Адрес</span> <span class="req">*</span></label>
+          <input type="text" id="address" data-i18n-placeholder="ph.address" placeholder="Улица, дом, квартира/офис">
+          <div class="error-hint" id="addressErr" data-i18n="checkout.addr_err">Укажите адрес доставки</div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Телефон получателя <span class="req">*</span></label>
+            <label><span data-i18n="checkout.dphone_label">Телефон получателя</span> <span class="req">*</span></label>
             <input type="tel" id="deliveryPhone" placeholder="+7 (___) ___-__-__">
-            <div class="error-hint" id="delivPhoneErr">Укажите телефон</div>
+            <div class="error-hint" id="delivPhoneErr" data-i18n="checkout.dphone_err">Укажите телефон</div>
           </div>
           <div class="form-group">
-            <label>Дата доставки <span class="req">*</span></label>
+            <label><span data-i18n="checkout.ddate_label">Дата доставки</span> <span class="req">*</span></label>
             <input type="date" id="delivDate">
-            <div class="error-hint" id="delivDateErr">Выберите дату</div>
+            <div class="error-hint" id="delivDateErr" data-i18n="checkout.ddate_err">Выберите дату</div>
           </div>
         </div>
         <div class="form-group">
-          <label>Желаемое время</label>
+          <label data-i18n="checkout.dtime_label">Желаемое время</label>
           <select id="delivTime">
-            <option value="">— Любое время —</option>
+            <option value="" data-i18n="checkout.dtime_any">— Любое время —</option>
             <option>09:00 – 12:00</option>
             <option>12:00 – 15:00</option>
             <option>15:00 – 18:00</option>
@@ -304,82 +304,82 @@ setTimeout(function(){
 
     <!-- ШАГ 2 — ДАННЫЕ КЛИЕНТА -->
     <div class="step">
-      <div class="step-title"><span class="step-num">2</span> Информация о покупателе</div>
+      <div class="step-title"><span class="step-num">2</span> <span data-i18n="checkout.step2">Информация о покупателе</span></div>
 
       <div class="form-row">
         <div class="form-group">
-          <label>ФИО <span class="req">*</span></label>
-          <input type="text" id="clientName" placeholder="Иванов Иван Иванович">
-          <div class="error-hint" id="clientNameErr">Укажите ФИО</div>
+          <label><span data-i18n="checkout.name_label">ФИО</span> <span class="req">*</span></label>
+          <input type="text" id="clientName" data-i18n-placeholder="ph.full_name" placeholder="Иванов Иван Иванович">
+          <div class="error-hint" id="clientNameErr" data-i18n="checkout.name_err">Укажите ФИО</div>
         </div>
         <div class="form-group">
-          <label>Название компании</label>
-          <input type="text" id="company" placeholder="ООО «Название» (если есть)">
+          <label data-i18n="checkout.company_label">Название компании</label>
+          <input type="text" id="company" data-i18n-placeholder="ph.company_optional" placeholder="ООО «Название» (если есть)">
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label>Телефон <span class="req">*</span></label>
-          <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
-          <div class="error-hint" id="clientPhoneErr">Укажите корректный телефон</div>
+          <label><span data-i18n="checkout.phone_label">Телефон</span> <span class="req">*</span></label>
+          <input type="tel" id="clientPhone" data-i18n-placeholder="ph.phone" placeholder="+7 (___) ___-__-__">
+          <div class="error-hint" id="clientPhoneErr" data-i18n="checkout.phone_err">Укажите корректный телефон</div>
         </div>
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="clientEmail" placeholder="example@mail.ru">
+          <label data-i18n="checkout.email_label">Email</label>
+          <input type="email" id="clientEmail" data-i18n-placeholder="ph.email" placeholder="example@mail.ru">
         </div>
       </div>
 
       <div class="form-group">
-        <label>Комментарий к заказу</label>
-        <textarea id="comment" placeholder="Особые пожелания, уточнения по заказу или доставке..."></textarea>
+        <label data-i18n="checkout.comment_label">Комментарий к заказу</label>
+        <textarea id="comment" data-i18n-placeholder="ph.comment" placeholder="Особые пожелания, уточнения по заказу или доставке..."></textarea>
       </div>
     </div>
 
     <!-- ШАГ 3 — СПОСОБ ОПЛАТЫ -->
     <div class="step payment-step" id="paymentStep">
-      <div class="step-title"><span class="step-num">3</span> Способ оплаты</div>
+      <div class="step-title"><span class="step-num">3</span> <span data-i18n="checkout.step3">Способ оплаты</span></div>
 
       <div class="payment-options">
         <label class="delivery-option payment-option selected" data-pay="cash">
           <input type="radio" name="paymentMethod" value="cash" checked>
           <span class="delivery-option-icon">💵</span>
-          <div class="delivery-option-title">Наличными или картой курьеру</div>
-          <div class="delivery-option-desc">Оплата при получении заказа. Принимаем наличные и банковские карты.</div>
+          <div class="delivery-option-title" data-i18n="checkout.pay_cash_title">Наличными или картой курьеру</div>
+          <div class="delivery-option-desc" data-i18n="checkout.pay_cash_desc">Оплата при получении заказа. Принимаем наличные и банковские карты.</div>
           <span class="check-mark"></span>
         </label>
         <label class="delivery-option payment-option" data-pay="invoice">
           <input type="radio" name="paymentMethod" value="invoice">
           <span class="delivery-option-icon">🏦</span>
-          <div class="delivery-option-title">По безналичному расчёту</div>
-          <div class="delivery-option-desc">Для ИП и юр.лиц. Выставим счёт на оплату. Оплата по реквизитам в течение 3 рабочих дней.</div>
+          <div class="delivery-option-title" data-i18n="checkout.pay_invoice_title">По безналичному расчёту</div>
+          <div class="delivery-option-desc" data-i18n="checkout.pay_invoice_desc">Для ИП и юр.лиц. Выставим счёт на оплату. Оплата по реквизитам в течение 3 рабочих дней.</div>
           <span class="check-mark"></span>
         </label>
         <label class="delivery-option payment-option" data-pay="transfer">
           <input type="radio" name="paymentMethod" value="transfer">
           <span class="delivery-option-icon">💳</span>
-          <div class="delivery-option-title">Перевод на карту</div>
-          <div class="delivery-option-desc">Перевод на карту Сбербанк. Реквизиты отправим после подтверждения заказа.</div>
+          <div class="delivery-option-title" data-i18n="checkout.pay_transfer_title">Перевод на карту</div>
+          <div class="delivery-option-desc" data-i18n="checkout.pay_transfer_desc">Перевод на карту Сбербанк. Реквизиты отправим после подтверждения заказа.</div>
           <span class="check-mark"></span>
         </label>
       </div>
 
       <!-- Реквизиты для безналичной оплаты -->
       <div class="invoice-form" id="invoiceForm">
-        <div class="invoice-note">📋 Реквизиты для счёта</div>
+        <div class="invoice-note" data-i18n="checkout.invoice_note">📋 Реквизиты для счёта</div>
         <div class="form-row">
           <div class="form-group">
-            <label>Название компании <span class="req">*</span></label>
-            <input type="text" id="invoiceCompany" placeholder="ООО «Название» или ИП Иванов И.И.">
-            <div class="error-hint" id="invoiceCompanyErr">Укажите название организации</div>
+            <label><span data-i18n="checkout.invoice_company_label">Название компании</span> <span class="req">*</span></label>
+            <input type="text" id="invoiceCompany" data-i18n-placeholder="ph.invoice_company" placeholder="ООО «Название» или ИП Иванов И.И.">
+            <div class="error-hint" id="invoiceCompanyErr" data-i18n="checkout.invoice_company_err">Укажите название организации</div>
           </div>
           <div class="form-group">
-            <label>ИНН <span class="req">*</span></label>
-            <input type="text" id="invoiceInn" placeholder="10 или 12 цифр" inputmode="numeric" maxlength="12">
-            <div class="error-hint" id="invoiceInnErr">Укажите корректный ИНН (10 или 12 цифр)</div>
+            <label><span data-i18n="checkout.invoice_inn_label">ИНН</span> <span class="req">*</span></label>
+            <input type="text" id="invoiceInn" data-i18n-placeholder="ph.invoice_inn" placeholder="10 или 12 цифр" inputmode="numeric" maxlength="12">
+            <div class="error-hint" id="invoiceInnErr" data-i18n="checkout.invoice_inn_err">Укажите корректный ИНН (10 или 12 цифр)</div>
           </div>
         </div>
-        <div class="invoice-hint" id="invoiceUserHint" style="display:none;">✓ Данные подставлены из профиля. Проверьте и при необходимости измените.</div>
+        <div class="invoice-hint" id="invoiceUserHint" style="display:none;" data-i18n="checkout.invoice_hint">✓ Данные подставлены из профиля. Проверьте и при необходимости измените.</div>
       </div>
     </div>
   </div>
@@ -397,30 +397,30 @@ setTimeout(function(){
     </div>
 
     <div class="order-summary">
-      <div class="summary-title">Ваш заказ</div>
+      <div class="summary-title" data-i18n="checkout.summary_title">Ваш заказ</div>
 
       <div class="summary-items" id="summaryItems"></div>
 
       <div>
         <div class="summary-line">
-          <span class="label">Товаров:</span>
-          <span class="value" id="summaryCount">0 шт.</span>
+          <span class="label" data-i18n="checkout.summary_items">Товаров:</span>
+          <span class="value" id="summaryCount" data-i18n="checkout.summary_count_zero">0 шт.</span>
         </div>
         <div class="summary-line">
-          <span class="label">Сумма:</span>
+          <span class="label" data-i18n="checkout.summary_subtotal">Сумма:</span>
           <span class="value" id="summarySubtotal">0 ₽</span>
         </div>
         <div class="summary-line delivery">
-          <span class="label">Доставка:</span>
+          <span class="label" data-i18n="checkout.summary_delivery">Доставка:</span>
           <span class="value" id="summaryDelivery">500 ₽</span>
         </div>
         <div class="summary-line total-line">
-          <span class="label">Итого:</span>
+          <span class="label" data-i18n="checkout.summary_total">Итого:</span>
           <span class="value" id="summaryTotal">0 ₽</span>
         </div>
       </div>
 
-      <button class="btn-submit-order" id="submitBtn" onclick="submitOrder()">
+      <button class="btn-submit-order" id="submitBtn" onclick="submitOrder()" data-i18n="checkout.submit">
         Оформить заказ →
       </button>
       <div class="terms">
@@ -433,13 +433,13 @@ setTimeout(function(){
 <!-- ЭКРАН УСПЕХА -->
 <div class="success-wrap" id="successWrap">
   <div class="success-icon">✅</div>
-  <div class="success-title">Заказ оформлен!</div>
+  <div class="success-title" data-i18n="checkout.success_title">Заказ оформлен!</div>
   <div class="success-sub">Мы получили ваш заказ и свяжемся<br>с вами в течение 30 минут для подтверждения.</div>
   <div class="success-order-num" id="successOrderNum">#000000</div>
   <div class="success-sub" id="successDetails"></div>
   <div class="success-actions">
-    <a href="catalog.html" class="primary">Продолжить покупки</a>
-    <a href="index.html" class="secondary">На главную</a>
+    <a href="catalog.html" class="primary" data-i18n="checkout.success_continue">Продолжить покупки</a>
+    <a href="index.html" class="secondary" data-i18n="checkout.success_home">На главную</a>
   </div>
 </div>
 
@@ -448,8 +448,8 @@ setTimeout(function(){
   <p>© 2025 ООО «Клевер». Все права защищены.</p>
   <div class="footer-links">
     <a href="index.html">Главная</a>
-    <a href="catalog.html">Каталог</a>
-    <a href="delivery.html">Доставка</a>
+    <a href="catalog.html" data-i18n="nav.catalog">Каталог</a>
+    <a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
   </div>
 </footer>
 
@@ -793,12 +793,12 @@ prefillInvoiceFromUser();
 <div class="klever-news-overlay" id="kleverNewsOverlay">
   <div class="klever-news-modal">
     <div class="klever-news-banner" id="kleverNewsBanner">
-      <div class="klever-news-eyebrow">📢 Новость</div>
+      <div class="klever-news-eyebrow" data-i18n="news.eyebrow">📢 Новость</div>
       <div class="klever-news-title" id="kleverNewsTitle"></div>
     </div>
     <div class="klever-news-body">
       <div class="klever-news-text" id="kleverNewsText"></div>
-      <button class="klever-news-btn" onclick="kleverNewsDismiss()">Понятно</button>
+      <button class="klever-news-btn" onclick="kleverNewsDismiss()" data-i18n="news.ok">Понятно</button>
     </div>
   </div>
 </div>
@@ -1022,7 +1022,7 @@ prefillInvoiceFromUser();
 <div class="klever-search-overlay" id="kleverSearchOverlay"></div>
 <div class="klever-search-panel" id="kleverSearchPanel">
   <div class="klever-search-row">
-    <input type="text" class="klever-search-input" id="kleverSearchInput" placeholder="Поиск по названию или артикулу..." autocomplete="off">
+    <input type="text" class="klever-search-input" id="kleverSearchInput" data-i18n-placeholder="search.placeholder" placeholder="Поиск по названию или артикулу..." autocomplete="off">
     <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть">✕</button>
   </div>
   <div class="klever-search-results" id="kleverSearchResults"></div>
@@ -1183,6 +1183,81 @@ prefillInvoiceFromUser();
     document.getElementById('kleverFabOverlay').addEventListener('click', closeFab);
   });
   window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+})();
+</script>
+
+<style id="klever-lang-styles">
+.klever-lang{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
+.klever-lang-trigger{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;height:42px;padding:0 10px;border-radius:21px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;transition:background .2s;}
+.klever-lang-trigger:hover{background:rgba(255,255,255,0.15);}
+.klever-lang-current-flag{font-size:16px;line-height:1;}
+.klever-lang-current-code{letter-spacing:0.5px;}
+.klever-lang-caret{font-size:10px;opacity:0.7;transition:transform .2s;}
+.klever-lang.open .klever-lang-caret{transform:rotate(180deg);}
+.klever-lang-menu{position:absolute;top:calc(100% + 8px);right:0;background:#0f1a14;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:2px;min-width:160px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .2s,visibility .2s,transform .2s;z-index:8800;box-shadow:0 16px 50px rgba(0,0,0,0.3);}
+.klever-lang.open .klever-lang-menu{opacity:1;visibility:visible;transform:translateY(0);}
+.klever-lang-opt{background:none;border:none;color:rgba(255,255,255,0.8);font-family:'Onest',sans-serif;font-size:14px;padding:10px 14px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;transition:background .15s,color .15s;}
+.klever-lang-opt:hover{background:rgba(255,255,255,0.06);color:white;}
+.klever-lang-opt.active{background:rgba(46,204,113,0.18);color:#C8F135;font-weight:700;}
+.klever-lang-opt .flag{font-size:18px;line-height:1;}
+@media(max-width:600px){.klever-lang-trigger{height:38px;padding:0 9px;font-size:12px;}}
+</style>
+<script src="translations.js"></script>
+<script id="klever-lang-script">
+(function(){
+  const LANGS = [
+    {code:'ru', flag:'🇷🇺', label:'Русский'},
+    {code:'en', flag:'🇬🇧', label:'English'},
+    {code:'zh', flag:'🇨🇳', label:'中文'},
+    {code:'ko', flag:'🇰🇷', label:'한국어'},
+  ];
+  const FLAG_MAP = {ru:'🇷🇺',en:'🇬🇧',zh:'🇨🇳',ko:'🇰🇷'};
+  const CODE_MAP = {ru:'RU',en:'EN',zh:'ZH',ko:'KO'};
+  function build(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.klever-lang')) return;
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const wrap = document.createElement('div');
+    wrap.className = 'klever-lang';
+    wrap.innerHTML = '<button class="klever-lang-trigger" type="button" aria-label="Language">'
+      + '<span class="klever-lang-current-flag">'+FLAG_MAP[lang]+'</span>'
+      + '<span class="klever-lang-current-code">'+CODE_MAP[lang]+'</span>'
+      + '<span class="klever-lang-caret">▼</span>'
+      + '</button>'
+      + '<div class="klever-lang-menu" role="menu">'
+      + LANGS.map(l => '<button class="klever-lang-opt'+(l.code===lang?' active':'')+'" data-lang="'+l.code+'" type="button"><span class="flag">'+l.flag+'</span><span>'+l.label+'</span></button>').join('')
+      + '</div>';
+    const actions = header.querySelector('.header-actions');
+    if (actions){
+      const cartBtn = actions.querySelector('.cart-btn');
+      if (cartBtn) actions.insertBefore(wrap, cartBtn);
+      else actions.appendChild(wrap);
+    } else {
+      header.appendChild(wrap);
+    }
+    const trigger = wrap.querySelector('.klever-lang-trigger');
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      wrap.classList.toggle('open');
+    });
+    wrap.querySelectorAll('.klever-lang-opt').forEach(b => {
+      b.addEventListener('click', () => {
+        const code = b.dataset.lang;
+        if (typeof applyLanguage === 'function') applyLanguage(code);
+        wrap.classList.remove('open');
+      });
+    });
+    document.addEventListener('click', e => {
+      if (!wrap.contains(e.target)) wrap.classList.remove('open');
+    });
+  }
+  function init(){
+    if (typeof applyLanguage === 'function') applyLanguage((typeof getSavedLang === 'function') ? getSavedLang() : 'ru');
+    build();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 
