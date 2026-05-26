@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Контакты — КЛЕВЕР</title>
+<title data-i18n="contacts.title">Контакты — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--white:#ffffff;--accent:#FF6B35;}
@@ -129,47 +129,47 @@ setTimeout(function(){
 <header>
   <a href="index.html" class="logo">🍀 <span>Clever</span></a>
   <nav>
-    <a href="catalog.html">Каталог</a><a href="sales.html">Акции</a><a href="wholesale.html">Оптовикам</a>
-    <a href="delivery.html">Доставка</a><a href="about.html">О нас</a><a href="contacts.html" class="active">Контакты</a>
+    <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="sales.html" data-i18n="nav.sales">Акции</a><a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a>
+    <a href="delivery.html" data-i18n="nav.delivery">Доставка</a><a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" class="active" data-i18n="nav.contacts">Контакты</a>
   </nav>
   <div class="header-actions"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
-    <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a>
+    <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a>
     <button class="cart-btn" onclick="openCart()">
       🛒
       <span class="cart-badge" id="cartBadge" style="display:none;"></span>
     </button>
   </div>
 </header>
-<div class="breadcrumb"><a href="index.html">Главная</a><span>→</span>Контакты</div>
+<div class="breadcrumb"><a href="index.html" data-i18n="crumb.home">Главная</a><span>→</span><span data-i18n="crumb.contacts">Контакты</span></div>
 <div class="page-hero">
-  <div class="page-tag">Связь</div>
-  <div class="page-title">Свяжитесь<br>с нами</div>
-  <div class="page-sub">Ответим на все вопросы и поможем с выбором товара</div>
+  <div class="page-tag" data-i18n="contacts.page_tag">Связь</div>
+  <div class="page-title"><span data-i18n="contacts.page_title_a">Свяжитесь</span><br><span data-i18n="contacts.page_title_b">с нами</span></div>
+  <div class="page-sub" data-i18n="contacts.page_sub">Ответим на все вопросы и поможем с выбором товара</div>
 </div>
 <div class="page-content">
   <div class="contacts-grid">
     <div class="contact-card">
       <div class="contact-icon">📞</div>
-      <div class="contact-label">Телефоны</div>
+      <div class="contact-label" data-i18n="contacts.phones_title">Телефоны</div>
       <div class="contact-value"><a href="tel:+78129228677">8 (812) 922-86-77</a></div>
       <div class="contact-value"><a href="tel:+79112368277">+7 911 236-82-77</a></div>
       <div class="contact-sub">Пн–Пт: 9:00–18:00, Сб: 10:00–16:00</div>
     </div>
     <div class="contact-card">
       <div class="contact-icon">✉️</div>
-      <div class="contact-label">Email</div>
+      <div class="contact-label" data-i18n="contacts.email_title">Email</div>
       <div class="contact-value"><a href="mailto:9112368277@mail.ru">9112368277@mail.ru</a></div>
       <div class="contact-sub">Ответим в течение рабочего дня</div>
     </div>
     <div class="contact-card">
       <div class="contact-icon">📍</div>
-      <div class="contact-label">Адрес</div>
+      <div class="contact-label" data-i18n="contacts.addr_title">Адрес</div>
       <div class="contact-value" style="font-size:16px;">Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8</div>
       <div class="contact-sub">Самовывоз — бесплатно</div>
     </div>
     <div class="contact-card">
       <div class="contact-icon">💬</div>
-      <div class="contact-label">Мессенджеры</div>
+      <div class="contact-label" data-i18n="contacts.messengers_title">Мессенджеры</div>
       <div class="contact-value" style="font-size:16px;display:flex;gap:12px;margin-top:4px;">
         <a href="https://vk.com" target="_blank" style="background:var(--green);color:var(--dark);padding:8px 16px;border-radius:30px;font-size:14px;font-weight:700;text-decoration:none;">VK</a>
         <a href="https://t.me" target="_blank" style="background:var(--green);color:var(--dark);padding:8px 16px;border-radius:30px;font-size:14px;font-weight:700;text-decoration:none;">Telegram</a>
@@ -195,8 +195,8 @@ setTimeout(function(){
     <a href="https://yandex.ru/maps/?text=Санкт-Петербург+Софийская+4+к+3" target="_blank" style="color:var(--green-dark);font-weight:600;font-size:14px;text-decoration:none;">📍 Открыть на Яндекс.Картах →</a>
   </div>
   <div class="form-block">
-    <div class="form-title">Напишите нам</div>
-    <div class="form-sub">Оставьте заявку — перезвоним в течение 30 минут</div>
+    <div class="form-title" data-i18n="contacts.form_title">Напишите нам</div>
+    <div class="form-sub" data-i18n="contacts.form_sub">Оставьте заявку — перезвоним в течение 30 минут</div>
     <div class="form-row">
       <div class="form-group"><label>Ваше имя</label><input type="text" id="contactName" placeholder="Иван Иванов"></div>
       <div class="form-group"><label>Телефон</label><input type="tel" id="contactPhone" placeholder="+7 (___) ___-__-__"></div>
@@ -237,23 +237,23 @@ function sendContactForm() {
 </script>
 <footer>
   <div class="footer-logo">🍀 <span>Clever</span></div>
-  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;">⚙️ Админка</a></p>
-  <div class="footer-links"><a href="index.html">Главная</a><a href="catalog.html">Каталог</a><a href="delivery.html">Доставка</a></div>
+  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" data-i18n="footer.admin" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;">⚙️ Админка</a></p>
+  <div class="footer-links"><a href="index.html" data-i18n="footer.home_link">Главная</a><a href="catalog.html" data-i18n="footer.catalog">Каталог</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a></div>
 </footer>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-panel" id="cartPanel">
   <div class="cart-header">
-    <h3>🛒 Корзина</h3>
-    <button class="cart-close" onclick="closeCart()">✕</button>
+    <h3 data-i18n="cart.title">🛒 Корзина</h3>
+    <button class="cart-close" onclick="closeCart()" aria-label="Close" data-i18n-aria="nav.menu_close">✕</button>
   </div>
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-footer">
     <div class="cart-total">
-      <span>Итого:</span>
+      <span data-i18n="cart.total">Итого:</span>
       <span class="cart-total-price" id="cartTotal">0 ₽</span>
     </div>
-    <button class="btn-checkout" onclick="checkout()">Оформить заказ →</button>
+    <button class="btn-checkout" onclick="checkout()" data-i18n="cart.checkout">Оформить заказ →</button>
   </div>
 </aside>
 
@@ -295,12 +295,12 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 <div class="klever-news-overlay" id="kleverNewsOverlay">
   <div class="klever-news-modal">
     <div class="klever-news-banner" id="kleverNewsBanner">
-      <div class="klever-news-eyebrow">📢 Новость</div>
+      <div class="klever-news-eyebrow" data-i18n="news.eyebrow">📢 Новость</div>
       <div class="klever-news-title" id="kleverNewsTitle"></div>
     </div>
     <div class="klever-news-body">
       <div class="klever-news-text" id="kleverNewsText"></div>
-      <button class="klever-news-btn" onclick="kleverNewsDismiss()">Понятно</button>
+      <button class="klever-news-btn" onclick="kleverNewsDismiss()" data-i18n="news.ok">Понятно</button>
     </div>
   </div>
 </div>
@@ -524,7 +524,7 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 <div class="klever-search-overlay" id="kleverSearchOverlay"></div>
 <div class="klever-search-panel" id="kleverSearchPanel">
   <div class="klever-search-row">
-    <input type="text" class="klever-search-input" id="kleverSearchInput" placeholder="Поиск по названию или артикулу..." autocomplete="off">
+    <input type="text" class="klever-search-input" id="kleverSearchInput" data-i18n-placeholder="search.placeholder" placeholder="Поиск по названию или артикулу..." autocomplete="off">
     <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть">✕</button>
   </div>
   <div class="klever-search-results" id="kleverSearchResults"></div>
@@ -685,6 +685,81 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
     document.getElementById('kleverFabOverlay').addEventListener('click', closeFab);
   });
   window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+})();
+</script>
+
+<style id="klever-lang-styles">
+.klever-lang{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
+.klever-lang-trigger{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;height:42px;padding:0 10px;border-radius:21px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;transition:background .2s;}
+.klever-lang-trigger:hover{background:rgba(255,255,255,0.15);}
+.klever-lang-current-flag{font-size:16px;line-height:1;}
+.klever-lang-current-code{letter-spacing:0.5px;}
+.klever-lang-caret{font-size:10px;opacity:0.7;transition:transform .2s;}
+.klever-lang.open .klever-lang-caret{transform:rotate(180deg);}
+.klever-lang-menu{position:absolute;top:calc(100% + 8px);right:0;background:#0f1a14;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:2px;min-width:160px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .2s,visibility .2s,transform .2s;z-index:8800;box-shadow:0 16px 50px rgba(0,0,0,0.3);}
+.klever-lang.open .klever-lang-menu{opacity:1;visibility:visible;transform:translateY(0);}
+.klever-lang-opt{background:none;border:none;color:rgba(255,255,255,0.8);font-family:'Onest',sans-serif;font-size:14px;padding:10px 14px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;transition:background .15s,color .15s;}
+.klever-lang-opt:hover{background:rgba(255,255,255,0.06);color:white;}
+.klever-lang-opt.active{background:rgba(46,204,113,0.18);color:#C8F135;font-weight:700;}
+.klever-lang-opt .flag{font-size:18px;line-height:1;}
+@media(max-width:600px){.klever-lang-trigger{height:38px;padding:0 9px;font-size:12px;}}
+</style>
+<script src="translations.js"></script>
+<script id="klever-lang-script">
+(function(){
+  const LANGS = [
+    {code:'ru', flag:'🇷🇺', label:'Русский'},
+    {code:'en', flag:'🇬🇧', label:'English'},
+    {code:'zh', flag:'🇨🇳', label:'中文'},
+    {code:'ko', flag:'🇰🇷', label:'한국어'},
+  ];
+  const FLAG_MAP = {ru:'🇷🇺',en:'🇬🇧',zh:'🇨🇳',ko:'🇰🇷'};
+  const CODE_MAP = {ru:'RU',en:'EN',zh:'ZH',ko:'KO'};
+  function build(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.klever-lang')) return;
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const wrap = document.createElement('div');
+    wrap.className = 'klever-lang';
+    wrap.innerHTML = '<button class="klever-lang-trigger" type="button" aria-label="Language">'
+      + '<span class="klever-lang-current-flag">'+FLAG_MAP[lang]+'</span>'
+      + '<span class="klever-lang-current-code">'+CODE_MAP[lang]+'</span>'
+      + '<span class="klever-lang-caret">▼</span>'
+      + '</button>'
+      + '<div class="klever-lang-menu" role="menu">'
+      + LANGS.map(l => '<button class="klever-lang-opt'+(l.code===lang?' active':'')+'" data-lang="'+l.code+'" type="button"><span class="flag">'+l.flag+'</span><span>'+l.label+'</span></button>').join('')
+      + '</div>';
+    const actions = header.querySelector('.header-actions');
+    if (actions){
+      const cartBtn = actions.querySelector('.cart-btn');
+      if (cartBtn) actions.insertBefore(wrap, cartBtn);
+      else actions.appendChild(wrap);
+    } else {
+      header.appendChild(wrap);
+    }
+    const trigger = wrap.querySelector('.klever-lang-trigger');
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      wrap.classList.toggle('open');
+    });
+    wrap.querySelectorAll('.klever-lang-opt').forEach(b => {
+      b.addEventListener('click', () => {
+        const code = b.dataset.lang;
+        if (typeof applyLanguage === 'function') applyLanguage(code);
+        wrap.classList.remove('open');
+      });
+    });
+    document.addEventListener('click', e => {
+      if (!wrap.contains(e.target)) wrap.classList.remove('open');
+    });
+  }
+  function init(){
+    if (typeof applyLanguage === 'function') applyLanguage((typeof getSavedLang === 'function') ? getSavedLang() : 'ru');
+    build();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 

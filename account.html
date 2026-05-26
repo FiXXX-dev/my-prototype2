@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Личный кабинет — КЛЕВЕР</title>
+<title data-i18n="account.title">Личный кабинет — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--accent:#FF6B35;--danger:#FF3B6B;}
@@ -169,31 +169,31 @@ setTimeout(function(){
 <header>
   <a href="index.html" class="logo">🍀 <span>Clever</span></a>
   <nav>
-    <a href="catalog.html">Каталог</a><a href="sales.html">Акции</a>
-    <a href="wholesale.html">Оптовикам</a><a href="delivery.html">Доставка</a>
-    <a href="about.html">О нас</a><a href="contacts.html">Контакты</a>
+    <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="sales.html" data-i18n="nav.sales">Акции</a>
+    <a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
+    <a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
   <a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
 </header>
 
 <div class="breadcrumb">
-  <a href="index.html">Главная</a><span>→</span>Личный кабинет
+  <a href="index.html" data-i18n="crumb.home">Главная</a><span>→</span><span data-i18n="crumb.account">Личный кабинет</span>
 </div>
 
 <!-- АВТОРИЗАЦИЯ -->
 <div class="auth-wrap" id="authWrap">
   <div class="auth-box">
-    <div class="auth-title">🍀 Добро пожаловать!</div>
-    <div class="auth-sub">Войдите или создайте аккаунт</div>
+    <div class="auth-title" data-i18n="account.welcome">🍀 Добро пожаловать!</div>
+    <div class="auth-sub" data-i18n="account.welcome_sub">Войдите или создайте аккаунт</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Вход</button>
-      <button class="auth-tab" id="tabRegBtn" onclick="switchAuthTab('register')">Регистрация</button>
+      <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')" data-i18n="account.tab_login">Вход</button>
+      <button class="auth-tab" id="tabRegBtn" onclick="switchAuthTab('register')" data-i18n="account.tab_register">Регистрация</button>
     </div>
 
     <div id="loginForm" class="auth-form">
       <div class="field-toggle">
-        <button id="loginByEmailBtn" class="active" onclick="setLoginMethod('email')">📧 По Email</button>
-        <button id="loginByPhoneBtn" onclick="setLoginMethod('phone')">📱 По телефону</button>
+        <button id="loginByEmailBtn" class="active" onclick="setLoginMethod('email')" data-i18n="account.login_email_tab">📧 По Email</button>
+        <button id="loginByPhoneBtn" onclick="setLoginMethod('phone')" data-i18n="account.login_phone_tab">📱 По телефону</button>
       </div>
       <div class="form-grp">
         <label id="loginIdLabel">Email <span class="req">*</span></label>
@@ -304,13 +304,13 @@ setTimeout(function(){
       <div class="user-contact" id="userContact">—</div>
     </div>
     <nav class="acc-nav">
-      <button class="acc-link active" onclick="showAccTab('profile', this)">👤 Профиль</button>
-      <button class="acc-link" onclick="showAccTab('orders', this)">🛍️ Заказы <span class="badge" id="cntMyOrders">0</span></button>
-      <button class="acc-link" onclick="showAccTab('favorites', this)">❤️ Избранное <span class="badge" id="cntMyFav">0</span></button>
-      <button class="acc-link" onclick="showAccTab('addresses', this)">📍 Адреса <span class="badge" id="cntMyAddr">0</span></button>
-      <button class="acc-link" onclick="showAccTab('security', this)">🔒 Безопасность</button>
+      <button class="acc-link active" onclick="showAccTab('profile', this)" data-i18n="account.nav_profile">👤 Профиль</button>
+      <button class="acc-link" onclick="showAccTab('orders', this)"><span data-i18n="account.nav_orders">🛍️ Заказы</span> <span class="badge" id="cntMyOrders">0</span></button>
+      <button class="acc-link" onclick="showAccTab('favorites', this)"><span data-i18n="account.nav_favorites">❤️ Избранное</span> <span class="badge" id="cntMyFav">0</span></button>
+      <button class="acc-link" onclick="showAccTab('addresses', this)"><span data-i18n="account.nav_addresses">📍 Адреса</span> <span class="badge" id="cntMyAddr">0</span></button>
+      <button class="acc-link" onclick="showAccTab('security', this)" data-i18n="account.nav_security">🔒 Безопасность</button>
     </nav>
-    <button class="acc-logout" onclick="doLogout()">Выйти из аккаунта</button>
+    <button class="acc-logout" onclick="doLogout()" data-i18n="account.logout">Выйти из аккаунта</button>
   </aside>
 
   <main>
@@ -406,7 +406,7 @@ setTimeout(function(){
   <div class="footer-logo">🍀 <span>Clever</span></div>
   <p>© 2025 ООО «Клевер»</p>
   <div class="footer-links">
-    <a href="index.html">Главная</a><a href="catalog.html">Каталог</a><a href="contacts.html">Контакты</a>
+    <a href="index.html" data-i18n="footer.home_link">Главная</a><a href="catalog.html" data-i18n="footer.catalog">Каталог</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </div>
 </footer>
 
@@ -937,12 +937,12 @@ if (getCurrentUser()){ showAccount(); }
 <div class="klever-news-overlay" id="kleverNewsOverlay">
   <div class="klever-news-modal">
     <div class="klever-news-banner" id="kleverNewsBanner">
-      <div class="klever-news-eyebrow">📢 Новость</div>
+      <div class="klever-news-eyebrow" data-i18n="news.eyebrow">📢 Новость</div>
       <div class="klever-news-title" id="kleverNewsTitle"></div>
     </div>
     <div class="klever-news-body">
       <div class="klever-news-text" id="kleverNewsText"></div>
-      <button class="klever-news-btn" onclick="kleverNewsDismiss()">Понятно</button>
+      <button class="klever-news-btn" onclick="kleverNewsDismiss()" data-i18n="news.ok">Понятно</button>
     </div>
   </div>
 </div>
@@ -1181,7 +1181,7 @@ if (getCurrentUser()){ showAccount(); }
 <div class="klever-search-overlay" id="kleverSearchOverlay"></div>
 <div class="klever-search-panel" id="kleverSearchPanel">
   <div class="klever-search-row">
-    <input type="text" class="klever-search-input" id="kleverSearchInput" placeholder="Поиск по названию или артикулу..." autocomplete="off">
+    <input type="text" class="klever-search-input" id="kleverSearchInput" data-i18n-placeholder="search.placeholder" placeholder="Поиск по названию или артикулу..." autocomplete="off">
     <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть">✕</button>
   </div>
   <div class="klever-search-results" id="kleverSearchResults"></div>
@@ -1342,6 +1342,81 @@ if (getCurrentUser()){ showAccount(); }
     document.getElementById('kleverFabOverlay').addEventListener('click', closeFab);
   });
   window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+})();
+</script>
+
+<style id="klever-lang-styles">
+.klever-lang{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
+.klever-lang-trigger{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;height:42px;padding:0 10px;border-radius:21px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;transition:background .2s;}
+.klever-lang-trigger:hover{background:rgba(255,255,255,0.15);}
+.klever-lang-current-flag{font-size:16px;line-height:1;}
+.klever-lang-current-code{letter-spacing:0.5px;}
+.klever-lang-caret{font-size:10px;opacity:0.7;transition:transform .2s;}
+.klever-lang.open .klever-lang-caret{transform:rotate(180deg);}
+.klever-lang-menu{position:absolute;top:calc(100% + 8px);right:0;background:#0f1a14;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:2px;min-width:160px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .2s,visibility .2s,transform .2s;z-index:8800;box-shadow:0 16px 50px rgba(0,0,0,0.3);}
+.klever-lang.open .klever-lang-menu{opacity:1;visibility:visible;transform:translateY(0);}
+.klever-lang-opt{background:none;border:none;color:rgba(255,255,255,0.8);font-family:'Onest',sans-serif;font-size:14px;padding:10px 14px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;transition:background .15s,color .15s;}
+.klever-lang-opt:hover{background:rgba(255,255,255,0.06);color:white;}
+.klever-lang-opt.active{background:rgba(46,204,113,0.18);color:#C8F135;font-weight:700;}
+.klever-lang-opt .flag{font-size:18px;line-height:1;}
+@media(max-width:600px){.klever-lang-trigger{height:38px;padding:0 9px;font-size:12px;}}
+</style>
+<script src="translations.js"></script>
+<script id="klever-lang-script">
+(function(){
+  const LANGS = [
+    {code:'ru', flag:'🇷🇺', label:'Русский'},
+    {code:'en', flag:'🇬🇧', label:'English'},
+    {code:'zh', flag:'🇨🇳', label:'中文'},
+    {code:'ko', flag:'🇰🇷', label:'한국어'},
+  ];
+  const FLAG_MAP = {ru:'🇷🇺',en:'🇬🇧',zh:'🇨🇳',ko:'🇰🇷'};
+  const CODE_MAP = {ru:'RU',en:'EN',zh:'ZH',ko:'KO'};
+  function build(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.klever-lang')) return;
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const wrap = document.createElement('div');
+    wrap.className = 'klever-lang';
+    wrap.innerHTML = '<button class="klever-lang-trigger" type="button" aria-label="Language">'
+      + '<span class="klever-lang-current-flag">'+FLAG_MAP[lang]+'</span>'
+      + '<span class="klever-lang-current-code">'+CODE_MAP[lang]+'</span>'
+      + '<span class="klever-lang-caret">▼</span>'
+      + '</button>'
+      + '<div class="klever-lang-menu" role="menu">'
+      + LANGS.map(l => '<button class="klever-lang-opt'+(l.code===lang?' active':'')+'" data-lang="'+l.code+'" type="button"><span class="flag">'+l.flag+'</span><span>'+l.label+'</span></button>').join('')
+      + '</div>';
+    const actions = header.querySelector('.header-actions');
+    if (actions){
+      const cartBtn = actions.querySelector('.cart-btn');
+      if (cartBtn) actions.insertBefore(wrap, cartBtn);
+      else actions.appendChild(wrap);
+    } else {
+      header.appendChild(wrap);
+    }
+    const trigger = wrap.querySelector('.klever-lang-trigger');
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      wrap.classList.toggle('open');
+    });
+    wrap.querySelectorAll('.klever-lang-opt').forEach(b => {
+      b.addEventListener('click', () => {
+        const code = b.dataset.lang;
+        if (typeof applyLanguage === 'function') applyLanguage(code);
+        wrap.classList.remove('open');
+      });
+    });
+    document.addEventListener('click', e => {
+      if (!wrap.contains(e.target)) wrap.classList.remove('open');
+    });
+  }
+  function init(){
+    if (typeof applyLanguage === 'function') applyLanguage((typeof getSavedLang === 'function') ? getSavedLang() : 'ru');
+    build();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 
