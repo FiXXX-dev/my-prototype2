@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Админка — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="icons.css">
+
 <style>
 :root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--accent:#FF6B35;--danger:#FF3B6B;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -230,7 +232,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <a href="index.html" class="side-logo">🍀 <span>Clever</span><span class="badge">админ</span></a>
+    <a href="index.html" class="side-logo"><span class="icon icon-clover brand-logo-icon"></span><span>Clever</span><span class="badge">админ</span></a>
     <nav class="side-nav">
       <button class="side-link active" onclick="showTab('dashboard', this)">📊 Дашборд</button>
       <button class="side-link" onclick="showTab('products', this)">📦 Товары <span class="count" id="cntProducts">0</span></button>
