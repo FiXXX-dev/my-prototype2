@@ -117,6 +117,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .modal-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .modal-form .full{grid-column:1/-1;}
 .form-grp{display:flex;flex-direction:column;gap:6px;}
+.settings-msg-grid{display:flex;flex-direction:column;gap:14px;}
+.settings-msg-row{display:flex;align-items:flex-end;gap:14px;}
+.settings-msg-ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
 .form-grp label{font-size:12px;font-weight:600;color:var(--text);}
 .form-grp input,.form-grp select,.form-grp textarea{padding:11px 14px;border:1.5px solid #d0e8d8;border-radius:10px;font-family:'Onest',sans-serif;font-size:14px;outline:none;background:white;}
 .form-grp input:focus,.form-grp select:focus,.form-grp textarea:focus{border-color:var(--green);}
@@ -463,6 +466,39 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
             <input type="number" id="setDeliveryCost" placeholder="0">
           </div>
         </div>
+
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8f4ec;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;">📱 Мессенджеры для связи</div>
+          <div style="font-size:13px;color:#8aaa94;margin-bottom:18px;">Ссылки будут использоваться плавающими кнопками на всех страницах. Пустое поле — кнопка не показывается.</div>
+          <div class="settings-msg-grid">
+            <div class="settings-msg-row">
+              <span class="settings-msg-ic" style="background:#25D366;">
+                <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.057 20.85h-.005a8.9 8.9 0 0 1-4.54-1.244l-.325-.193-3.374.885.9-3.288-.211-.337a8.879 8.879 0 0 1-1.367-4.738c.002-4.911 4.001-8.911 8.92-8.911 2.382 0 4.622.928 6.305 2.612a8.86 8.86 0 0 1 2.612 6.305c-.003 4.911-4.002 8.91-8.916 8.91zM20.52 3.449C18.244 1.245 15.222 0 12.057 0 5.534 0 .222 5.31.22 11.836c0 2.086.546 4.122 1.585 5.916L.122 24l6.401-1.68a11.886 11.886 0 0 0 5.69 1.45h.005c6.521 0 11.832-5.31 11.835-11.836a11.831 11.831 0 0 0-3.527-8.485"/></svg>
+              </span>
+              <div class="form-grp" style="flex:1;">
+                <label>WhatsApp</label>
+                <input type="text" id="setWhatsApp" placeholder="https://wa.me/79119228677">
+              </div>
+            </div>
+            <div class="settings-msg-row">
+              <span class="settings-msg-ic" style="background:#0088cc;">
+                <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+              </span>
+              <div class="form-grp" style="flex:1;">
+                <label>Telegram</label>
+                <input type="text" id="setTelegram" placeholder="https://t.me/cleverspb">
+              </div>
+            </div>
+            <div class="settings-msg-row">
+              <span class="settings-msg-ic" style="background:#FF6600;font-family:'Unbounded',sans-serif;font-weight:900;font-size:18px;color:white;">M</span>
+              <div class="form-grp" style="flex:1;">
+                <label>Max</label>
+                <input type="text" id="setMax" placeholder="https://max.me/cleverspb">
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style="margin-top:24px;display:flex;gap:10px;">
           <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button>
         </div>
@@ -928,6 +964,7 @@ function showTab(name, btn) {
   if (name === 'news') renderNews();
   if (name === 'products') renderProducts();
   if (name === 'dashboard') renderDashboard();
+  if (name === 'settings') loadSettings();
 }
 
 // ===== ДАННЫЕ =====
@@ -1611,6 +1648,9 @@ function loadSettings() {
   document.getElementById('setMinOrder').value = s.minOrder || 5000;
   document.getElementById('setFreeDelivery').value = s.freeDelivery || 0;
   document.getElementById('setDeliveryCost').value = s.deliveryCost || 0;
+  document.getElementById('setWhatsApp').value = s.whatsapp !== undefined ? s.whatsapp : 'https://wa.me/79119228677';
+  document.getElementById('setTelegram').value = s.telegram !== undefined ? s.telegram : 'https://t.me/cleverspb';
+  document.getElementById('setMax').value = s.max || '';
 }
 
 function saveSettings() {
@@ -1622,6 +1662,9 @@ function saveSettings() {
     minOrder: parseInt(document.getElementById('setMinOrder').value) || 5000,
     freeDelivery: parseInt(document.getElementById('setFreeDelivery').value) || 0,
     deliveryCost: parseInt(document.getElementById('setDeliveryCost').value) || 0,
+    whatsapp: document.getElementById('setWhatsApp').value.trim(),
+    telegram: document.getElementById('setTelegram').value.trim(),
+    max: document.getElementById('setMax').value.trim(),
   };
   localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(s));
   toast('✓ Настройки сохранены');
