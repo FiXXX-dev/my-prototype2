@@ -158,9 +158,9 @@ setTimeout(function(){
 </div>
 <footer>
   <div class="footer-logo">🍀 <span>Clever</span></div>
-  <p>© 2025 ООО «Клевер». Все права защищены.</p>
+  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;">⚙️ Админка</a></p>
   <div class="footer-links"><a href="index.html">Главная</a><a href="catalog.html">Каталог</a><a href="contacts.html">Контакты</a></div>
-<div style="display:flex;justify-content:flex-end;padding:8px 40px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:16px;"><a href="admin.html" style="color:rgba(255,255,255,0.15);font-size:11px;">⚙️ Админка</a></div></footer>
+</footer>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-panel" id="cartPanel">
@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 </script>
 
 <style id="klever-fab-styles">
-.klever-fab{position:fixed;bottom:24px;right:24px;z-index:150;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:14px;}
+.klever-fab-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(2px);z-index:149;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease;}.klever-fab-overlay.open{opacity:1;visibility:visible;}.klever-fab{position:fixed;bottom:80px;right:24px;z-index:150;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:14px;}
 .klever-fab-main{width:56px;height:56px;border-radius:50%;background:#2ECC71;color:#0f1a14;border:none;cursor:pointer;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(46,204,113,0.4),0 4px 12px rgba(0,0,0,0.15);transition:transform .25s ease,background .2s,box-shadow .2s;}
 .klever-fab-main:hover{background:#C8F135;transform:scale(1.06);}
 .klever-fab.open .klever-fab-main{transform:rotate(135deg);background:#0f1a14;color:white;}
@@ -556,8 +556,9 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 .klever-fab-btn.max{background:#FF6600;}
 .klever-fab-btn svg{width:24px;height:24px;}
 .klever-fab-btn .max-letter{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;letter-spacing:-1px;line-height:1;}
-@media(max-width:600px){.klever-fab{bottom:80px;right:18px;}}
+@media(max-width:600px){.klever-fab{bottom:90px;right:18px;}}
 </style>
+<div class="klever-fab-overlay" id="kleverFabOverlay"></div>
 <div class="klever-fab" id="kleverFab">
   <button class="klever-fab-main" id="kleverFabMain" aria-label="Связаться с нами">💬</button>
   <div class="klever-fab-items" id="kleverFabItems"></div>
@@ -591,15 +592,18 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
     }).join('');
   }
   function toggle(){
-    document.getElementById('kleverFab').classList.toggle('open');
+    const isOpen = document.getElementById('kleverFab').classList.toggle('open');
+    document.getElementById('kleverFabOverlay').classList.toggle('open', isOpen);
   }
   document.addEventListener('DOMContentLoaded', function(){
     render();
     document.getElementById('kleverFabMain').addEventListener('click', toggle);
+    function closeFab(){ document.getElementById('kleverFab').classList.remove('open'); document.getElementById('kleverFabOverlay').classList.remove('open'); }
     document.addEventListener('click', e => {
       const fab = document.getElementById('kleverFab');
-      if (fab.classList.contains('open') && !fab.contains(e.target)) fab.classList.remove('open');
+      if (fab.classList.contains('open') && !fab.contains(e.target)) closeFab();
     });
+    document.getElementById('kleverFabOverlay').addEventListener('click', closeFab);
   });
   window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
 })();
