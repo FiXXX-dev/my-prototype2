@@ -73,6 +73,7 @@ const TRANSLATIONS = {
 
     // ===== NEWS MODAL =====
     'news.eyebrow': '📢 Новость',
+    'news.eyebrow_text': 'Новость',
     'news.ok': 'Понятно',
 
     // ===== RECENTLY VIEWED =====
@@ -568,6 +569,7 @@ const TRANSLATIONS = {
     'fab.title': 'Contact us',
 
     'news.eyebrow': '📢 News',
+    'news.eyebrow_text': 'News',
     'news.ok': 'Got it',
 
     'recent.title': 'Recently viewed',
@@ -1046,6 +1048,7 @@ const TRANSLATIONS = {
     'fab.title': '联系我们',
 
     'news.eyebrow': '📢 公告',
+    'news.eyebrow_text': '公告',
     'news.ok': '知道了',
 
     'recent.title': '最近浏览',
@@ -1524,6 +1527,7 @@ const TRANSLATIONS = {
     'fab.title': '문의하기',
 
     'news.eyebrow': '📢 공지',
+    'news.eyebrow_text': '공지',
     'news.ok': '확인',
 
     'recent.title': '최근 본 상품',

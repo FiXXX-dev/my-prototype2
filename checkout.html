@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title data-i18n="checkout.title">Оформление заказа — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="icons.css">
+
 <style>
 :root{--green:#2ECC71;--green-dark:#1aab58;--green-light:#a8f0c6;--lime:#C8F135;--dark:#0f1a14;--dark2:#162119;--gray:#f2f7f4;--text:#1a2e22;--white:#ffffff;--accent:#FF6B35;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -185,7 +187,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 @keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
 </style>
 <div id="klever-preloader">
-  <div class="pre-logo"><span class="leaf">🍀</span> <span>Clever</span></div>
+  <div class="pre-logo"><span class="leaf"><span class="icon icon-clover" style="color:#C8F135;"></span></span> <span>Clever</span></div>
   <div class="pre-bar"></div>
 </div>
 <script id="preloader-script">
@@ -206,12 +208,12 @@ setTimeout(function(){
 </script>
 
 <header>
-  <a href="index.html" class="logo">🍀 <span>Clever</span></a>
+  <a href="index.html" class="logo"><span class="icon icon-clover brand-logo-icon"></span><span>Clever</span></a>
   <nav>
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
     <a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">👤</a></div>
+  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a></div>
 </header>
 
 <div class="breadcrumb">
@@ -444,7 +446,7 @@ setTimeout(function(){
 </div>
 
 <footer>
-  <div class="footer-logo">🍀 <span>Clever</span></div>
+  <div class="footer-logo"><span class="icon icon-clover brand-logo-icon"></span><span>Clever</span></div>
   <p>© 2025 ООО «Клевер». Все права защищены.</p>
   <div class="footer-links">
     <a href="index.html">Главная</a>
@@ -793,7 +795,7 @@ prefillInvoiceFromUser();
 <div class="klever-news-overlay" id="kleverNewsOverlay">
   <div class="klever-news-modal">
     <div class="klever-news-banner" id="kleverNewsBanner">
-      <div class="klever-news-eyebrow" data-i18n="news.eyebrow">📢 Новость</div>
+      <div class="klever-news-eyebrow"><span class="icon icon-megaphone"></span> <span data-i18n="news.eyebrow_text">Новость</span></div>
       <div class="klever-news-title" id="kleverNewsTitle"></div>
     </div>
     <div class="klever-news-body">
@@ -909,7 +911,7 @@ prefillInvoiceFromUser();
       return '<a href="'+href+'" '+(isActive?'class="active"':'')+'>'+text+'</a>';
     }).join('');
     // Find phone link
-    let phoneHref = 'tel:+78129228677', phoneText = '📞 Позвонить';
+    let phoneHref = 'tel:+78129228677', phoneText = '<span class="icon icon-phone"></span> Позвонить';
     const phoneEl = header.querySelector('.btn-phone, a[href^="tel:"]');
     if (phoneEl) { phoneHref = phoneEl.getAttribute('href'); phoneText = phoneEl.textContent.trim(); }
     // Build menu HTML
@@ -921,13 +923,13 @@ prefillInvoiceFromUser();
     panel.className = 'mobile-menu-panel';
     panel.id = 'mobileMenuPanel';
     panel.innerHTML = '<div class="mobile-menu-head">'
-      + '<span class="mm-title">🍀 Меню</span>'
-      + '<button class="mobile-menu-close" onclick="window.__kleverCloseMobileMenu()">✕</button>'
+      + '<span class="mm-title"><span class="icon icon-clover" style="color:#C8F135;"></span> Меню</span>'
+      + '<button class="mobile-menu-close" onclick="window.__kleverCloseMobileMenu()"><span class="icon icon-close"></span></button>'
       + '</div>'
       + '<div class="mobile-menu-links">'+links+'</div>'
       + '<div class="mobile-menu-actions">'
-      + '<a href="account.html">👤 Личный кабинет</a>'
-      + '<button id="mmCartBtn">🛒 Корзина <span class="mm-cart-badge empty" id="mmCartBadge">0</span></button>'
+      + '<a href="account.html"><span class="icon icon-user"></span> <span data-i18n="nav.account">Личный кабинет</span></a>'
+      + '<button id="mmCartBtn"><span class="icon icon-cart"></span> <span data-i18n="nav.cart">Корзина</span> <span class="mm-cart-badge empty" id="mmCartBadge">0</span></button>'
       + '<a href="'+phoneHref+'" class="mobile-menu-phone">'+phoneText+'</a>'
       + '</div>';
     document.body.appendChild(overlay);
@@ -942,7 +944,7 @@ prefillInvoiceFromUser();
     const burger = document.createElement('button');
     burger.className = 'mobile-burger-btn';
     burger.setAttribute('aria-label','Открыть меню');
-    burger.innerHTML = '☰';
+    burger.innerHTML = '<span class="icon icon-menu"></span>';
     burger.onclick = openMenu;
     const actions = header.querySelector('.header-actions');
     if (actions) actions.appendChild(burger);
@@ -1023,7 +1025,7 @@ prefillInvoiceFromUser();
 <div class="klever-search-panel" id="kleverSearchPanel">
   <div class="klever-search-row">
     <input type="text" class="klever-search-input" id="kleverSearchInput" data-i18n-placeholder="search.placeholder" placeholder="Поиск по названию или артикулу..." autocomplete="off">
-    <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть">✕</button>
+    <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть"><span class="icon icon-close"></span></button>
   </div>
   <div class="klever-search-results" id="kleverSearchResults"></div>
 </div>
@@ -1060,7 +1062,7 @@ prefillInvoiceFromUser();
     }).slice(0, 8);
     box.classList.add('has-content');
     if (matches.length === 0){
-      box.innerHTML = '<div class="klever-search-empty"><span class="emoji">🔍</span>Ничего не найдено по запросу «'+escHtml(query)+'»</div>';
+      box.innerHTML = '<div class="klever-search-empty"><span class="icon icon-search icon-2x" style="display:block;margin:0 auto 10px;"></span>Ничего не найдено по запросу «'+escHtml(query)+'»</div>';
       return;
     }
     box.innerHTML = matches.map(p => {
@@ -1093,7 +1095,7 @@ prefillInvoiceFromUser();
     const btn = document.createElement('button');
     btn.className = 'search-trigger';
     btn.setAttribute('aria-label','Поиск');
-    btn.innerHTML = '🔍';
+    btn.innerHTML = '<span class="icon icon-search"></span>';
     btn.onclick = openSearch;
     const actions = header.querySelector('.header-actions');
     if (actions){
@@ -1137,7 +1139,7 @@ prefillInvoiceFromUser();
 </style>
 <div class="klever-fab-overlay" id="kleverFabOverlay"></div>
 <div class="klever-fab" id="kleverFab">
-  <button class="klever-fab-main" id="kleverFabMain" aria-label="Связаться с нами">💬</button>
+  <button class="klever-fab-main" id="kleverFabMain" aria-label="Связаться с нами"><span class="icon icon-chat icon-lg"></span></button>
   <div class="klever-fab-items" id="kleverFabItems"></div>
 </div>
 <script id="klever-fab-script">
