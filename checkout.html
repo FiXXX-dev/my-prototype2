@@ -75,6 +75,18 @@ nav a:hover{color:var(--lime);}
 /* SECTION DIVIDER */
 .section-divider{border:none;border-top:1px solid #e8f4ec;margin:24px 0;}
 
+/* PAYMENT */
+.payment-options{display:flex;flex-direction:column;gap:12px;}
+.payment-option{display:block;padding:18px 20px 18px 56px;position:relative;}
+.payment-option .delivery-option-icon{position:absolute;top:18px;left:18px;margin:0;font-size:26px;line-height:1;}
+.payment-option .delivery-option-title{font-size:15px;margin-bottom:4px;}
+.payment-option .delivery-option-desc{font-size:13px;color:#6b8a74;line-height:1.45;}
+.payment-option .check-mark{top:18px;right:18px;}
+.invoice-form{margin-top:0;padding:0 20px;background:#f6fbf8;border:0 dashed #b8e0c8;border-radius:14px;max-height:0;overflow:hidden;transition:max-height .3s ease, padding .25s ease, margin-top .25s ease, border-width .25s ease;}
+.invoice-form.visible{max-height:400px;padding:20px;margin-top:18px;border-width:1.5px;}
+.invoice-note{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;color:var(--green-dark);margin-bottom:14px;letter-spacing:-0.3px;}
+.invoice-hint{margin-top:6px;padding:10px 12px;background:#e8faf0;border-radius:10px;font-size:12.5px;color:var(--green-dark);}
+
 /* RIGHT - SUMMARY */
 .checkout-right{position:sticky;top:90px;}
 .order-summary{background:white;border-radius:20px;padding:28px;border:1.5px solid #e0ece4;}
@@ -321,6 +333,53 @@ setTimeout(function(){
         <textarea id="comment" placeholder="Особые пожелания, уточнения по заказу или доставке..."></textarea>
       </div>
     </div>
+
+    <!-- ШАГ 3 — СПОСОБ ОПЛАТЫ -->
+    <div class="step">
+      <div class="step-title"><span class="step-num">3</span> Способ оплаты</div>
+
+      <div class="payment-options">
+        <label class="delivery-option payment-option selected" data-pay="cash">
+          <input type="radio" name="paymentMethod" value="cash" checked>
+          <span class="delivery-option-icon">💵</span>
+          <div class="delivery-option-title">Наличными или картой курьеру</div>
+          <div class="delivery-option-desc">Оплата при получении заказа. Принимаем наличные и банковские карты.</div>
+          <span class="check-mark"></span>
+        </label>
+        <label class="delivery-option payment-option" data-pay="invoice">
+          <input type="radio" name="paymentMethod" value="invoice">
+          <span class="delivery-option-icon">🏦</span>
+          <div class="delivery-option-title">По безналичному расчёту</div>
+          <div class="delivery-option-desc">Для ИП и юр.лиц. Выставим счёт на оплату. Оплата по реквизитам в течение 3 рабочих дней.</div>
+          <span class="check-mark"></span>
+        </label>
+        <label class="delivery-option payment-option" data-pay="transfer">
+          <input type="radio" name="paymentMethod" value="transfer">
+          <span class="delivery-option-icon">💳</span>
+          <div class="delivery-option-title">Перевод на карту</div>
+          <div class="delivery-option-desc">Перевод на карту Сбербанк. Реквизиты отправим после подтверждения заказа.</div>
+          <span class="check-mark"></span>
+        </label>
+      </div>
+
+      <!-- Реквизиты для безналичной оплаты -->
+      <div class="invoice-form" id="invoiceForm">
+        <div class="invoice-note">📋 Реквизиты для счёта</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Название компании <span class="req">*</span></label>
+            <input type="text" id="invoiceCompany" placeholder="ООО «Название» или ИП Иванов И.И.">
+            <div class="error-hint" id="invoiceCompanyErr">Укажите название организации</div>
+          </div>
+          <div class="form-group">
+            <label>ИНН <span class="req">*</span></label>
+            <input type="text" id="invoiceInn" placeholder="10 или 12 цифр" inputmode="numeric" maxlength="12">
+            <div class="error-hint" id="invoiceInnErr">Укажите корректный ИНН (10 или 12 цифр)</div>
+          </div>
+        </div>
+        <div class="invoice-hint" id="invoiceUserHint" style="display:none;">✓ Данные подставлены из профиля. Проверьте и при необходимости измените.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ПРАВАЯ КОЛОНКА - ИТОГ -->
@@ -399,6 +458,39 @@ const DELIVERY_FREE_FROM = 0;
 const DELIVERY_COST = 0;
 
 let deliveryMethod = 'courier';
+let paymentMethod = 'cash';
+
+function selectPayment(method) {
+  paymentMethod = method;
+  document.querySelectorAll('.payment-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.pay === method);
+  });
+  const invForm = document.getElementById('invoiceForm');
+  invForm.classList.toggle('visible', method === 'invoice');
+  if (method !== 'invoice') {
+    clearError('invoiceCompany', 'invoiceCompanyErr');
+    clearError('invoiceInn', 'invoiceInnErr');
+  }
+}
+
+function prefillInvoiceFromUser() {
+  let user = null;
+  try {
+    const id = localStorage.getItem('klever_current_user');
+    if (id) {
+      const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+      user = users.find(u => u.id === id || u.id === Number(id));
+    }
+  } catch(e) {}
+  if (user && user.userType === 'company') {
+    const c = document.getElementById('invoiceCompany');
+    const inn = document.getElementById('invoiceInn');
+    if (c && !c.value) c.value = user.company || '';
+    if (inn && !inn.value) inn.value = user.inn || '';
+    const hint = document.getElementById('invoiceUserHint');
+    if (hint && (user.company || user.inn)) hint.style.display = 'block';
+  }
+}
 
 function getCart() {
   try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
@@ -557,6 +649,16 @@ function submitOrder() {
   if (!name) { showError('clientName', 'clientNameErr'); errors.push('name'); }
   if (!phone || phone.replace(/\D/g,'').length < 10) { showError('clientPhone', 'clientPhoneErr'); errors.push('phone'); }
 
+  // Проверка реквизитов для безналичного расчёта
+  if (paymentMethod === 'invoice') {
+    const invCompany = document.getElementById('invoiceCompany').value.trim();
+    const invInn = document.getElementById('invoiceInn').value.trim();
+    clearError('invoiceCompany', 'invoiceCompanyErr');
+    clearError('invoiceInn', 'invoiceInnErr');
+    if (!invCompany) { showError('invoiceCompany', 'invoiceCompanyErr'); errors.push('invCompany'); }
+    if (!/^\d{10}$|^\d{12}$/.test(invInn)) { showError('invoiceInn', 'invoiceInnErr'); errors.push('invInn'); }
+  }
+
   if (errors.length > 0) {
     // Скроллим к первой ошибке
     document.querySelector('.error') && document.querySelector('.error').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -585,6 +687,9 @@ function submitOrder() {
     company: document.getElementById('company').value,
     email: document.getElementById('clientEmail').value,
     comment: document.getElementById('comment').value,
+    payment: paymentMethod,
+    invoiceCompany: paymentMethod === 'invoice' ? document.getElementById('invoiceCompany').value.trim() : '',
+    invoiceInn: paymentMethod === 'invoice' ? document.getElementById('invoiceInn').value.trim() : '',
   });
   localStorage.setItem('klever_orders', JSON.stringify(orders));
 
@@ -600,8 +705,13 @@ function submitOrder() {
   const methodText = deliveryMethod === 'courier'
     ? `Доставим по адресу: ${document.getElementById('address').value}<br>Дата: ${document.getElementById('delivDate').value}`
     : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
+  const paymentLabel = {
+    cash: '💵 Наличными или картой курьеру',
+    invoice: '🏦 Безналичный расчёт — выставим счёт',
+    transfer: '💳 Перевод на карту — пришлём реквизиты'
+  }[paymentMethod] || '';
   document.getElementById('successDetails').innerHTML =
-    `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Свяжемся с вами по номеру: <strong>${document.getElementById('clientPhone').value}</strong>`;
+    `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${document.getElementById('clientPhone').value}</strong>`;
 
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -640,6 +750,10 @@ function checkCart() {
 setMinDate();
 checkCart();
 updateSummary();
+document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
+  r.addEventListener('change', e => selectPayment(e.target.value));
+});
+prefillInvoiceFromUser();
 </script>
 <style id="news-modal-styles">
 .klever-news-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;}
