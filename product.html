@@ -47,6 +47,13 @@ nav a:hover{color:var(--lime);}
 .btn-buy:hover{background:var(--lime);transform:translateY(-2px);}
 .btn-cart{flex:1;padding:18px;border-radius:14px;background:white;border:2px solid #d0e8d8;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:var(--green-dark);cursor:pointer;}
 .btn-cart:hover{border-color:var(--green);background:var(--gray);}
+.cart-qty-block{background:#e8faf0;border:2px solid var(--green);border-radius:16px;padding:18px 22px;text-align:center;margin-top:12px;}
+.cart-qty-label{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;color:var(--green-dark);letter-spacing:0.5px;margin-bottom:12px;text-transform:uppercase;}
+.cart-qty-control{display:flex;align-items:center;justify-content:center;gap:14px;}
+.cart-qty-btn{width:44px;height:44px;background:var(--green);border:none;border-radius:50%;font-size:22px;font-weight:700;color:var(--dark);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background .15s,transform .12s;}
+.cart-qty-btn:hover{background:var(--lime);transform:scale(1.08);}
+.cart-qty-val{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;color:var(--dark);min-width:50px;text-align:center;}
+.cart-qty-unit{font-size:14px;color:#6b8a74;font-weight:600;}
 .delivery-info{border:1.5px solid #d0e8d8;border-radius:16px;padding:20px;margin-bottom:24px;}
 .delivery-row{display:flex;align-items:center;gap:12px;padding:8px 0;}
 .delivery-row:not(:last-child){border-bottom:1px solid #e8f4ec;}
@@ -194,8 +201,8 @@ const CART_KEY='klever_cart';
 function getCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}catch(e){return[];}}
 function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartBadge();}
 function addToCart(p){const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:1});saveCart(c);showAddedToast(p.name);}
-function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();}
-function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();}
+function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();if(typeof syncCartQtyBlock==='function')syncCartQtyBlock();}
+function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();if(typeof syncCartQtyBlock==='function')syncCartQtyBlock();}
 function getCartTotal(){return getCart().reduce((s,i)=>s+i.price*i.qty,0);}
 function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
 function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
@@ -571,9 +578,19 @@ function renderProduct() {
           </div>
         </div>
 
-        <div class="buy-btns">
+        <div class="buy-btns" id="buyBtns">
           <button class="btn-buy" onclick="buyNow()">Купить сейчас</button>
           <button class="btn-cart" onclick="addCurrentToCart()">🛒 В корзину</button>
+        </div>
+        <div class="cart-qty-block" id="cartQtyBlock" style="display:none;">
+          <div class="cart-qty-label">✓ В корзине</div>
+          <div class="cart-qty-control">
+            <button class="cart-qty-btn" onclick="productQtyDec()" aria-label="Убрать">−</button>
+            <span class="cart-qty-val" id="cartQtyVal">0</span>
+            <span class="cart-qty-unit">шт.</span>
+            <button class="cart-qty-btn" onclick="productQtyInc()" aria-label="Добавить">+</button>
+          </div>
+          <button class="btn-cart" onclick="openCart()" style="margin-top:14px;">🛒 Открыть корзину</button>
         </div>
 
         <div class="delivery-info">
@@ -626,6 +643,7 @@ function addCurrentToCart() {
   for (let i = 0; i < qty; i++) {
     addToCart({name: product.name, sku: product.sku, price: product.price, img: product.img || ''});
   }
+  syncCartQtyBlock();
 }
 
 function buyNow() {
@@ -633,7 +651,43 @@ function buyNow() {
   setTimeout(openCart, 300);
 }
 
+function getProductQty(){
+  try { const c = JSON.parse(localStorage.getItem('klever_cart')||'[]'); const i = c.find(x=>x.sku===product.sku); return i?i.qty:0; } catch(e){ return 0; }
+}
+
+function syncCartQtyBlock(){
+  if (!product) return;
+  const qty = getProductQty();
+  const buyBtns = document.getElementById('buyBtns');
+  const qtyBlock = document.getElementById('cartQtyBlock');
+  if (!buyBtns || !qtyBlock) return;
+  if (qty > 0) {
+    buyBtns.style.display = 'none';
+    qtyBlock.style.display = 'block';
+    document.getElementById('cartQtyVal').textContent = qty;
+  } else {
+    buyBtns.style.display = '';
+    qtyBlock.style.display = 'none';
+  }
+}
+
+function productQtyInc(){
+  addToCart({name: product.name, sku: product.sku, price: product.price, img: product.img || ''});
+  syncCartQtyBlock();
+}
+
+function productQtyDec(){
+  const cart = getCart();
+  const item = cart.find(i => i.sku === product.sku);
+  if (!item) return;
+  item.qty--;
+  const newCart = item.qty <= 0 ? cart.filter(i => i.sku !== product.sku) : cart;
+  saveCart(newCart);
+  syncCartQtyBlock();
+}
+
 renderProduct();
+syncCartQtyBlock();
 </script>
 <style id="news-modal-styles">
 .klever-news-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;}
@@ -839,6 +893,309 @@ renderProduct();
   // Patch updateCartBadge if exists to also sync mm
   const _origInterval = setInterval(function(){ if (typeof updateCartBadge === 'function') { const _orig = updateCartBadge; window.updateCartBadge = function(){ _orig(); updateMmCart(); }; clearInterval(_origInterval); } }, 100);
   setTimeout(function(){ clearInterval(_origInterval); }, 3000);
+})();
+</script>
+
+<style id="klever-search-styles">
+.search-trigger{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .2s,transform .15s;}
+.search-trigger:hover{background:rgba(255,255,255,0.15);transform:scale(1.05);}
+.klever-search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);z-index:8500;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;}
+.klever-search-overlay.open{opacity:1;visibility:visible;}
+.klever-search-panel{position:fixed;top:0;left:0;right:0;background:#0f1a14;border-bottom:2px solid #2ECC71;z-index:8501;transform:translateY(-100%);transition:transform .3s ease;padding:18px 24px;}
+.klever-search-panel.open{transform:translateY(0);}
+.klever-search-row{display:flex;gap:10px;align-items:center;max-width:900px;margin:0 auto;}
+.klever-search-input{flex:1;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);border-radius:14px;padding:14px 18px;font-family:'Onest',sans-serif;font-size:15px;color:white;outline:none;transition:border-color .2s,background .2s;min-width:0;}
+.klever-search-input:focus{border-color:#2ECC71;background:rgba(255,255,255,0.12);}
+.klever-search-input::placeholder{color:rgba(255,255,255,0.4);}
+.klever-search-close{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:46px;height:46px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;}
+.klever-search-close:hover{background:rgba(255,255,255,0.18);}
+.klever-search-results{max-width:900px;margin:14px auto 0;background:white;border-radius:16px;max-height:60vh;overflow-y:auto;display:none;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.klever-search-results.has-content{display:block;}
+.klever-search-result{display:grid;grid-template-columns:54px 1fr auto auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid #e8f4ec;text-decoration:none;color:inherit;transition:background .15s;}
+.klever-search-result:last-child{border-bottom:none;}
+.klever-search-result:hover{background:#f2f7f4;}
+.klever-search-result-img{width:54px;height:54px;background:#f2f7f4;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.klever-search-result-img img{width:100%;height:100%;object-fit:contain;padding:5px;}
+.klever-search-result-name{font-size:14px;font-weight:600;color:#1a2e22;line-height:1.35;}
+.klever-search-result-sku{font-size:12px;color:#8aaa94;margin-top:2px;}
+.klever-search-result-price{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;color:#1aab58;white-space:nowrap;}
+.klever-search-result-add{background:#2ECC71;color:#0f1a14;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;padding:0;transition:background .2s,transform .15s;}
+.klever-search-result-add:hover{background:#C8F135;transform:scale(1.1);}
+.klever-search-empty{padding:40px 20px;text-align:center;color:#8aaa94;font-size:14px;}
+.klever-search-empty .emoji{font-size:44px;margin-bottom:10px;display:block;}
+@media(max-width:600px){
+  .klever-search-panel{padding:14px 14px;}
+  .klever-search-input{padding:12px 14px;font-size:14px;}
+  .klever-search-close{width:42px;height:42px;}
+  .klever-search-results{max-height:70vh;border-radius:12px;}
+  .klever-search-result{grid-template-columns:46px 1fr auto;gap:10px;padding:11px 12px;}
+  .klever-search-result-price{display:none;}
+  .klever-search-result-add{width:34px;height:34px;font-size:16px;}
+  .klever-search-result-name{font-size:13px;}
+}
+</style>
+<div class="klever-search-overlay" id="kleverSearchOverlay"></div>
+<div class="klever-search-panel" id="kleverSearchPanel">
+  <div class="klever-search-row">
+    <input type="text" class="klever-search-input" id="kleverSearchInput" placeholder="Поиск по названию или артикулу..." autocomplete="off">
+    <button class="klever-search-close" onclick="kleverSearchClose()" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="klever-search-results" id="kleverSearchResults"></div>
+</div>
+<script id="klever-search-script">
+(function(){
+  let debounceT = null;
+  function getProducts(){
+    try{ const a=JSON.parse(localStorage.getItem('klever_products_v2')); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+  }
+  function escHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function openSearch(){
+    document.getElementById('kleverSearchOverlay').classList.add('open');
+    document.getElementById('kleverSearchPanel').classList.add('open');
+    document.body.style.overflow='hidden';
+    setTimeout(()=>document.getElementById('kleverSearchInput').focus(), 100);
+  }
+  function closeSearch(){
+    document.getElementById('kleverSearchOverlay').classList.remove('open');
+    document.getElementById('kleverSearchPanel').classList.remove('open');
+    document.body.style.overflow='';
+    document.getElementById('kleverSearchInput').value='';
+    const r = document.getElementById('kleverSearchResults');
+    r.classList.remove('has-content'); r.innerHTML='';
+  }
+  function render(query){
+    const box = document.getElementById('kleverSearchResults');
+    const q = query.trim().toLowerCase();
+    if (!q){ box.classList.remove('has-content'); box.innerHTML=''; return; }
+    const all = getProducts();
+    const matches = all.filter(p => {
+      const n = (p.name||'').toLowerCase();
+      const s = (p.sku||'').toString().toLowerCase();
+      return n.includes(q) || s.includes(q);
+    }).slice(0, 8);
+    box.classList.add('has-content');
+    if (matches.length === 0){
+      box.innerHTML = '<div class="klever-search-empty"><span class="emoji">🔍</span>Ничего не найдено по запросу «'+escHtml(query)+'»</div>';
+      return;
+    }
+    box.innerHTML = matches.map(p => {
+      const imgHtml = p.img ? '<img src="'+escHtml(p.img)+'" alt="" onerror="this.outerHTML=\'<span style=font-size:22px>📦</span>\'">' : '<span style="font-size:22px">📦</span>';
+      const cartData = escHtml(JSON.stringify({name:p.name,sku:p.sku,price:p.price,img:p.img||''}));
+      return '<a href="product.html?sku='+escHtml(p.sku)+'" class="klever-search-result">'
+        + '<div class="klever-search-result-img">'+imgHtml+'</div>'
+        + '<div><div class="klever-search-result-name">'+escHtml(p.name)+'</div><div class="klever-search-result-sku">Арт. '+escHtml(p.sku)+'</div></div>'
+        + '<div class="klever-search-result-price">'+escHtml(p.price)+' ₽</div>'
+        + '<button class="klever-search-result-add" onclick="event.preventDefault();event.stopPropagation();kleverSearchAdd('+cartData+')" aria-label="В корзину">+</button>'
+        + '</a>';
+    }).join('');
+  }
+  window.kleverSearchClose = closeSearch;
+  window.kleverSearchAdd = function(p){
+    if (typeof addToCart === 'function') { addToCart(p); return; }
+    try {
+      const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
+      const ex = cart.find(i => i.sku === p.sku);
+      if (ex) ex.qty++; else cart.push({...p, qty:1});
+      localStorage.setItem('klever_cart', JSON.stringify(cart));
+    } catch(e){}
+    if (typeof updateCartBadge === 'function') updateCartBadge();
+    if (typeof window.__kleverUpdateMmCart === 'function') window.__kleverUpdateMmCart();
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    const header = document.querySelector('header');
+    if (!header) return;
+    if (header.querySelector('.search-trigger')) return;
+    const btn = document.createElement('button');
+    btn.className = 'search-trigger';
+    btn.setAttribute('aria-label','Поиск');
+    btn.innerHTML = '🔍';
+    btn.onclick = openSearch;
+    const actions = header.querySelector('.header-actions');
+    if (actions){
+      const phoneBtn = actions.querySelector('.btn-phone');
+      if (phoneBtn && phoneBtn.nextSibling) actions.insertBefore(btn, phoneBtn.nextSibling);
+      else actions.insertBefore(btn, actions.firstChild);
+    } else { header.appendChild(btn); }
+    const input = document.getElementById('kleverSearchInput');
+    input.addEventListener('input', e => {
+      clearTimeout(debounceT);
+      const q = e.target.value;
+      debounceT = setTimeout(()=>render(q), 300);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('kleverSearchPanel').classList.contains('open')) closeSearch(); });
+    document.getElementById('kleverSearchOverlay').addEventListener('click', closeSearch);
+  });
+})();
+</script>
+
+<style id="klever-fab-styles">
+.klever-fab{position:fixed;bottom:24px;right:24px;z-index:150;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:14px;}
+.klever-fab-main{width:56px;height:56px;border-radius:50%;background:#2ECC71;color:#0f1a14;border:none;cursor:pointer;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(46,204,113,0.4),0 4px 12px rgba(0,0,0,0.15);transition:transform .25s ease,background .2s,box-shadow .2s;}
+.klever-fab-main:hover{background:#C8F135;transform:scale(1.06);}
+.klever-fab.open .klever-fab-main{transform:rotate(135deg);background:#0f1a14;color:white;}
+.klever-fab-items{display:flex;flex-direction:column;gap:12px;align-items:flex-end;pointer-events:none;}
+.klever-fab-item{opacity:0;transform:translateY(10px) scale(0.85);transition:opacity .2s ease,transform .25s ease;pointer-events:none;display:flex;align-items:center;gap:10px;}
+.klever-fab.open .klever-fab-item{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+.klever-fab.open .klever-fab-item:nth-child(1){transition-delay:0.05s;}
+.klever-fab.open .klever-fab-item:nth-child(2){transition-delay:0.1s;}
+.klever-fab.open .klever-fab-item:nth-child(3){transition-delay:0.15s;}
+.klever-fab-tooltip{background:#0f1a14;color:white;padding:7px 12px;border-radius:8px;font-size:13px;font-weight:600;font-family:'Onest',sans-serif;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.25);opacity:0;transform:translateX(8px);transition:opacity .15s,transform .15s;pointer-events:none;}
+.klever-fab-item:hover .klever-fab-tooltip{opacity:1;transform:translateX(0);}
+.klever-fab-btn{width:48px;height:48px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 6px 16px rgba(0,0,0,0.18);transition:transform .15s,box-shadow .2s;flex-shrink:0;}
+.klever-fab-btn:hover{transform:scale(1.1);box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+.klever-fab-btn.whatsapp{background:#25D366;}
+.klever-fab-btn.telegram{background:#0088cc;}
+.klever-fab-btn.max{background:#FF6600;}
+.klever-fab-btn svg{width:24px;height:24px;}
+.klever-fab-btn .max-letter{font-family:'Unbounded',sans-serif;font-weight:900;font-size:20px;letter-spacing:-1px;line-height:1;}
+@media(max-width:600px){.klever-fab{bottom:80px;right:18px;}}
+</style>
+<div class="klever-fab" id="kleverFab">
+  <button class="klever-fab-main" id="kleverFabMain" aria-label="Связаться с нами">💬</button>
+  <div class="klever-fab-items" id="kleverFabItems"></div>
+</div>
+<script id="klever-fab-script">
+(function(){
+  const ICONS = {
+    whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.057 20.85h-.005a8.9 8.9 0 0 1-4.54-1.244l-.325-.193-3.374.885.9-3.288-.211-.337a8.879 8.879 0 0 1-1.367-4.738c.002-4.911 4.001-8.911 8.92-8.911 2.382 0 4.622.928 6.305 2.612a8.86 8.86 0 0 1 2.612 6.305c-.003 4.911-4.002 8.91-8.916 8.91zM20.52 3.449C18.244 1.245 15.222 0 12.057 0 5.534 0 .222 5.31.22 11.836c0 2.086.546 4.122 1.585 5.916L.122 24l6.401-1.68a11.886 11.886 0 0 0 5.69 1.45h.005c6.521 0 11.832-5.31 11.835-11.836a11.831 11.831 0 0 0-3.527-8.485"/></svg>',
+    telegram: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>',
+    max: '<span class="max-letter">M</span>'
+  };
+  const LABELS = { whatsapp: 'WhatsApp', telegram: 'Telegram', max: 'Max' };
+  function getSettings(){
+    try { return JSON.parse(localStorage.getItem('klever_settings') || '{}') || {}; } catch(e) { return {}; }
+  }
+  function defaults(){
+    return { whatsapp: 'https://wa.me/79119228677', telegram: 'https://t.me/cleverspb', max: '' };
+  }
+  function render(){
+    const wrap = document.getElementById('kleverFabItems');
+    if (!wrap) return;
+    const s = Object.assign({}, defaults(), getSettings());
+    const order = ['whatsapp','telegram','max'];
+    wrap.innerHTML = order.filter(k => (s[k]||'').trim()).map(k => {
+      const url = s[k];
+      const icon = ICONS[k];
+      return '<div class="klever-fab-item">'
+        + '<span class="klever-fab-tooltip">'+LABELS[k]+'</span>'
+        + '<a class="klever-fab-btn '+k+'" href="'+url+'" target="_blank" rel="noopener" aria-label="'+LABELS[k]+'">'+icon+'</a>'
+        + '</div>';
+    }).join('');
+  }
+  function toggle(){
+    document.getElementById('kleverFab').classList.toggle('open');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    render();
+    document.getElementById('kleverFabMain').addEventListener('click', toggle);
+    document.addEventListener('click', e => {
+      const fab = document.getElementById('kleverFab');
+      if (fab.classList.contains('open') && !fab.contains(e.target)) fab.classList.remove('open');
+    });
+  });
+  window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+})();
+</script>
+
+<style id="klever-recent-styles">
+.klever-recent{max-width:1200px;margin:0 auto 60px;padding:0 40px;}
+.klever-recent-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;}
+.klever-recent-title{font-family:'Unbounded',sans-serif;font-size:clamp(22px,3vw,30px);font-weight:900;letter-spacing:-1px;color:#1a2e22;}
+.klever-recent-strip{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 16px;scrollbar-width:thin;scrollbar-color:#d0e8d8 transparent;-webkit-overflow-scrolling:touch;}
+.klever-recent-strip::-webkit-scrollbar{height:6px;}
+.klever-recent-strip::-webkit-scrollbar-thumb{background:#d0e8d8;border-radius:3px;}
+.klever-recent-card{flex:0 0 220px;background:#f2f7f4;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;scroll-snap-align:start;border:1.5px solid transparent;transition:transform .2s,box-shadow .2s,border-color .2s;}
+.klever-recent-card:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(0,0,0,0.08);border-color:#a8f0c6;}
+.klever-recent-img{background:white;height:140px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.klever-recent-img img{width:100%;height:100%;object-fit:contain;padding:12px;}
+.klever-recent-info{padding:14px;}
+.klever-recent-name{font-size:13.5px;font-weight:600;line-height:1.35;color:#1a2e22;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;}
+.klever-recent-foot{display:flex;justify-content:space-between;align-items:center;}
+.klever-recent-price{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;color:#1aab58;}
+.klever-recent-add{width:34px;height:34px;background:#2ECC71;border:none;border-radius:50%;font-size:18px;color:#0f1a14;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;padding:0;transition:background .2s,transform .15s;}
+.klever-recent-add:hover{background:#C8F135;transform:scale(1.1);}
+@media(max-width:600px){
+  .klever-recent{padding:0 16px;margin-bottom:40px;}
+  .klever-recent-card{flex:0 0 160px;}
+  .klever-recent-img{height:110px;}
+}
+</style>
+<script id="klever-recent-script">
+(function(){
+  const KEY = 'klever_recently_viewed';
+  const MAX = 12;
+  function getList(){
+    try { const a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a : []; } catch(e) { return []; }
+  }
+  function setList(a){ localStorage.setItem(KEY, JSON.stringify(a.slice(0, MAX))); }
+  function getProducts(){
+    try { const a = JSON.parse(localStorage.getItem('klever_products_v2')); return Array.isArray(a) ? a : []; } catch(e) { return []; }
+  }
+  function escHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  // Track current product if on product.html
+  function trackCurrent(){
+    if (!/product\.html/i.test(location.pathname)) return;
+    const sku = new URLSearchParams(location.search).get('sku');
+    if (!sku) return;
+    const list = getList().filter(s => s !== sku);
+    list.unshift(sku);
+    setList(list);
+  }
+  function render(){
+    const host = document.getElementById('kleverRecentSection');
+    if (!host) return;
+    let list = getList();
+    // On product page, exclude current sku
+    if (/product\.html/i.test(location.pathname)) {
+      const curSku = new URLSearchParams(location.search).get('sku');
+      list = list.filter(s => s !== curSku);
+    }
+    if (!list.length) { host.style.display = 'none'; return; }
+    const products = getProducts();
+    const items = list.map(s => products.find(p => p.sku === s)).filter(Boolean).slice(0, 12);
+    if (!items.length) { host.style.display = 'none'; return; }
+    host.style.display = '';
+    const strip = host.querySelector('.klever-recent-strip');
+    strip.innerHTML = items.map(p => {
+      const imgHtml = p.img ? '<img src="'+escHtml(p.img)+'" alt="" onerror="this.outerHTML=\'<span style=font-size:42px>📦</span>\'">' : '<span style="font-size:42px">📦</span>';
+      const cartData = escHtml(JSON.stringify({name:p.name,sku:p.sku,price:p.price,img:p.img||''}));
+      return '<a href="product.html?sku='+escHtml(p.sku)+'" class="klever-recent-card">'
+        + '<div class="klever-recent-img">'+imgHtml+'</div>'
+        + '<div class="klever-recent-info">'
+        + '<div class="klever-recent-name">'+escHtml(p.name)+'</div>'
+        + '<div class="klever-recent-foot">'
+        + '<div class="klever-recent-price">'+escHtml(p.price)+' ₽</div>'
+        + '<button class="klever-recent-add" onclick="event.preventDefault();event.stopPropagation();kleverRecentAdd('+cartData+')" aria-label="В корзину">+</button>'
+        + '</div></div></a>';
+    }).join('');
+  }
+  window.kleverRecentAdd = function(p){
+    if (typeof addToCart === 'function') { addToCart(p); return; }
+    try {
+      const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
+      const ex = cart.find(i => i.sku === p.sku);
+      if (ex) ex.qty++; else cart.push({...p, qty:1});
+      localStorage.setItem('klever_cart', JSON.stringify(cart));
+    } catch(e){}
+    if (typeof updateCartBadge === 'function') updateCartBadge();
+    if (typeof window.__kleverUpdateMmCart === 'function') window.__kleverUpdateMmCart();
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    trackCurrent();
+    // Inject block before footer if not already there
+    if (!document.getElementById('kleverRecentSection')){
+      const sec = document.createElement('section');
+      sec.id = 'kleverRecentSection';
+      sec.className = 'klever-recent';
+      sec.innerHTML = '<div class="klever-recent-head"><div class="klever-recent-title">Вы недавно смотрели</div></div><div class="klever-recent-strip"></div>';
+      const footer = document.querySelector('footer');
+      if (footer) footer.parentNode.insertBefore(sec, footer);
+      else document.body.appendChild(sec);
+    }
+    // Delay slightly to let product page write its track
+    setTimeout(render, 50);
+  });
+  window.addEventListener('storage', e => { if (e.key === KEY || e.key === 'klever_products_v2') render(); });
 })();
 </script>
 
