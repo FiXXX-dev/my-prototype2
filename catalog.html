@@ -73,8 +73,13 @@
   .prod-footer{display:flex;align-items:center;justify-content:space-between;}
   .prod-price{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;color:var(--green-dark);}
   .prod-price small{font-size:12px;color:#8aaa94;font-weight:400;font-family:'Onest',sans-serif;}
-  .btn-add{width:40px;height:40px;background:var(--green);border:none;border-radius:50%;font-size:22px;color:var(--dark);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:background .2s,transform .15s;}
+  .btn-add{width:40px;height:40px;background:var(--green);border:none;border-radius:50%;font-size:22px;color:var(--dark);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:background .2s,transform .15s;padding:0;line-height:1;}
   .btn-add:hover{background:var(--lime);transform:scale(1.1);}
+  .qty-control{display:flex;align-items:center;gap:6px;}
+  .qty-control-btn{width:32px;height:32px;background:#e8faf0;border:1.5px solid var(--green-light);border-radius:50%;font-size:16px;font-weight:700;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background .15s,border-color .15s,transform .12s;}
+  .qty-control-btn:hover{background:var(--green);color:var(--dark);border-color:var(--green);transform:scale(1.08);}
+  .qty-control-val{min-width:34px;height:32px;background:var(--green);color:var(--dark);border-radius:16px;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 8px;}
+  @media(max-width:600px){.qty-control-btn{width:28px;height:28px;font-size:14px;}.qty-control-val{height:28px;min-width:30px;font-size:12px;}}
   .no-results{grid-column:1/-1;text-align:center;padding:60px 20px;}
   .pagination{display:flex;justify-content:center;gap:8px;margin-top:40px;flex-wrap:wrap;}
   .page-btn{min-width:40px;height:40px;padding:0 12px;border-radius:10px;border:1.5px solid #d0e8d8;background:white;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
@@ -616,16 +621,13 @@ function renderGrid() {
   }
 
   grid.innerHTML = page.map(p => `
-    <a href="product.html?sku=${p.sku}" class="prod-card">
+    <a href="product.html?sku=${p.sku}" class="prod-card" data-sku="${p.sku}">
       <div class="prod-img">${img(p.img)}${badgeHtml(p.badge)}</div>
       <div class="prod-info">
         <div class="prod-cat">${p.cat}</div>
         <div class="prod-name">${p.name}</div>
         <div class="prod-sku">Арт. ${p.sku}</div>
-        <div class="prod-footer">
-          <div class="prod-price">${p.price} ₽ <small>/ шт</small></div>
-          <button class="btn-add" data-sku="${p.sku}" onclick="event.preventDefault();event.stopPropagation();addProdToCart(this)">+</button>
-        </div>
+        ${prodFooterHtml(p)}
       </div>
     </a>`).join('');
 
@@ -726,6 +728,56 @@ function addProdToCart(btn) {
   const p = ALL_PRODUCTS.find(x => x.sku === sku);
   if (!p) return;
   addToCart({name: p.name, sku: p.sku, price: p.price, img: p.img || ''});
+  refreshCardFooter(sku);
+}
+
+function getQtyInCart(sku){
+  try { const c = JSON.parse(localStorage.getItem('klever_cart')||'[]'); const i = c.find(x=>x.sku===sku); return i?i.qty:0; } catch(e){ return 0; }
+}
+
+function prodFooterHtml(p){
+  const qty = getQtyInCart(p.sku);
+  const ctrl = qty > 0
+    ? `<div class="qty-control" data-sku="${p.sku}">
+        <button class="qty-control-btn" onclick="event.preventDefault();event.stopPropagation();qtyDec('${p.sku}')" aria-label="Убрать">−</button>
+        <span class="qty-control-val">${qty}</span>
+        <button class="qty-control-btn" onclick="event.preventDefault();event.stopPropagation();qtyInc('${p.sku}')" aria-label="Добавить">+</button>
+       </div>`
+    : `<button class="btn-add" data-sku="${p.sku}" onclick="event.preventDefault();event.stopPropagation();addProdToCart(this)">+</button>`;
+  return `<div class="prod-footer"><div class="prod-price">${p.price} ₽ <small>/ шт</small></div>${ctrl}</div>`;
+}
+
+function refreshCardFooter(sku){
+  const card = document.querySelector('.prod-card[data-sku="'+sku+'"]');
+  if (!card) return;
+  const p = ALL_PRODUCTS.find(x => x.sku === sku);
+  if (!p) return;
+  const oldFooter = card.querySelector('.prod-footer');
+  if (!oldFooter) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = prodFooterHtml(p);
+  oldFooter.replaceWith(wrap.firstElementChild);
+}
+
+function qtyInc(sku){
+  const p = ALL_PRODUCTS.find(x => x.sku === sku);
+  if (!p) return;
+  const cart = getCart();
+  const existing = cart.find(i => i.sku === sku);
+  if (existing) existing.qty++;
+  else cart.push({name:p.name, sku:p.sku, price:p.price, img:p.img||'', qty:1});
+  saveCart(cart);
+  refreshCardFooter(sku);
+}
+
+function qtyDec(sku){
+  const cart = getCart();
+  const existing = cart.find(i => i.sku === sku);
+  if (!existing) return;
+  existing.qty--;
+  const newCart = existing.qty <= 0 ? cart.filter(i => i.sku !== sku) : cart;
+  saveCart(newCart);
+  refreshCardFooter(sku);
 }
 
 // Чтение категории из URL-параметра ?cat=
@@ -780,8 +832,8 @@ const CART_KEY='klever_cart';
 function getCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}catch(e){return[];}}
 function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartBadge();}
 function addToCart(p){const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:1});saveCart(c);showAddedToast(p.name);}
-function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();}
-function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();}
+function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();if(typeof refreshCardFooter==='function')refreshCardFooter(s);}
+function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();if(typeof refreshCardFooter==='function')refreshCardFooter(s);}
 function getCartTotal(){return getCart().reduce((s,i)=>s+i.price*i.qty,0);}
 function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
 function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
