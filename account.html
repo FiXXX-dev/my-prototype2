@@ -214,7 +214,6 @@ setTimeout(function(){
 <!-- АВТОРИЗАЦИЯ -->
 <div class="auth-wrap" id="authWrap">
   <div class="auth-box">
-    <div style="text-align:center;margin-bottom:12px;"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></div>
       <div class="auth-title" data-i18n="account.welcome">Добро пожаловать!</div>
     <div class="auth-sub" data-i18n="account.welcome_sub">Войдите или создайте аккаунт</div>
     <div class="auth-tabs">
@@ -1071,18 +1070,44 @@ if (getCurrentUser()){ showAccount(); }
   header{padding:0 20px;}
   nav{display:none;}
   .account-wrap.visible{grid-template-columns:1fr;padding:0 16px;margin:16px auto;gap:14px;}
-  .account-side{position:static;padding:16px;}
-  .acc-nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px;margin-bottom:0;}
-  .acc-nav::-webkit-scrollbar{height:4px;}
-  .acc-nav::-webkit-scrollbar-thumb{background:#d0e8d8;border-radius:2px;}
-  .acc-link{flex-shrink:0;padding:10px 14px;white-space:nowrap;font-size:13px;}
-  .user-card{padding-bottom:14px;margin-bottom:12px;}
+  .account-side{position:static;padding:16px;display:flex;flex-direction:column;}
+  /* Top: avatar + name compact row */
+  .user-card{padding-bottom:14px;margin-bottom:12px;display:flex;align-items:center;gap:14px;}
+  .user-card .user-avatar{margin-bottom:0;width:44px;height:44px;font-size:16px;}
+  .user-card .user-name{font-size:15px;margin-bottom:2px;}
+  .user-card .user-type-badge{font-size:10px;padding:2px 8px;}
+  .user-contact{margin-top:0;display:none;}
   .acc-logout{margin-top:14px;}
   .profile-form{grid-template-columns:1fr;}
   .fav-grid{grid-template-columns:repeat(2,1fr) !important;}
 }
+@media(max-width:768px){
+  /* Tabs become a horizontal touch-scroll strip */
+  .acc-nav{flex-direction:row;overflow-x:auto;gap:6px;padding:4px 4px 8px;margin:0 -4px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .acc-nav::-webkit-scrollbar{display:none;}
+  .acc-link{flex-shrink:0;padding:10px 14px;white-space:nowrap;font-size:13px;border:1.5px solid #e0ece4;border-radius:30px;min-height:40px;display:inline-flex;align-items:center;}
+  .acc-link.active{border-color:var(--green);}
+  .acc-link .badge{margin-left:6px;}
+  /* Order card collapses to vertical layout, prevents overflow */
+  .acc-tab{min-width:0;}
+  .order{padding:16px;}
+  .order-head{flex-direction:column;align-items:flex-start;gap:6px;padding-bottom:10px;margin-bottom:10px;}
+  .order-head > div:first-child{order:1;}
+  .order-status{order:2;}
+  .order-total{order:3;font-size:22px;align-self:flex-end;}
+  .order-num{font-size:15px;}
+  .order-line{flex-wrap:wrap;}
+  .order-actions{flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;}
+  .order-actions .btn{font-size:13px;padding:8px 14px;}
+  /* Addresses adapt the same way */
+  .addr-card{flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px;}
+  .addr-card .addr-actions{display:flex;gap:8px;flex-wrap:wrap;align-self:flex-end;}
+  /* Forms: single column at small screens too */
+  .profile-form{grid-template-columns:1fr;}
+}
 @media(max-width:480px){
   .fav-grid{grid-template-columns:1fr !important;}
+  .order-total{align-self:flex-start;}
 }
 </style>
 <script id="burger-menu-script">

@@ -343,7 +343,7 @@ const TRANSLATIONS = {
 
     // ===== ACCOUNT =====
     'account.title': 'Личный кабинет — КЛЕВЕР',
-    'account.welcome': '🍀 Добро пожаловать!',
+    'account.welcome': 'Добро пожаловать!',
     'account.welcome_sub': 'Войдите или создайте аккаунт',
     'account.tab_login': 'Вход',
     'account.tab_register': 'Регистрация',
@@ -878,7 +878,7 @@ const TRANSLATIONS = {
     'checkout.delivery_free': '🎉 Free',
 
     'account.title': 'My Account — KLEVER',
-    'account.welcome': '🍀 Welcome!',
+    'account.welcome': 'Welcome!',
     'account.welcome_sub': 'Sign in or create an account',
     'account.tab_login': 'Sign in',
     'account.tab_register': 'Register',
@@ -1405,7 +1405,7 @@ const TRANSLATIONS = {
     'checkout.delivery_free': '🎉 免费',
 
     'account.title': '个人中心 — KLEVER',
-    'account.welcome': '🍀 欢迎您！',
+    'account.welcome': '欢迎您！',
     'account.welcome_sub': '请登录或注册账号',
     'account.tab_login': '登录',
     'account.tab_register': '注册',
@@ -1932,7 +1932,7 @@ const TRANSLATIONS = {
     'checkout.delivery_free': '🎉 무료',
 
     'account.title': '마이페이지 — KLEVER',
-    'account.welcome': '🍀 환영합니다!',
+    'account.welcome': '환영합니다!',
     'account.welcome_sub': '로그인 또는 회원가입해 주세요',
     'account.tab_login': '로그인',
     'account.tab_register': '회원가입',
