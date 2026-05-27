@@ -166,6 +166,44 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .order-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
 .order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;}
 
+/* CATEGORIES */
+.cat-admin-card{background:white;border:1.5px solid #e0ece4;border-radius:14px;margin-bottom:12px;overflow:hidden;}
+.cat-admin-head{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;}
+.cat-admin-head:hover{background:#f8fcfa;}
+.cat-admin-thumb{width:48px;height:48px;border-radius:10px;background:#f2f7f4;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+.cat-admin-thumb img{width:100%;height:100%;object-fit:cover;}
+.cat-admin-thumb .icon{font-size:24px;color:#6b8a74;}
+.cat-admin-name{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.3px;color:var(--text);}
+.cat-admin-meta{font-size:12px;color:#8aaa94;margin-top:3px;}
+.cat-admin-spacer{flex:1;}
+.cat-admin-order{display:flex;flex-direction:column;gap:2px;}
+.cat-admin-order button{background:#f2f7f4;border:1px solid #d0e8d8;width:24px;height:20px;font-size:10px;cursor:pointer;color:#6b8a74;border-radius:4px;line-height:1;padding:0;}
+.cat-admin-order button:hover{background:var(--green);color:var(--dark);}
+.cat-admin-actions{display:flex;gap:6px;flex-shrink:0;}
+.cat-admin-toggle{background:none;border:none;color:#6b8a74;font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:6px;transition:transform .2s,background .15s;display:flex;align-items:center;justify-content:center;}
+.cat-admin-toggle:hover{background:#f2f7f4;}
+.cat-admin-card[data-open="true"] .cat-admin-toggle{transform:rotate(180deg);}
+.cat-admin-body{max-height:0;overflow:hidden;transition:max-height .3s ease;background:#fafbfa;border-top:1px solid transparent;}
+.cat-admin-card[data-open="true"] .cat-admin-body{max-height:1200px;border-top-color:#e0ece4;}
+.cat-admin-body-inner{padding:14px 18px 16px;}
+.sub-admin-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:white;border:1px solid #e8f4ec;border-radius:10px;margin-bottom:8px;}
+.sub-admin-thumb{width:36px;height:36px;border-radius:8px;background:#f2f7f4;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.sub-admin-thumb img{width:100%;height:100%;object-fit:cover;}
+.sub-admin-name{font-size:14px;font-weight:600;}
+.sub-admin-count{font-size:12px;color:#8aaa94;margin-left:6px;}
+.btn-icon{background:#f2f7f4;border:1px solid #d0e8d8;width:30px;height:30px;border-radius:7px;font-size:13px;cursor:pointer;color:#6b8a74;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;}
+.btn-icon:hover{background:var(--green);color:var(--dark);border-color:var(--green);}
+.btn-icon.danger:hover{background:#ffe8ee;color:var(--danger);border-color:#ffc4c4;}
+.icon-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;max-height:160px;overflow-y:auto;padding:8px;border:1.5px solid #d0e8d8;border-radius:10px;background:#fafbfa;}
+.icon-picker label{display:flex;align-items:center;justify-content:center;height:48px;border:1.5px solid transparent;border-radius:8px;cursor:pointer;background:white;transition:border-color .15s,background .15s;}
+.icon-picker label:hover{border-color:var(--green-light);}
+.icon-picker input{display:none;}
+.icon-picker input:checked + .icon{color:var(--green);}
+.icon-picker label:has(input:checked){border-color:var(--green);background:#e8faf0;}
+.icon-picker .icon{font-size:22px;color:#6b8a74;}
+.img-preview{width:80px;height:80px;border-radius:10px;background:#f2f7f4;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1.5px solid #d0e8d8;}
+.img-preview img{width:100%;height:100%;object-fit:cover;}
+
 /* PROMOTIONS */
 .promo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
 .promo-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;overflow:hidden;}
@@ -265,6 +303,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <nav class="side-nav">
       <button class="side-link active" onclick="showTab('dashboard', this)">📊 Дашборд</button>
       <button class="side-link" onclick="showTab('products', this)">📦 Товары <span class="count" id="cntProducts">0</span></button>
+      <button class="side-link" onclick="showTab('categories', this)">📁 Категории <span class="count" id="cntCategories">0</span></button>
       <button class="side-link" onclick="showTab('orders', this)">🛍️ Заказы <span class="count" id="cntOrders">0</span></button>
       <button class="side-link" onclick="showTab('contacts', this)">✉️ Заявки <span class="count" id="cntContacts">0</span></button>
       <button class="side-link" onclick="showTab('promotions', this)">🔥 Акции <span class="count" id="cntPromos">0</span></button>
@@ -405,6 +444,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </section>
 
     <!-- ORDERS -->
+    <!-- CATEGORIES -->
+    <section class="tab-content" id="tab-categories">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Категории и подкатегории</div>
+          <div class="page-sub">Иерархия каталога. У товара может быть категория и подкатегория.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openCategoryModal()">+ Категория</button>
+      </div>
+      <div id="categoriesList"></div>
+    </section>
+
     <section class="tab-content" id="tab-orders">
       <div class="page-header">
         <div>
@@ -563,7 +614,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       </div>
       <div class="form-grp">
         <label>Категория *</label>
-        <select id="prodCat">
+        <select id="prodCat" onchange="onProductCatChange()">
           <option>Бытовая химия</option>
           <option>Бумажная продукция</option>
           <option>Одноразовая посуда</option>
@@ -571,6 +622,12 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <option>Упаковка</option>
           <option>Хозтовары</option>
           <option>Канцелярия</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Подкатегория</label>
+        <select id="prodSubcat">
+          <option value="">— Без подкатегории —</option>
         </select>
       </div>
       <div class="form-grp">
@@ -676,6 +733,79 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeNewsModal()">Отмена</button>
       <button class="btn btn-primary" onclick="saveNews()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MODAL -->
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeCategoryModal()">✕</button>
+    <div class="modal-title" id="catModalTitle">Новая категория</div>
+    <div class="modal-sub">Параметры верхнеуровневой категории каталога</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Название *</label>
+        <input type="text" id="catName" placeholder="Например: Одноразовая посуда">
+      </div>
+      <div class="form-grp">
+        <label>ID (латиница, без пробелов) *</label>
+        <input type="text" id="catId" placeholder="Например: disposable">
+      </div>
+      <div class="form-grp">
+        <label>Порядок</label>
+        <input type="number" id="catOrder" min="1" value="1">
+      </div>
+      <div class="form-grp full">
+        <label>Иконка</label>
+        <div class="icon-picker" id="catIconPicker"></div>
+      </div>
+      <div class="form-grp full">
+        <label>Ссылка на фото (URL, опционально)</label>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <input type="url" id="catImg" placeholder="https://example.com/photo.jpg" oninput="updateImgPreview('catImg','catImgPreview')" style="flex:1;">
+          <div class="img-preview" id="catImgPreview"><span class="icon icon-box"></span></div>
+        </div>
+        <small style="color:#8aaa94;font-size:12px;">Если пусто — карточка будет с градиентом и иконкой</small>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeCategoryModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCategory()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUBCATEGORY MODAL -->
+<div class="modal-overlay" id="subcategoryModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSubcategoryModal()">✕</button>
+    <div class="modal-title" id="subModalTitle">Новая подкатегория</div>
+    <div class="modal-sub" id="subModalSub">—</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Название *</label>
+        <input type="text" id="subName" placeholder="Например: Стаканы">
+      </div>
+      <div class="form-grp">
+        <label>ID (латиница) *</label>
+        <input type="text" id="subId" placeholder="Например: cups">
+      </div>
+      <div class="form-grp">
+        <label>Порядок</label>
+        <input type="number" id="subOrder" min="1" value="1">
+      </div>
+      <div class="form-grp full">
+        <label>Ссылка на фото (URL, опционально)</label>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <input type="url" id="subImg" placeholder="https://example.com/photo.jpg" oninput="updateImgPreview('subImg','subImgPreview')" style="flex:1;">
+          <div class="img-preview" id="subImgPreview"><span class="icon icon-box"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSubcategoryModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveSubcategory()">💾 Сохранить</button>
     </div>
   </div>
 </div>
@@ -996,6 +1126,7 @@ function showTab(name, btn) {
   if (name === 'products') renderProducts();
   if (name === 'dashboard') renderDashboard();
   if (name === 'settings') loadSettings();
+  if (name === 'categories') renderCategoriesAdmin();
 }
 
 // ===== ДАННЫЕ =====
@@ -1055,6 +1186,8 @@ function loadAll() {
 
 function updateCounts() {
   document.getElementById('cntProducts').textContent = getProducts().length;
+  const cntCatsEl = document.getElementById('cntCategories');
+  if (cntCatsEl && typeof getCategories === 'function') cntCatsEl.textContent = getCategories().length;
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
   document.getElementById('cntContacts').textContent = getContacts().length;
@@ -1223,6 +1356,8 @@ function openProductModal() {
   document.getElementById('prodBadge').value = '';
   document.getElementById('prodImg').value = '';
   document.getElementById('prodDesc').value = '';
+  if (typeof onProductCatChange === 'function') onProductCatChange();
+  document.getElementById('prodSubcat').value = '';
   document.getElementById('productModal').classList.add('open');
   document.getElementById('prodName').focus();
 }
@@ -1239,6 +1374,8 @@ function editProduct(sku) {
   document.getElementById('prodBadge').value = p.badge || '';
   document.getElementById('prodImg').value = p.img || '';
   document.getElementById('prodDesc').value = p.desc || '';
+  if (typeof onProductCatChange === 'function') onProductCatChange();
+  document.getElementById('prodSubcat').value = p.subcategory || '';
   document.getElementById('productModal').classList.add('open');
 }
 
@@ -1251,6 +1388,8 @@ function saveProduct() {
   const sku = document.getElementById('prodSku').value.trim();
   const price = parseFloat(document.getElementById('prodPrice').value);
   const cat = document.getElementById('prodCat').value;
+  const subcategory = document.getElementById('prodSubcat').value || undefined;
+  const categoryId = (typeof KLEVER_LEGACY_CAT_TO_ID === 'object' ? KLEVER_LEGACY_CAT_TO_ID[cat] : null) || undefined;
   const badge = document.getElementById('prodBadge').value;
   const img = document.getElementById('prodImg').value.trim();
   const desc = document.getElementById('prodDesc').value.trim();
@@ -1265,14 +1404,14 @@ function saveProduct() {
 
   if (editingSku) {
     // Редактирование
-    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, cat, badge: badge || undefined, img, desc} : p);
+    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, img, desc} : p);
   } else {
     // Добавление
     if (existing) {
       alert('Товар с таким артикулом уже существует!');
       return;
     }
-    products.unshift({name, sku, price, cat, badge: badge || undefined, img, desc, emoji:'📦'});
+    products.unshift({name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, img, desc, emoji:'📦'});
   }
 
   setProducts(products);
@@ -1725,6 +1864,274 @@ loadSettings();
 // Авто-вход если сессия активна (после возврата на админку)
 if (sessionStorage.getItem('klever_admin') === '1') {
   showAdmin();
+}
+
+// ===== CATEGORIES ADMIN =====
+const ADMIN_ICON_CHOICES = ['takeaway','spray','paper-roll','shield','box','broom','paperclip','flame','bag','package','star','heart','phone','mail','pin','truck','store','chat','chart','gear','lock','megaphone'];
+const _openCats = new Set();
+let editingCategoryId = null;
+let editingSubcategoryParent = null;
+let editingSubcategoryId = null;
+
+function escH(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function updateImgPreview(inputId, previewId){
+  const url = document.getElementById(inputId).value.trim();
+  const box = document.getElementById(previewId);
+  if (url) box.innerHTML = '<img src="'+escH(url)+'" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">';
+  else box.innerHTML = '<span class="icon icon-box"></span>';
+}
+
+function renderCategoriesAdmin(){
+  const cats = sortedCategories();
+  const counts = productCountByCategory();
+  document.getElementById('cntCategories').textContent = cats.length;
+  const host = document.getElementById('categoriesList');
+  if (!cats.length) {
+    host.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">Нет категорий</div><div>Создайте первую категорию</div></div>';
+    return;
+  }
+  host.innerHTML = cats.map((c, idx) => {
+    const open = _openCats.has(c.id);
+    const subCounts = productCountBySubcategory(c.id);
+    const subsHtml = (c.subcategories || []).map((s) => {
+      const n = subCounts[s.id] || 0;
+      const thumb = s.img
+        ? `<img src="${escH(s.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
+        : `<span class="icon icon-box"></span>`;
+      return `<div class="sub-admin-row">
+        <div class="sub-admin-thumb">${thumb}</div>
+        <div><span class="sub-admin-name">${escH(s.name)}</span><span class="sub-admin-count">${n} ${plural(n,['товар','товара','товаров'])}</span></div>
+        <div class="cat-admin-spacer"></div>
+        <div class="cat-admin-actions">
+          <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',-1)" title="Вверх">↑</button>
+          <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',1)" title="Вниз">↓</button>
+          <button class="btn-icon" onclick="editSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
+          <button class="btn-icon danger" onclick="deleteSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
+        </div>
+      </div>`;
+    }).join('') || '<div style="font-size:13px;color:#8aaa94;padding:8px 4px;">Подкатегорий нет</div>';
+    const headerThumb = c.img
+      ? `<img src="${escH(c.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
+      : (c.icon ? `<span class="icon icon-${escH(c.icon)}"></span>` : '<span class="icon icon-box"></span>');
+    return `<div class="cat-admin-card" data-cat-id="${escH(c.id)}" data-open="${open}">
+      <div class="cat-admin-head">
+        <div class="cat-admin-order">
+          <button onclick="event.stopPropagation();moveCategory('${escH(c.id)}',-1)">↑</button>
+          <button onclick="event.stopPropagation();moveCategory('${escH(c.id)}',1)">↓</button>
+        </div>
+        <div class="cat-admin-thumb">${headerThumb}</div>
+        <div onclick="toggleCatOpen('${escH(c.id)}')" style="cursor:pointer;flex:1;">
+          <div class="cat-admin-name">${escH(c.name)}</div>
+          <div class="cat-admin-meta">id: ${escH(c.id)} · ${(c.subcategories||[]).length} подкат. · ${counts[c.id]||0} ${plural(counts[c.id]||0,['товар','товара','товаров'])}</div>
+        </div>
+        <div class="cat-admin-actions">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openSubcategoryModal('${escH(c.id)}')">+ Подкат.</button>
+          <button class="btn-icon" onclick="event.stopPropagation();editCategory('${escH(c.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
+          <button class="btn-icon danger" onclick="event.stopPropagation();deleteCategory('${escH(c.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
+          <button class="cat-admin-toggle" onclick="event.stopPropagation();toggleCatOpen('${escH(c.id)}')" aria-label="Развернуть">▼</button>
+        </div>
+      </div>
+      <div class="cat-admin-body"><div class="cat-admin-body-inner">${subsHtml}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCatOpen(id){
+  if (_openCats.has(id)) _openCats.delete(id); else _openCats.add(id);
+  const card = document.querySelector('.cat-admin-card[data-cat-id="'+id+'"]');
+  if (card) card.setAttribute('data-open', _openCats.has(id));
+}
+
+function buildIconPicker(selected){
+  return ADMIN_ICON_CHOICES.map(ic =>
+    `<label><input type="radio" name="catIcon" value="${ic}"${ic===selected?' checked':''}><span class="icon icon-${ic}"></span></label>`
+  ).join('');
+}
+
+function openCategoryModal(){
+  editingCategoryId = null;
+  document.getElementById('catModalTitle').textContent = 'Новая категория';
+  document.getElementById('catName').value = '';
+  document.getElementById('catId').value = '';
+  document.getElementById('catOrder').value = (getCategories().length || 0) + 1;
+  document.getElementById('catImg').value = '';
+  document.getElementById('catIconPicker').innerHTML = buildIconPicker('box');
+  updateImgPreview('catImg','catImgPreview');
+  document.getElementById('categoryModal').classList.add('open');
+  document.getElementById('catName').focus();
+}
+function editCategory(id){
+  const c = getCategoryById(id); if (!c) return;
+  editingCategoryId = id;
+  document.getElementById('catModalTitle').textContent = 'Редактирование категории';
+  document.getElementById('catName').value = c.name;
+  document.getElementById('catId').value = c.id;
+  document.getElementById('catOrder').value = c.order || 1;
+  document.getElementById('catImg').value = c.img || '';
+  document.getElementById('catIconPicker').innerHTML = buildIconPicker(c.icon || 'box');
+  updateImgPreview('catImg','catImgPreview');
+  document.getElementById('categoryModal').classList.add('open');
+}
+function closeCategoryModal(){ document.getElementById('categoryModal').classList.remove('open'); }
+function saveCategory(){
+  const name = document.getElementById('catName').value.trim();
+  const id = document.getElementById('catId').value.trim();
+  const order = parseInt(document.getElementById('catOrder').value) || 1;
+  const img = document.getElementById('catImg').value.trim();
+  const iconEl = document.querySelector('input[name="catIcon"]:checked');
+  const icon = iconEl ? iconEl.value : 'box';
+  if (!name || !id) { alert('Укажите название и ID'); return; }
+  if (!/^[a-z0-9-]+$/i.test(id)) { alert('ID может содержать только латиницу, цифры и тире'); return; }
+  let cats = getCategories();
+  if (editingCategoryId) {
+    cats = cats.map(c => c.id === editingCategoryId ? { ...c, name, id, icon, img, order } : c);
+    // If id changed — also update existing products referring to old id
+    if (editingCategoryId !== id) {
+      let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
+      let touched = 0;
+      products = products.map(p => { if (p.categoryId === editingCategoryId) { touched++; return { ...p, categoryId: id }; } return p; });
+      if (touched) localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
+    }
+  } else {
+    if (cats.some(c => c.id === id)) { alert('Категория с таким ID уже существует'); return; }
+    cats.push({ id, name, icon, img, order, subcategories: [] });
+  }
+  setCategories(cats);
+  closeCategoryModal();
+  renderCategoriesAdmin();
+  toast(editingCategoryId ? '✓ Категория обновлена' : '✓ Категория создана');
+}
+function deleteCategory(id){
+  const c = getCategoryById(id); if (!c) return;
+  const counts = productCountByCategory();
+  const n = counts[id] || 0;
+  let msg = `Удалить категорию «${c.name}»?`;
+  if (n > 0) msg += `\n\nВ ней ${n} ${plural(n,['товар','товара','товаров'])}. У этих товаров поле categoryId будет очищено (товары не удаляются).`;
+  if (!confirm(msg)) return;
+  // Strip categoryId from affected products
+  let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
+  products = products.map(p => p.categoryId === id ? { ...p, categoryId: undefined, subcategory: undefined } : p);
+  localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
+  setCategories(getCategories().filter(c => c.id !== id));
+  renderCategoriesAdmin();
+  toast('Категория удалена');
+}
+function moveCategory(id, delta){
+  let cats = getCategories().slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const idx = cats.findIndex(c => c.id === id);
+  const newIdx = idx + delta;
+  if (idx < 0 || newIdx < 0 || newIdx >= cats.length) return;
+  [cats[idx], cats[newIdx]] = [cats[newIdx], cats[idx]];
+  cats.forEach((c, i) => { c.order = i + 1; });
+  setCategories(cats);
+  renderCategoriesAdmin();
+}
+
+// ===== Subcategory CRUD =====
+function openSubcategoryModal(catId){
+  const c = getCategoryById(catId); if (!c) return;
+  editingSubcategoryParent = catId;
+  editingSubcategoryId = null;
+  document.getElementById('subModalTitle').textContent = 'Новая подкатегория';
+  document.getElementById('subModalSub').textContent = 'Категория: ' + c.name;
+  document.getElementById('subName').value = '';
+  document.getElementById('subId').value = '';
+  document.getElementById('subOrder').value = (c.subcategories||[]).length + 1;
+  document.getElementById('subImg').value = '';
+  updateImgPreview('subImg','subImgPreview');
+  document.getElementById('subcategoryModal').classList.add('open');
+  document.getElementById('subName').focus();
+}
+function editSubcategory(catId, subId){
+  const c = getCategoryById(catId); if (!c) return;
+  const s = getSubcategoryById(catId, subId); if (!s) return;
+  editingSubcategoryParent = catId;
+  editingSubcategoryId = subId;
+  document.getElementById('subModalTitle').textContent = 'Редактирование подкатегории';
+  document.getElementById('subModalSub').textContent = 'Категория: ' + c.name;
+  document.getElementById('subName').value = s.name;
+  document.getElementById('subId').value = s.id;
+  document.getElementById('subOrder').value = s.order || 1;
+  document.getElementById('subImg').value = s.img || '';
+  updateImgPreview('subImg','subImgPreview');
+  document.getElementById('subcategoryModal').classList.add('open');
+}
+function closeSubcategoryModal(){ document.getElementById('subcategoryModal').classList.remove('open'); }
+function saveSubcategory(){
+  const catId = editingSubcategoryParent;
+  const name = document.getElementById('subName').value.trim();
+  const id = document.getElementById('subId').value.trim();
+  const order = parseInt(document.getElementById('subOrder').value) || 1;
+  const img = document.getElementById('subImg').value.trim();
+  if (!name || !id) { alert('Укажите название и ID'); return; }
+  if (!/^[a-z0-9-]+$/i.test(id)) { alert('ID может содержать только латиницу, цифры и тире'); return; }
+  let cats = getCategories();
+  const ci = cats.findIndex(c => c.id === catId);
+  if (ci < 0) return;
+  cats[ci].subcategories = cats[ci].subcategories || [];
+  if (editingSubcategoryId) {
+    cats[ci].subcategories = cats[ci].subcategories.map(s => s.id === editingSubcategoryId ? { ...s, name, id, img, order } : s);
+    if (editingSubcategoryId !== id) {
+      // Update products referencing old sub id
+      let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
+      products = products.map(p => (p.categoryId === catId && p.subcategory === editingSubcategoryId) ? { ...p, subcategory: id } : p);
+      localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
+    }
+  } else {
+    if (cats[ci].subcategories.some(s => s.id === id)) { alert('Подкатегория с таким ID уже существует'); return; }
+    cats[ci].subcategories.push({ id, name, img, order });
+  }
+  setCategories(cats);
+  closeSubcategoryModal();
+  renderCategoriesAdmin();
+  toast(editingSubcategoryId ? '✓ Подкатегория обновлена' : '✓ Подкатегория создана');
+}
+function deleteSubcategory(catId, subId){
+  const s = getSubcategoryById(catId, subId); if (!s) return;
+  const counts = productCountBySubcategory(catId);
+  const n = counts[subId] || 0;
+  let msg = `Удалить подкатегорию «${s.name}»?`;
+  if (n > 0) msg += `\n\nЕё ${n} ${plural(n,['товар','товара','товаров'])} останется в категории, но без подкатегории.`;
+  if (!confirm(msg)) return;
+  let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
+  products = products.map(p => (p.categoryId === catId && p.subcategory === subId) ? { ...p, subcategory: undefined } : p);
+  localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
+  let cats = getCategories();
+  const ci = cats.findIndex(c => c.id === catId);
+  cats[ci].subcategories = (cats[ci].subcategories || []).filter(s => s.id !== subId);
+  setCategories(cats);
+  renderCategoriesAdmin();
+  toast('Подкатегория удалена');
+}
+function moveSubcategory(catId, subId, delta){
+  let cats = getCategories();
+  const ci = cats.findIndex(c => c.id === catId);
+  if (ci < 0) return;
+  let subs = (cats[ci].subcategories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const idx = subs.findIndex(s => s.id === subId);
+  const newIdx = idx + delta;
+  if (idx < 0 || newIdx < 0 || newIdx >= subs.length) return;
+  [subs[idx], subs[newIdx]] = [subs[newIdx], subs[idx]];
+  subs.forEach((s, i) => { s.order = i + 1; });
+  cats[ci].subcategories = subs;
+  setCategories(cats);
+  renderCategoriesAdmin();
+}
+
+// ===== Product modal — subcategory dropdown =====
+function onProductCatChange(){
+  const catName = document.getElementById('prodCat').value;
+  const cat = getCategoryByLegacyName(catName) || getCategories().find(c => c.name === catName);
+  const sel = document.getElementById('prodSubcat');
+  sel.innerHTML = '<option value="">— Без подкатегории —</option>';
+  if (cat && cat.subcategories) {
+    cat.subcategories.slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = s.name;
+      sel.appendChild(o);
+    });
+  }
 }
 </script>
 </body>
