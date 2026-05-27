@@ -78,6 +78,10 @@ const TRANSLATIONS = {
 
     // ===== RECENTLY VIEWED =====
     'recent.title': 'Вы недавно смотрели',
+    'tabbar.home': 'Главная',
+    'tabbar.catalog': 'Каталог',
+    'tabbar.cart': 'Корзина',
+    'tabbar.account': 'Кабинет',
 
     // ===== COMMON UI =====
     'common.per_piece': '/ шт',
@@ -573,6 +577,10 @@ const TRANSLATIONS = {
     'news.ok': 'Got it',
 
     'recent.title': 'Recently viewed',
+    'tabbar.home': 'Home',
+    'tabbar.catalog': 'Catalog',
+    'tabbar.cart': 'Cart',
+    'tabbar.account': 'Account',
 
     'common.per_piece': '/ pc',
     'common.per_piece_short': 'per pc',
@@ -1052,6 +1060,10 @@ const TRANSLATIONS = {
     'news.ok': '知道了',
 
     'recent.title': '最近浏览',
+    'tabbar.home': '首页',
+    'tabbar.catalog': '目录',
+    'tabbar.cart': '购物车',
+    'tabbar.account': '账户',
 
     'common.per_piece': '/ 件',
     'common.per_piece_short': '每件',
@@ -1531,6 +1543,10 @@ const TRANSLATIONS = {
     'news.ok': '확인',
 
     'recent.title': '최근 본 상품',
+    'tabbar.home': '홈',
+    'tabbar.catalog': '카탈로그',
+    'tabbar.cart': '장바구니',
+    'tabbar.account': '계정',
 
     'common.per_piece': '/ 개',
     'common.per_piece_short': '개당',
