@@ -85,3 +85,12 @@
 
 /* ===== Brand logo helper ===== */
 .brand-logo-icon { color: #2ECC71; width: 1.2em; height: 1.2em; }
+
+
+/* ===== Brand logo SVG (inline via <use href="#clover-logo">) ===== */
+.logo-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.logo .logo-icon,
+.side-logo .logo-icon,
+.footer-logo .logo-icon,
+.login-logo .logo-icon { margin-right: 4px; }
+.pre-logo .leaf .logo-icon { display: inline-block; animation: preSpin 1.5s ease-in-out infinite; }
