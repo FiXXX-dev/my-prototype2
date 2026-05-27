@@ -166,6 +166,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .order-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
 .order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;}
 
+/* CSV IMPORT */
+.csv-dropzone{border:2px dashed #c0d8c8;border-radius:14px;padding:32px 20px;text-align:center;transition:border-color .2s,background .2s;background:#fafbfa;}
+.csv-dropzone.over{border-color:var(--green);background:#e8faf0;}
+.csv-preview-table{width:100%;border-collapse:collapse;font-size:13px;border:1px solid #e0ece4;border-radius:10px;overflow:hidden;}
+.csv-preview-table th{background:#f2f7f4;text-align:left;padding:8px 10px;font-weight:700;font-size:12px;color:#6b8a74;text-transform:uppercase;letter-spacing:0.5px;}
+.csv-preview-table td{padding:8px 10px;border-top:1px solid #e8f4ec;}
+.csv-preview-table tr.invalid td{background:#fff3ee;color:#c14a16;}
+.csv-preview-title{font-size:13px;font-weight:700;margin-bottom:8px;color:#6b8a74;}
+.csv-tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;margin-left:6px;}
+.csv-tag.ok{background:#e8faf0;color:#1a8f4a;}
+.csv-tag.warn{background:#fff3ee;color:#c14a16;}
+
 /* CATEGORIES */
 .cat-admin-card{background:white;border:1.5px solid #e0ece4;border-radius:14px;margin-bottom:12px;overflow:hidden;}
 .cat-admin-head{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;}
@@ -398,7 +410,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Товары</div>
           <div class="page-sub">Управление товарами в каталоге</div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="exportProductsCsv()">📤 Экспорт CSV</button>
+          <button class="btn btn-secondary" onclick="openImportModal()">📥 Импорт CSV</button>
           <button class="btn btn-secondary" onclick="resetProducts()" title="Восстановить товары из стандартного списка">🔄 Сбросить</button>
           <button class="btn btn-primary" onclick="openProductModal()">+ Добавить товар</button>
         </div>
@@ -806,6 +820,36 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeSubcategoryModal()">Отмена</button>
       <button class="btn btn-primary" onclick="saveSubcategory()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width:780px;">
+    <button class="modal-close" onclick="closeImportModal()">✕</button>
+    <div class="modal-title">📥 Импорт товаров из CSV</div>
+    <div class="modal-sub">Формат: <code>name;sku;price;category;subcategory;img;description</code> (разделитель «;»)</div>
+    <div style="margin-top:18px;">
+      <div id="csvDropZone" class="csv-dropzone">
+        <div style="font-size:42px;margin-bottom:8px;color:#8aaa94;"><span class="icon icon-box icon-2x"></span></div>
+        <div style="font-weight:600;margin-bottom:4px;">Перетащите CSV-файл сюда</div>
+        <div style="font-size:13px;color:#8aaa94;margin-bottom:14px;">или нажмите кнопку</div>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('csvFileInput').click()">Выбрать файл</button>
+        <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;">
+      </div>
+      <div id="csvFileMeta" style="display:none;margin-top:14px;padding:10px 14px;background:#f2f7f4;border-radius:10px;font-size:13px;color:#1a8f4a;"></div>
+      <div id="csvPreview" style="display:none;margin-top:14px;"></div>
+      <div id="csvImportProgress" style="display:none;margin-top:14px;padding:14px;background:#e8faf0;border-radius:10px;font-size:14px;color:#1a8f4a;font-weight:600;text-align:center;"></div>
+    </div>
+    <div class="modal-actions">
+      <div style="margin-right:auto;font-size:13px;color:#8aaa94;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="csvReplaceMode"> Заменить все существующие товары
+        </label>
+      </div>
+      <button class="btn btn-secondary" onclick="closeImportModal()">Отмена</button>
+      <button class="btn btn-primary" id="csvImportBtn" onclick="runCsvImport()" disabled>📥 Импортировать</button>
     </div>
   </div>
 </div>
@@ -2132,6 +2176,247 @@ function onProductCatChange(){
       sel.appendChild(o);
     });
   }
+}
+
+// ===== CSV IMPORT / EXPORT =====
+let _csvParsedRows = null;
+
+function csvEscape(v) {
+  if (v == null) return '';
+  const s = String(v);
+  if (s.includes('"') || s.includes(';') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportProductsCsv() {
+  const products = getProducts();
+  const cols = ['name','sku','price','category','subcategory','img','description'];
+  const headerRu = ['Название','Артикул','Цена','Категория','Подкатегория','Фото','Описание'];
+  let csv = '﻿' + headerRu.map(csvEscape).join(';') + '\r\n';
+  for (const p of products) {
+    const row = [
+      p.name || '',
+      p.sku || '',
+      p.price != null ? p.price : '',
+      p.cat || '',
+      p.subcategory || '',
+      p.img || '',
+      p.desc || '',
+    ];
+    csv += row.map(csvEscape).join(';') + '\r\n';
+  }
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'klever-products-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 200);
+  toast('✓ Экспортировано ' + products.length + ' ' + plural(products.length, ['товар','товара','товаров']));
+}
+
+// Minimal RFC 4180-ish CSV parser supporting ";" delimiter and quoted fields.
+function parseCsv(text, delim) {
+  delim = delim || ';';
+  // Strip BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\r') { /* ignore */ }
+      else if (c === '\n') { row.push(field); field = ''; rows.push(row); row = []; }
+      else field += c;
+    }
+  }
+  // Trailing field/row
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length && !(r.length === 1 && !r[0].trim()));
+}
+
+const _CSV_HEADER_ALIASES = {
+  'name': 'name', 'название': 'name', 'наименование': 'name',
+  'sku': 'sku', 'артикул': 'sku', 'код': 'sku',
+  'price': 'price', 'цена': 'price',
+  'category': 'category', 'категория': 'category', 'cat': 'category',
+  'subcategory': 'subcategory', 'подкатегория': 'subcategory', 'sub': 'subcategory',
+  'img': 'img', 'image': 'img', 'фото': 'img', 'картинка': 'img',
+  'description': 'description', 'описание': 'description', 'desc': 'description',
+};
+
+function detectColumnMap(headerRow) {
+  const map = {};
+  headerRow.forEach((h, i) => {
+    const key = (h || '').trim().toLowerCase();
+    const dest = _CSV_HEADER_ALIASES[key];
+    if (dest && map[dest] == null) map[dest] = i;
+  });
+  return map;
+}
+
+function openImportModal() {
+  _csvParsedRows = null;
+  document.getElementById('csvFileMeta').style.display = 'none';
+  document.getElementById('csvPreview').style.display = 'none';
+  document.getElementById('csvImportProgress').style.display = 'none';
+  document.getElementById('csvImportBtn').disabled = true;
+  document.getElementById('csvFileInput').value = '';
+  document.getElementById('csvReplaceMode').checked = false;
+  document.getElementById('importModal').classList.add('open');
+  // Bind events once
+  if (!document.getElementById('importModal').dataset.bound) {
+    const dz = document.getElementById('csvDropZone');
+    const input = document.getElementById('csvFileInput');
+    input.addEventListener('change', () => {
+      if (input.files && input.files[0]) handleCsvFile(input.files[0]);
+    });
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('over');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) handleCsvFile(e.dataTransfer.files[0]);
+    });
+    document.getElementById('importModal').dataset.bound = '1';
+  }
+}
+function closeImportModal() { document.getElementById('importModal').classList.remove('open'); }
+
+function handleCsvFile(file) {
+  const meta = document.getElementById('csvFileMeta');
+  meta.style.display = 'block';
+  meta.textContent = '📄 ' + file.name + ' · ' + Math.round(file.size/1024) + ' КБ — читаю…';
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCsv(String(reader.result), ';');
+      if (rows.length < 2) throw new Error('Файл должен содержать заголовок и хотя бы одну строку данных');
+      _csvParsedRows = rows;
+      meta.textContent = '✓ Прочитано ' + file.name + ' — ' + (rows.length - 1) + ' ' + plural(rows.length-1, ['строка','строки','строк']);
+      renderCsvPreview(rows);
+      document.getElementById('csvImportBtn').disabled = false;
+    } catch (e) {
+      meta.style.background = '#fff3ee'; meta.style.color = '#c14a16';
+      meta.textContent = '✕ Ошибка: ' + e.message;
+      _csvParsedRows = null;
+      document.getElementById('csvImportBtn').disabled = true;
+    }
+  };
+  reader.onerror = () => { meta.textContent = '✕ Ошибка чтения файла'; };
+  reader.readAsText(file, 'utf-8');
+}
+
+function renderCsvPreview(rows) {
+  const map = detectColumnMap(rows[0]);
+  const need = ['name','sku','price'];
+  const missing = need.filter(k => map[k] == null);
+  const colsToShow = ['name','sku','price','category','subcategory','img','description'];
+  const previewRows = rows.slice(1, 6); // first 5 data rows
+
+  let invalidCount = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (missing.length) continue;
+    if (!(r[map.name]||'').trim() || !(r[map.sku]||'').trim() || isNaN(parseFloat(r[map.price]))) invalidCount++;
+  }
+
+  let html = '<div class="csv-preview-title">Предпросмотр первых 5 строк';
+  if (missing.length) html += ' <span class="csv-tag warn">не хватает: '+missing.join(', ')+'</span>';
+  else if (invalidCount) html += ' <span class="csv-tag warn">'+invalidCount+' строк с ошибками — пропустятся</span>';
+  else html += ' <span class="csv-tag ok">формат ок</span>';
+  html += '</div>';
+
+  html += '<div style="overflow-x:auto;"><table class="csv-preview-table"><thead><tr>'
+       + colsToShow.map(c => '<th>'+c+'</th>').join('')
+       + '</tr></thead><tbody>';
+  for (const r of previewRows) {
+    const valid = (r[map.name]||'').trim() && (r[map.sku]||'').trim() && !isNaN(parseFloat(r[map.price]));
+    html += '<tr'+(valid?'':' class="invalid"')+'>' + colsToShow.map(c => {
+      const i = map[c];
+      const v = (i != null) ? (r[i] || '') : '';
+      return '<td>' + String(v).slice(0, 60).replace(/</g,'&lt;') + '</td>';
+    }).join('') + '</tr>';
+  }
+  html += '</tbody></table></div>';
+
+  const preview = document.getElementById('csvPreview');
+  preview.innerHTML = html;
+  preview.style.display = 'block';
+
+  if (missing.length) document.getElementById('csvImportBtn').disabled = true;
+}
+
+function runCsvImport() {
+  if (!_csvParsedRows) return;
+  const rows = _csvParsedRows;
+  const map = detectColumnMap(rows[0]);
+  if (map.name == null || map.sku == null || map.price == null) {
+    alert('В CSV должны быть колонки name, sku и price'); return;
+  }
+  const replaceMode = document.getElementById('csvReplaceMode').checked;
+  const progress = document.getElementById('csvImportProgress');
+  progress.style.display = 'block';
+  const total = rows.length - 1;
+
+  // Build category name → id map for proper categoryId fill
+  const catsByName = {};
+  getCategories().forEach(c => { catsByName[c.name.toLowerCase()] = c; });
+
+  let existing = replaceMode ? [] : getProducts();
+  const bySku = new Map(existing.map((p, i) => [p.sku, i]));
+  let added = 0, updated = 0, skipped = 0;
+  const skuSeen = new Set();
+
+  function processChunk(start) {
+    const end = Math.min(start + 200, rows.length);
+    for (let i = start; i < end; i++) {
+      const r = rows[i];
+      const name = (r[map.name] || '').trim();
+      const sku = (r[map.sku] || '').trim();
+      const price = parseFloat(r[map.price]);
+      if (!name || !sku || isNaN(price)) { skipped++; continue; }
+      if (skuSeen.has(sku)) { skipped++; continue; } // dup within CSV
+      skuSeen.add(sku);
+      const cat = map.category != null ? (r[map.category] || '').trim() : '';
+      const subcategory = map.subcategory != null ? (r[map.subcategory] || '').trim() : '';
+      const img = map.img != null ? (r[map.img] || '').trim() : '';
+      const desc = map.description != null ? (r[map.description] || '').trim() : '';
+      const catRec = catsByName[cat.toLowerCase()];
+      const categoryId = catRec ? catRec.id : undefined;
+      const rec = { name, sku, price, cat, categoryId, subcategory: subcategory || undefined,
+                    img, desc, emoji:'📦' };
+      if (bySku.has(sku)) {
+        existing[bySku.get(sku)] = { ...existing[bySku.get(sku)], ...rec };
+        updated++;
+      } else {
+        bySku.set(sku, existing.length);
+        existing.push(rec);
+        added++;
+      }
+    }
+    progress.textContent = `Импортировано ${Math.min(end-1, total)} из ${total}…`;
+    if (end < rows.length) {
+      setTimeout(()=>processChunk(end), 0);
+    } else {
+      setProducts(existing);
+      try { migrateProductsToSubcategories(); } catch(e) {}
+      progress.textContent = `✓ Готово. Добавлено: ${added}, обновлено: ${updated}, пропущено: ${skipped}`;
+      renderProducts();
+      updateCounts();
+      setTimeout(() => { closeImportModal(); toast(`✓ Импорт: +${added}, ↻${updated}`); }, 1200);
+    }
+  }
+  processChunk(1);
 }
 </script>
 </body>
