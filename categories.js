@@ -175,50 +175,50 @@ function productCountBySubcategory(catId) {
 // regex strings against product.name.
 const KLEVER_SUBCATEGORY_PATTERNS = {
   // Disposable
-  'disposable.cups':            ['стакан', 'стак\\. ', 'cup'],
-  'disposable.eco':             ['эко', 'крафт.*стакан', 'крафт.*тарел', 'бумажн.*стакан', 'бумажн.*тарел', 'кукуруз'],
-  'disposable.containers-rect': ['контейнер.*прям', 'прямоугол.*контейнер', 'контейнер ПР', 'судок.*прям'],
+  'disposable.cups':            ['стакан', 'стак\\. ', 'cup', 'чашк.*коф', 'стопк.*одноразов', 'бокал'],
+  'disposable.eco':             ['эко', 'крафт.*стакан', 'крафт.*тарел', 'бумажн.*стакан', 'бумажн.*тарел', 'кукуруз', 'контейнер бумажн'],
+  'disposable.containers-rect': ['контейнер.*прям', 'прямоугол.*контейнер', 'контейнер ПР', 'судок.*прям', 'контейнер.*с крышкой', 'контейнер.*для салат', 'контейнер.*\\d+.секц', 'контейнер.*для суп', 'контейнер.*плоск', 'контейнер.*с разделит', 'контейнер.*салатник'],
   'disposable.containers-round':['контейнер.*кругл', 'кругл.*контейнер', 'контейнер кр', 'судок.*кругл'],
   'disposable.clamshell':       ['ракушк', 'clamshell', 'контейнер.*шарни'],
-  'disposable.fastfood':        ['бургер', 'хот.?дог', 'fast.?food', 'fastfood', 'наггетс', 'фри'],
+  'disposable.fastfood':        ['бургер', 'хот.?дог', 'fast.?food', 'fastfood', 'наггетс', 'фри', 'контейнер.*морепрод'],
   'disposable.lunchbox':        ['ланч', 'lunch.?box'],
   'disposable.pizza':           ['пицц'],
   'disposable.sauce':           ['соусн', 'соус.*контейнер'],
   'disposable.plates':          ['тарелк', 'миск'],
-  'disposable.cutlery':         ['ложк', 'вилк', 'нож одноразов', 'столов.*прибор', 'шпажк', 'трубочк', 'размешив'],
-  'disposable.sushi':           ['суш', 'лапш', 'роллов', 'wok', 'вок\\b'],
-  'disposable.bottles':         ['бутылк', 'пэт ', 'пэт\\b'],
+  'disposable.cutlery':         ['ложк', 'вилк', 'нож одноразов', 'нож пластик', 'нож.*premium', 'дерев.*нож', 'столов.*прибор', 'шпажк', 'шампур', 'трубочк', 'соломк', 'размешив', 'зубочистк', 'палочк.*коф', 'палочк.*канап', 'зонтик.*кокт', 'шейкер'],
+  'disposable.sushi':           ['суш', 'лапш', 'роллов', 'wok', 'вок\\b', 'подставк.*ролл'],
+  'disposable.bottles':         ['бутылк', 'пэт ', 'пэт\\b', 'дозатор.*бутылк'],
   'disposable.trays':           ['лоток', 'поднос'],
-  'disposable.bakery':          ['кондитер', 'для торт', 'тортниц', 'капкейк', 'маффин', 'пирожн'],
+  'disposable.bakery':          ['кондитер', 'для торт', 'тортниц', 'капкейк', 'капсул.*кекс', 'маффин', 'пирожн'],
   // Chemistry
   'chemistry.dishwashing':      ['для посуд', 'fairy', 'pril', 'aos', 'миф', 'gala'],
   'chemistry.floor':            ['для пол', 'mr\\. proper', 'proper.*пол'],
-  'chemistry.kitchen':          ['жироудал', 'для плит', 'для кухн', 'духов'],
-  'chemistry.bathroom':         ['санокс', 'санит', 'унитаз', 'ванн', 'для туал', 'для сантехн', 'плесен', 'известк', 'rail'],
-  'chemistry.laundry':          ['стирк', 'порошок.*стиральн', 'ять', 'tide', 'persil', 'ariel'],
-  'chemistry.soap':             ['мыло', 'антисепт', 'санит', 'руки.*обраб'],
+  'chemistry.kitchen':          ['жироудал', 'для плит', 'для кухн', 'духов', 'пемолюкс', 'help', 'cif', 'азелит', 'чистящ.*порошок', 'чистящ.*средств'],
+  'chemistry.bathroom':         ['санокс', 'санит', 'унитаз', 'ванн', 'для туал', 'для сантехн', 'плесен', 'известк', 'rail', 'белизн', 'domestos', 'крот', 'tiret', 'sanita', 'антиржав', 'засор', 'для прочистки', 'stop'],
+  'chemistry.laundry':          ['стирк', 'стиральн', 'порошок.*стиральн', 'ять', 'tide', 'persil', 'ariel', 'synergetic', 'калгон'],
+  'chemistry.soap':             ['мыло', 'антисепт', 'руки.*обраб'],
   'chemistry.freshener':        ['освежит', 'glade', 'воздух'],
   // Paper
-  'paper.toilet':               ['туалет.*бумаг', 'tu\\b', 'tu '],
-  'paper.towels':               ['полотенц.*бумаж', 'бумажн.*полотенц', 'kitchen.*roll'],
+  'paper.toilet':               ['туалет.*бумаг', 'бумаг.*туалет', 'tu\\b', 'tu '],
+  'paper.towels':               ['полотенц.*бумаж', 'бумажн.*полотенц', 'kitchen.*roll', 'полотенц.*рулон', 'рулонн.*полотенц'],
   'paper.napkins':              ['салфет'],
   'paper.dispenser':            ['диспенсер', 'z-сложен', 'z\\-сложен', 'wepa', 'V-сложен', 'v\\-сложен'],
   // Protection
   'protection.gloves-nitrile':  ['нитрилов'],
   'protection.gloves-latex':    ['латексн'],
-  'protection.gloves-household':['хозяйствен.*перчатк', 'перчатк.*хоз'],
-  'protection.masks':           ['маск', 'респират'],
+  'protection.gloves-household':['хозяйствен.*перчатк', 'перчатк.*хоз', 'перчатк.*винил', 'перчатк.*пвх', 'перчатк.*рабоч', 'перчатк.*уборк', 'перчатк.*х/б', 'перчатк.*hdpe', 'перчатк.*одноразов'],
+  'protection.masks':           ['маск', 'респират', 'пилотк.*мед', 'очки.*защит'],
   'protection.clothing':        ['халат', 'шапочк', 'бахил', 'нарукавн', 'фартук'],
   // Packaging
-  'packaging.bags':              ['пакет.*майк', 'майк'],
-  'packaging.film':              ['стрейч', 'плёнк.*упак', 'пленк.*упак', 'плёнка.*стрейч'],
-  'packaging.kraft':             ['крафт.*пакет', 'крафт.*мешок'],
+  'packaging.bags':              ['пакет.*майк', 'майк\\b', 'фасовочн.*пакет', 'пакет.*фасовочн', 'шпагат'],
+  'packaging.film':              ['стрейч', 'плёнк.*упак', 'пленк.*упак', 'плёнка.*стрейч', 'пузырьк.*плёнк', 'пузырьк.*пленк', 'скотч', 'лента.*упак', 'стикер.*маркир'],
+  'packaging.kraft':             ['крафт.*пакет', 'крафт.*мешок', 'пакет.*крафт', 'крафт.*с ручк', 'кондитер.*мешок'],
   'packaging.vacuum':            ['вакуум'],
-  'packaging.ziplock':           ['zip', 'зип.?лок', 'зип лок'],
+  'packaging.ziplock':           ['zip', 'зип.?лок', 'зип лок', 'слайдер', 'пакет.*с замк'],
   // Household
-  'household.trash':             ['мусорн.*мешок', 'мешок.*мусор'],
+  'household.trash':             ['мусорн.*мешок', 'мешок.*мусор', 'мешок.*для мусор', 'мешк.*для мусор', 'мешок.*с завязк', 'мешк.*с завязк', 'мешки.*\\d+ л'],
   'household.foil':              ['фольг', 'пищев.*плёнк', 'пищев.*пленк'],
-  'household.cleaning':          ['тряпк', 'губк', 'микрофибр', 'салфетк.*микро'],
+  'household.cleaning':          ['тряпк', 'губк', 'микрофибр', 'мочалк', 'вафельн.*полотн', 'салфетк.*микро', 'салфетк.*уборк', 'салфетк.*универсал'],
   'household.tools':             ['ёршик', 'ершик', 'швабр', 'веник', 'совок', 'ведр'],
 };
 
@@ -255,6 +255,27 @@ function migrateProductsToSubcategories() {
   }
   if (changed) localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
   return changed;
+}
+
+// Auto-run idempotent migration so existing products get categoryId/subcategory.
+// Deferred to DOMContentLoaded so page-specific seeding (catalog/product/admin)
+// has finished writing klever_products_v2 first.
+if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+  function _kleverRunCategoryBootstrap() {
+    try {
+      if (!localStorage.getItem(KLEVER_CATEGORIES_KEY)) {
+        localStorage.setItem(KLEVER_CATEGORIES_KEY, JSON.stringify(DEFAULT_CATEGORIES));
+      }
+      migrateProductsToSubcategories();
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _kleverRunCategoryBootstrap);
+  } else {
+    _kleverRunCategoryBootstrap();
+  }
+  // Also run shortly after — catches lazy product seeds done in DOMContentLoaded handlers.
+  setTimeout(_kleverRunCategoryBootstrap, 600);
 }
 
 if (typeof window !== 'undefined') {
