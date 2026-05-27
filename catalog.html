@@ -59,6 +59,10 @@
   .crumb-bar a{color:var(--green-dark);text-decoration:none;}
   .crumb-bar a:hover{text-decoration:underline;}
   .crumb-bar .sep{color:#c0d0c5;}
+  /* Mobile-only sub-chip strip; hidden on desktop (sidebar is shown instead) */
+  .sub-chips{display:none;}
+  .sub-chip{flex-shrink:0;padding:8px 13px;border-radius:30px;background:#f2f7f4;color:var(--text);font-size:13px;font-weight:600;border:1.5px solid #d0e8d8;text-decoration:none;white-space:nowrap;}
+  .sub-chip.active{background:var(--green);color:var(--dark);border-color:var(--green);}
   @media(max-width:900px){
     .hbrowse{padding:18px 16px 40px;}
     .hbrowse-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
