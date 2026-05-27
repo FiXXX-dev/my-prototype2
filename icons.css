@@ -94,3 +94,20 @@
 .footer-logo .logo-icon,
 .login-logo .logo-icon { margin-right: 4px; }
 .pre-logo .leaf .logo-icon { display: inline-block; animation: preSpin 1.5s ease-in-out infinite; }
+
+/* ===== Mobile (<=768px): remove duplicates that tab-bar already provides =====
+   Tab-bar already exposes Корзина and Кабинет at the bottom, so on phones
+   we hide them from the header AND from inside the slide-out burger menu
+   to keep the top compact. Desktop layout (>768px) is unchanged. */
+@media (max-width: 768px) {
+  /* Header: hide cart button and account-icon link inside .header-actions */
+  header .header-actions .cart-btn,
+  header .header-actions > a[href="account.html"] {
+    display: none !important;
+  }
+  /* Burger menu drawer: hide Личный кабинет link and Корзина button */
+  .mobile-menu-actions > a[href="account.html"],
+  .mobile-menu-actions > button#mmCartBtn {
+    display: none !important;
+  }
+}
