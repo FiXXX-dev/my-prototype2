@@ -1309,5 +1309,69 @@ syncCartQtyBlock();
 })();
 </script>
 
+<style id="klever-tabbar-styles">
+.klever-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:140;display:none;background:white;border-top:1px solid #e0ece4;box-shadow:0 -4px 20px rgba(0,0,0,0.05);padding:4px 4px max(4px, env(safe-area-inset-bottom,0px));}
+.klever-tabbar-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;max-width:600px;margin:0 auto;}
+.klever-tabbar a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;color:#6b8a74;padding:8px 4px;border-radius:10px;font-family:'Onest',sans-serif;font-size:11px;font-weight:600;min-height:52px;transition:color .15s,background .15s;}
+.klever-tabbar a:hover{background:#f2f7f4;}
+.klever-tabbar a.active{color:#1aab58;}
+.klever-tabbar a.active .klever-tab-icon{color:#2ECC71;}
+.klever-tab-icon{font-size:22px;line-height:1;margin-bottom:3px;color:#8aaa94;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;}
+.klever-tab-label{line-height:1;}
+.klever-tab-badge{position:absolute;top:4px;right:14px;background:#FF6B35;color:white;font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 5px;border:1.5px solid white;}
+.klever-tab-badge.show{display:flex;}
+@media(max-width:900px){
+  .klever-tabbar{display:block;}
+  body{padding-bottom:64px;}
+  .klever-fab{bottom:84px !important;}
+}
+@media(max-width:600px){
+  .klever-fab{bottom:92px !important;}
+}
+</style>
+<nav class="klever-tabbar" id="kleverTabbar" aria-label="Mobile bottom navigation">
+  <div class="klever-tabbar-inner">
+    <a href="index.html" data-tab-key="home"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2V9.5z"/></svg></span><span class="klever-tab-label" data-i18n="tabbar.home">Главная</span></a>
+    <a href="catalog.html" data-tab-key="catalog"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="klever-tab-label" data-i18n="tabbar.catalog">Каталог</span></a>
+    <a href="javascript:void(0)" onclick="(typeof openCart==='function')&&openCart()" data-tab-key="cart"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></span><span class="klever-tab-label" data-i18n="tabbar.cart">Корзина</span><span class="klever-tab-badge" id="kleverTabCartBadge">0</span></a>
+    <a href="account.html" data-tab-key="account"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="klever-tab-label" data-i18n="tabbar.account">Кабинет</span></a>
+  </div>
+</nav>
+<script id="klever-tabbar-script">
+(function(){
+  // Mark active tab based on current path
+  function currentKey(){
+    const p = (location.pathname.split('/').pop()||'index.html').toLowerCase();
+    if (p === '' || p === 'index.html') return 'home';
+    if (p === 'catalog.html' || p === 'product.html' || p === 'sales.html') return 'catalog';
+    if (p === 'account.html') return 'account';
+    if (p === 'checkout.html') return 'cart';
+    return null;
+  }
+  function syncBadge(){
+    const el = document.getElementById('kleverTabCartBadge'); if (!el) return;
+    let n = 0;
+    try { const c = JSON.parse(localStorage.getItem('klever_cart')) || []; n = c.reduce((s,i)=>s+(i.qty||0), 0); } catch(e){}
+    el.textContent = n;
+    el.classList.toggle('show', n > 0);
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const key = currentKey();
+    if (key) {
+      const a = document.querySelector('.klever-tabbar a[data-tab-key="'+key+'"]');
+      if (a) a.classList.add('active');
+    }
+    syncBadge();
+    // Patch updateCartBadge if present so it also keeps tabbar badge in sync.
+    if (typeof updateCartBadge === 'function') {
+      const _orig = updateCartBadge;
+      window.updateCartBadge = function(){ _orig(); syncBadge(); };
+    }
+    window.__kleverSyncTabBadge = syncBadge;
+  });
+  window.addEventListener('storage', e => { if (e.key === 'klever_cart') syncBadge(); });
+})();
+</script>
+
 </body>
 </html>
