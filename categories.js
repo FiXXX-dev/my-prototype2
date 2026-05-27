@@ -1,0 +1,297 @@
+// ===== Clever — hierarchical category structure =====
+// Data lives in localStorage.klever_categories. Each category has:
+//   id, name, icon (matches an .icon-* class), img (URL or ""),
+//   order, subcategories[].
+// Each subcategory: id, name, img, order.
+//
+// This file also provides helpers used by catalog.html, product.html,
+// checkout, admin and the data migration that distributes existing
+// products into subcategories on first load.
+
+const KLEVER_CATEGORIES_KEY = 'klever_categories';
+const KLEVER_PRODUCTS_KEY = 'klever_products_v2';
+
+const DEFAULT_CATEGORIES = [
+  {
+    id: 'disposable', name: 'Одноразовая посуда', icon: 'takeaway', img: '', order: 1,
+    subcategories: [
+      { id: 'cups', name: 'Стаканы', img: '', order: 1 },
+      { id: 'eco', name: 'Эко-посуда', img: '', order: 2 },
+      { id: 'containers-rect', name: 'Контейнеры прямоугольные', img: '', order: 3 },
+      { id: 'containers-round', name: 'Контейнеры круглые', img: '', order: 4 },
+      { id: 'clamshell', name: 'Контейнеры-ракушки', img: '', order: 5 },
+      { id: 'fastfood', name: 'Упаковка для фастфуда', img: '', order: 6 },
+      { id: 'lunchbox', name: 'Ланч-боксы', img: '', order: 7 },
+      { id: 'pizza', name: 'Коробки для пиццы', img: '', order: 8 },
+      { id: 'sauce', name: 'Соусники', img: '', order: 9 },
+      { id: 'plates', name: 'Тарелки, миски', img: '', order: 10 },
+      { id: 'cutlery', name: 'Столовые приборы', img: '', order: 11 },
+      { id: 'sushi', name: 'Для суши и лапши', img: '', order: 12 },
+      { id: 'bottles', name: 'Бутылки ПЭТ', img: '', order: 13 },
+      { id: 'trays', name: 'Лотки', img: '', order: 14 },
+      { id: 'bakery', name: 'Для кондитерских изделий', img: '', order: 15 },
+    ],
+  },
+  {
+    id: 'chemistry', name: 'Бытовая химия', icon: 'spray', img: '', order: 2,
+    subcategories: [
+      { id: 'dishwashing', name: 'Для мытья посуды', img: '', order: 1 },
+      { id: 'floor', name: 'Для пола', img: '', order: 2 },
+      { id: 'kitchen', name: 'Для кухни', img: '', order: 3 },
+      { id: 'bathroom', name: 'Для санузла', img: '', order: 4 },
+      { id: 'laundry', name: 'Стирка', img: '', order: 5 },
+      { id: 'soap', name: 'Мыло и антисептики', img: '', order: 6 },
+      { id: 'freshener', name: 'Освежители воздуха', img: '', order: 7 },
+    ],
+  },
+  {
+    id: 'paper', name: 'Бумажная продукция', icon: 'paper-roll', img: '', order: 3,
+    subcategories: [
+      { id: 'toilet', name: 'Туалетная бумага', img: '', order: 1 },
+      { id: 'towels', name: 'Бумажные полотенца', img: '', order: 2 },
+      { id: 'napkins', name: 'Салфетки', img: '', order: 3 },
+      { id: 'dispenser', name: 'Для диспенсеров', img: '', order: 4 },
+    ],
+  },
+  {
+    id: 'protection', name: 'Средства защиты', icon: 'shield', img: '', order: 4,
+    subcategories: [
+      { id: 'gloves-nitrile', name: 'Перчатки нитриловые', img: '', order: 1 },
+      { id: 'gloves-latex', name: 'Перчатки латексные', img: '', order: 2 },
+      { id: 'gloves-household', name: 'Перчатки хозяйственные', img: '', order: 3 },
+      { id: 'masks', name: 'Маски и респираторы', img: '', order: 4 },
+      { id: 'clothing', name: 'Одежда одноразовая', img: '', order: 5 },
+    ],
+  },
+  {
+    id: 'packaging', name: 'Упаковка', icon: 'box', img: '', order: 5,
+    subcategories: [
+      { id: 'bags', name: 'Пакеты-майки', img: '', order: 1 },
+      { id: 'film', name: 'Плёнки и стрейч', img: '', order: 2 },
+      { id: 'kraft', name: 'Крафт-пакеты', img: '', order: 3 },
+      { id: 'vacuum', name: 'Вакуумные пакеты', img: '', order: 4 },
+      { id: 'ziplock', name: 'Zip-lock пакеты', img: '', order: 5 },
+    ],
+  },
+  {
+    id: 'household', name: 'Хозтовары', icon: 'broom', img: '', order: 6,
+    subcategories: [
+      { id: 'trash', name: 'Мешки для мусора', img: '', order: 1 },
+      { id: 'foil', name: 'Фольга и плёнка пищевая', img: '', order: 2 },
+      { id: 'cleaning', name: 'Тряпки и губки', img: '', order: 3 },
+      { id: 'tools', name: 'Инвентарь для уборки', img: '', order: 4 },
+    ],
+  },
+  {
+    id: 'stationery', name: 'Канцелярия', icon: 'paperclip', img: '', order: 7,
+    subcategories: [],
+  },
+];
+
+// Cosmetic gradient palette for category cards when no img is set.
+const KLEVER_CATEGORY_GRADIENTS = {
+  disposable: ['#ffe9a8', '#ffd166'],
+  chemistry:  ['#b8d8ff', '#7ab8ff'],
+  paper:      ['#c8f5dc', '#7ee0a8'],
+  protection: ['#ffd0d0', '#ff9a9a'],
+  packaging:  ['#ddb8ff', '#b889e8'],
+  household:  ['#b8f0e4', '#6dd6c2'],
+  stationery: ['#ffd8a8', '#ffae5c'],
+};
+
+// Map legacy product.cat string -> new category id.
+const KLEVER_LEGACY_CAT_TO_ID = {
+  'Одноразовая посуда': 'disposable',
+  'Бытовая химия': 'chemistry',
+  'Бумажная продукция': 'paper',
+  'Средства защиты': 'protection',
+  'Упаковка': 'packaging',
+  'Хозтовары': 'household',
+  'Канцелярия': 'stationery',
+};
+
+// ---------- localStorage helpers ----------
+function getCategories() {
+  try {
+    const raw = localStorage.getItem(KLEVER_CATEGORIES_KEY);
+    if (!raw) {
+      localStorage.setItem(KLEVER_CATEGORIES_KEY, JSON.stringify(DEFAULT_CATEGORIES));
+      return DEFAULT_CATEGORIES;
+    }
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : DEFAULT_CATEGORIES;
+  } catch (e) { return DEFAULT_CATEGORIES; }
+}
+function setCategories(arr) {
+  localStorage.setItem(KLEVER_CATEGORIES_KEY, JSON.stringify(arr));
+}
+function getCategoryById(id) {
+  return getCategories().find(c => c.id === id) || null;
+}
+function getCategoryByLegacyName(name) {
+  const id = KLEVER_LEGACY_CAT_TO_ID[name];
+  return id ? getCategoryById(id) : null;
+}
+function getSubcategoryById(catId, subId) {
+  const c = getCategoryById(catId);
+  if (!c) return null;
+  return (c.subcategories || []).find(s => s.id === subId) || null;
+}
+
+// Sort categories by order, subcategories by order.
+function sortedCategories() {
+  return getCategories().slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map(c => ({
+    ...c,
+    subcategories: (c.subcategories || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0)),
+  }));
+}
+
+// Count products per category / subcategory (uses current localStorage products).
+function productCountByCategory() {
+  let products = [];
+  try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch (e) {}
+  const counts = {};
+  for (const p of products) {
+    const id = p.categoryId || KLEVER_LEGACY_CAT_TO_ID[p.cat] || null;
+    if (!id) continue;
+    counts[id] = (counts[id] || 0) + 1;
+  }
+  return counts;
+}
+function productCountBySubcategory(catId) {
+  let products = [];
+  try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch (e) {}
+  const counts = {};
+  for (const p of products) {
+    const id = p.categoryId || KLEVER_LEGACY_CAT_TO_ID[p.cat] || null;
+    if (id !== catId) continue;
+    if (p.subcategory) counts[p.subcategory] = (counts[p.subcategory] || 0) + 1;
+  }
+  return counts;
+}
+
+// ---------- product → subcategory auto-classification ----------
+// Pattern list: ordered, first match wins. Patterns are case-insensitive
+// regex strings against product.name.
+const KLEVER_SUBCATEGORY_PATTERNS = {
+  // Disposable
+  'disposable.cups':            ['стакан', 'стак\\. ', 'cup', 'чашк.*коф', 'стопк.*одноразов', 'бокал'],
+  'disposable.eco':             ['эко', 'крафт.*стакан', 'крафт.*тарел', 'бумажн.*стакан', 'бумажн.*тарел', 'кукуруз', 'контейнер бумажн'],
+  'disposable.containers-rect': ['контейнер.*прям', 'прямоугол.*контейнер', 'контейнер ПР', 'судок.*прям', 'контейнер.*с крышкой', 'контейнер.*для салат', 'контейнер.*\\d+.секц', 'контейнер.*для суп', 'контейнер.*плоск', 'контейнер.*с разделит', 'контейнер.*салатник'],
+  'disposable.containers-round':['контейнер.*кругл', 'кругл.*контейнер', 'контейнер кр', 'судок.*кругл'],
+  'disposable.clamshell':       ['ракушк', 'clamshell', 'контейнер.*шарни'],
+  'disposable.fastfood':        ['бургер', 'хот.?дог', 'fast.?food', 'fastfood', 'наггетс', 'фри', 'контейнер.*морепрод'],
+  'disposable.lunchbox':        ['ланч', 'lunch.?box'],
+  'disposable.pizza':           ['пицц'],
+  'disposable.sauce':           ['соусн', 'соус.*контейнер'],
+  'disposable.plates':          ['тарелк', 'миск'],
+  'disposable.cutlery':         ['ложк', 'вилк', 'нож одноразов', 'нож пластик', 'нож.*premium', 'дерев.*нож', 'столов.*прибор', 'шпажк', 'шампур', 'трубочк', 'соломк', 'размешив', 'зубочистк', 'палочк.*коф', 'палочк.*канап', 'зонтик.*кокт', 'шейкер'],
+  'disposable.sushi':           ['суш', 'лапш', 'роллов', 'wok', 'вок\\b', 'подставк.*ролл'],
+  'disposable.bottles':         ['бутылк', 'пэт ', 'пэт\\b', 'дозатор.*бутылк'],
+  'disposable.trays':           ['лоток', 'поднос'],
+  'disposable.bakery':          ['кондитер', 'для торт', 'тортниц', 'капкейк', 'капсул.*кекс', 'маффин', 'пирожн'],
+  // Chemistry
+  'chemistry.dishwashing':      ['для посуд', 'fairy', 'pril', 'aos', 'миф', 'gala'],
+  'chemistry.floor':            ['для пол', 'mr\\. proper', 'proper.*пол'],
+  'chemistry.kitchen':          ['жироудал', 'для плит', 'для кухн', 'духов', 'пемолюкс', 'help', 'cif', 'азелит', 'чистящ.*порошок', 'чистящ.*средств'],
+  'chemistry.bathroom':         ['санокс', 'санит', 'унитаз', 'ванн', 'для туал', 'для сантехн', 'плесен', 'известк', 'rail', 'белизн', 'domestos', 'крот', 'tiret', 'sanita', 'антиржав', 'засор', 'для прочистки', 'stop'],
+  'chemistry.laundry':          ['стирк', 'стиральн', 'порошок.*стиральн', 'ять', 'tide', 'persil', 'ariel', 'synergetic', 'калгон'],
+  'chemistry.soap':             ['мыло', 'антисепт', 'руки.*обраб'],
+  'chemistry.freshener':        ['освежит', 'glade', 'воздух'],
+  // Paper
+  'paper.toilet':               ['туалет.*бумаг', 'бумаг.*туалет', 'tu\\b', 'tu '],
+  'paper.towels':               ['полотенц.*бумаж', 'бумажн.*полотенц', 'kitchen.*roll', 'полотенц.*рулон', 'рулонн.*полотенц'],
+  'paper.napkins':              ['салфет'],
+  'paper.dispenser':            ['диспенсер', 'z-сложен', 'z\\-сложен', 'wepa', 'V-сложен', 'v\\-сложен'],
+  // Protection
+  'protection.gloves-nitrile':  ['нитрилов'],
+  'protection.gloves-latex':    ['латексн'],
+  'protection.gloves-household':['хозяйствен.*перчатк', 'перчатк.*хоз', 'перчатк.*винил', 'перчатк.*пвх', 'перчатк.*рабоч', 'перчатк.*уборк', 'перчатк.*х/б', 'перчатк.*hdpe', 'перчатк.*одноразов'],
+  'protection.masks':           ['маск', 'респират', 'пилотк.*мед', 'очки.*защит'],
+  'protection.clothing':        ['халат', 'шапочк', 'бахил', 'нарукавн', 'фартук'],
+  // Packaging
+  'packaging.bags':              ['пакет.*майк', 'майк\\b', 'фасовочн.*пакет', 'пакет.*фасовочн', 'шпагат'],
+  'packaging.film':              ['стрейч', 'плёнк.*упак', 'пленк.*упак', 'плёнка.*стрейч', 'пузырьк.*плёнк', 'пузырьк.*пленк', 'скотч', 'лента.*упак', 'стикер.*маркир'],
+  'packaging.kraft':             ['крафт.*пакет', 'крафт.*мешок', 'пакет.*крафт', 'крафт.*с ручк', 'кондитер.*мешок'],
+  'packaging.vacuum':            ['вакуум'],
+  'packaging.ziplock':           ['zip', 'зип.?лок', 'зип лок', 'слайдер', 'пакет.*с замк'],
+  // Household
+  'household.trash':             ['мусорн.*мешок', 'мешок.*мусор', 'мешок.*для мусор', 'мешк.*для мусор', 'мешок.*с завязк', 'мешк.*с завязк', 'мешки.*\\d+ л'],
+  'household.foil':              ['фольг', 'пищев.*плёнк', 'пищев.*пленк'],
+  'household.cleaning':          ['тряпк', 'губк', 'микрофибр', 'мочалк', 'вафельн.*полотн', 'салфетк.*микро', 'салфетк.*уборк', 'салфетк.*универсал'],
+  'household.tools':             ['ёршик', 'ершик', 'швабр', 'веник', 'совок', 'ведр'],
+};
+
+function classifyProduct(name, catId) {
+  const lname = (name || '').toLowerCase();
+  for (const [key, pats] of Object.entries(KLEVER_SUBCATEGORY_PATTERNS)) {
+    const [cid, sid] = key.split('.');
+    if (cid !== catId) continue;
+    for (const pat of pats) {
+      try {
+        if (new RegExp(pat, 'i').test(lname)) return sid;
+      } catch (e) {}
+    }
+  }
+  return null;
+}
+
+// One-time migration: walk products and attach categoryId + subcategory.
+// Idempotent — only fills missing values, never overwrites manually set ones.
+function migrateProductsToSubcategories() {
+  let products = null;
+  try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)); } catch (e) { return 0; }
+  if (!Array.isArray(products) || !products.length) return 0;
+  let changed = 0;
+  for (const p of products) {
+    if (!p.categoryId) {
+      const id = KLEVER_LEGACY_CAT_TO_ID[p.cat];
+      if (id) { p.categoryId = id; changed++; }
+    }
+    if (!p.subcategory && p.categoryId) {
+      const sub = classifyProduct(p.name, p.categoryId);
+      if (sub) { p.subcategory = sub; changed++; }
+    }
+  }
+  if (changed) localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
+  return changed;
+}
+
+// Auto-run idempotent migration so existing products get categoryId/subcategory.
+// Deferred to DOMContentLoaded so page-specific seeding (catalog/product/admin)
+// has finished writing klever_products_v2 first.
+if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+  function _kleverRunCategoryBootstrap() {
+    try {
+      if (!localStorage.getItem(KLEVER_CATEGORIES_KEY)) {
+        localStorage.setItem(KLEVER_CATEGORIES_KEY, JSON.stringify(DEFAULT_CATEGORIES));
+      }
+      migrateProductsToSubcategories();
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _kleverRunCategoryBootstrap);
+  } else {
+    _kleverRunCategoryBootstrap();
+  }
+  // Also run shortly after — catches lazy product seeds done in DOMContentLoaded handlers.
+  setTimeout(_kleverRunCategoryBootstrap, 600);
+}
+
+if (typeof window !== 'undefined') {
+  window.KLEVER_CATEGORIES_KEY = KLEVER_CATEGORIES_KEY;
+  window.KLEVER_PRODUCTS_KEY = KLEVER_PRODUCTS_KEY;
+  window.DEFAULT_CATEGORIES = DEFAULT_CATEGORIES;
+  window.KLEVER_CATEGORY_GRADIENTS = KLEVER_CATEGORY_GRADIENTS;
+  window.KLEVER_LEGACY_CAT_TO_ID = KLEVER_LEGACY_CAT_TO_ID;
+  window.getCategories = getCategories;
+  window.setCategories = setCategories;
+  window.getCategoryById = getCategoryById;
+  window.getCategoryByLegacyName = getCategoryByLegacyName;
+  window.getSubcategoryById = getSubcategoryById;
+  window.sortedCategories = sortedCategories;
+  window.productCountByCategory = productCountByCategory;
+  window.productCountBySubcategory = productCountBySubcategory;
+  window.classifyProduct = classifyProduct;
+  window.migrateProductsToSubcategories = migrateProductsToSubcategories;
+}

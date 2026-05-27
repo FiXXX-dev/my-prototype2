@@ -23,6 +23,61 @@
   .breadcrumb{padding:16px 40px;background:var(--gray);font-size:13px;color:#8aaa94;}
   .breadcrumb a{color:var(--green-dark);text-decoration:none;}
   .breadcrumb span{margin:0 8px;}
+  /* ===== Hierarchical browser (modes A/B) ===== */
+  .hbrowse{display:none;max-width:1200px;margin:0 auto;padding:24px 40px 60px;width:100%;box-sizing:border-box;}
+  .hbrowse.active{display:block;}
+  .hbrowse-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:14px;}
+  .hbrowse-title{font-family:'Unbounded',sans-serif;font-size:clamp(24px,3vw,32px);font-weight:900;letter-spacing:-1px;color:var(--text);}
+  .hbrowse-count{color:#8aaa94;font-size:14px;margin-top:6px;}
+  .hbrowse-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .cat-tile{display:block;border-radius:20px;overflow:hidden;text-decoration:none;color:inherit;position:relative;min-height:200px;transition:transform .2s,box-shadow .2s;background:#f2f7f4;}
+  .cat-tile:hover{transform:translateY(-6px);box-shadow:0 18px 50px rgba(0,0,0,0.15);}
+  .cat-tile-bg{position:absolute;inset:0;background-size:cover;background-position:center;}
+  .cat-tile-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px;color:white;}
+  .cat-tile.tinted .cat-tile-overlay{background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,0.55) 100%);}
+  .cat-tile.no-photo .cat-tile-bg{background-size:auto;}
+  .cat-tile-icon-bg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.18;font-size:90px;color:white;}
+  .cat-tile-name{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;letter-spacing:-0.5px;line-height:1.15;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.3);}
+  .cat-tile-count{font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px;text-shadow:0 1px 4px rgba(0,0,0,0.3);}
+  /* Mode B layout: sidebar with subcategory list + tile grid */
+  .hbrowse-with-sidebar{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:flex-start;}
+  .sub-sidebar{background:var(--gray);border-radius:16px;padding:20px;}
+  .sub-sidebar-title{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b8a74;margin-bottom:14px;}
+  .sub-list{list-style:none;margin:0;padding:0;}
+  .sub-list li{margin-bottom:2px;}
+  .sub-list a{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:10px;text-decoration:none;color:var(--text);font-size:14px;font-weight:500;}
+  .sub-list a:hover{background:white;color:var(--green-dark);}
+  .sub-list a.active{background:var(--green);color:var(--dark);font-weight:700;}
+  .sub-list-count{background:rgba(0,0,0,0.06);padding:1px 8px;border-radius:20px;font-size:11px;}
+  .sub-list a.active .sub-list-count{background:rgba(0,0,0,0.16);}
+  /* Subcategory tiles slightly smaller */
+  .sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .sub-tile{min-height:150px;}
+  .sub-tile .cat-tile-name{font-size:15px;}
+  /* Breadcrumb chip path */
+  .crumb-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:#6b8a74;margin-bottom:14px;}
+  .crumb-bar a{color:var(--green-dark);text-decoration:none;}
+  .crumb-bar a:hover{text-decoration:underline;}
+  .crumb-bar .sep{color:#c0d0c5;}
+  @media(max-width:900px){
+    .hbrowse{padding:18px 16px 40px;}
+    .hbrowse-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .cat-tile{min-height:140px;}
+    .cat-tile-overlay{padding:14px;}
+    .cat-tile-name{font-size:14px;}
+    .cat-tile-icon-bg{font-size:60px;}
+    .hbrowse-with-sidebar{grid-template-columns:1fr;gap:14px;}
+    .sub-sidebar{display:none;}
+    .sub-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .crumb-bar{font-size:12px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;scrollbar-width:none;}
+    .crumb-bar::-webkit-scrollbar{display:none;}
+    .crumb-bar > *{flex-shrink:0;}
+    .sub-chips{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;margin:0 -16px 14px;padding:0 16px 6px;scrollbar-width:none;}
+    .sub-chips::-webkit-scrollbar{display:none;}
+    .sub-chip{flex-shrink:0;padding:8px 13px;border-radius:30px;background:#f2f7f4;color:var(--text);font-size:13px;font-weight:600;border:1.5px solid #d0e8d8;text-decoration:none;white-space:nowrap;}
+    .sub-chip.active{background:var(--green);color:var(--dark);border-color:var(--green);}
+  }
+
   .catalog-wrap{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 140px);}
   .sidebar{background:var(--gray);padding:32px 24px;border-right:1px solid #e0ece4;}
   .sidebar-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.5px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #d0e8d8;}
@@ -173,6 +228,7 @@
 .cart-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 
+<script src="categories.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -249,7 +305,19 @@ setTimeout(function(){
 </header>
 <div class="breadcrumb"><a href="index.html" data-i18n="crumb.home">Главная</a><span>→</span><span data-i18n="crumb.catalog_full">Каталог товаров</span></div>
 
-<div class="catalog-wrap">
+<!-- Hierarchical browse (Mode A: categories, Mode B: subcategories) -->
+<section class="hbrowse" id="hbrowse">
+  <div class="crumb-bar" id="hbrowseCrumb"></div>
+  <div class="hbrowse-head">
+    <div>
+      <div class="hbrowse-title" id="hbrowseTitle"></div>
+      <div class="hbrowse-count" id="hbrowseCount"></div>
+    </div>
+  </div>
+  <div id="hbrowseBody"></div>
+</section>
+
+<div class="catalog-wrap" id="catalogWrap">
   <button class="mobile-filter-toggle" id="mobileFilterToggle" onclick="this.classList.toggle('open');document.querySelector('.sidebar').classList.toggle('mobile-open');" style="margin:14px 20px 0;width:calc(100% - 40px);">
     <span data-i18n="catalog.filter_toggle">🔍 Фильтры и категории</span> <span class="arrow">▼</span>
   </button>
@@ -619,6 +687,7 @@ try {
 
 const PER_PAGE = 9;
 let currentCat = 'все';
+let currentSub = null;
 let currentPage = 1;
 let filteredProducts = [...ALL_PRODUCTS];
 
@@ -702,9 +771,10 @@ function applyFilters() {
     const catMap = {'бумажная':'бумажная','одноразовая':'одноразовая','бытовая':'бытовая','защита':'защиты','упаковка':'упаковка','хозтовары':'хозтовары','канцелярия':'канцелярия'};
     const catKey = catMap[currentCat] || currentCat;
     const catMatch = currentCat === 'все' || p.cat.toLowerCase().includes(catKey);
+    const subMatch = !currentSub || p.subcategory === currentSub;
     const priceMatch = p.price >= min && p.price <= max;
     const searchMatch = !query || p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query) || p.cat.toLowerCase().includes(query);
-    return catMatch && priceMatch && searchMatch;
+    return catMatch && subMatch && priceMatch && searchMatch;
   });
 
   if (sort === 'asc') filteredProducts.sort((a,b) => a.price - b.price);
@@ -810,32 +880,209 @@ function qtyDec(sku){
   refreshCardFooter(sku);
 }
 
-// Чтение категории из URL-параметра ?cat=
-(function initFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const cat = params.get('cat');
+// ===== Mode dispatcher =====
+// ?cat=<categoryId>            → Mode B: subcategory tiles
+// ?cat=<categoryId>&sub=<subId> → Mode C: products of that subcategory
+// ?cat=all  /  ?q=...           → Mode D: existing flat product grid
+// no params                     → Mode A: top-level category tiles
+const LEGACY_CAT_KEYS = ['все','бумажная','одноразовая','бытовая','защита','упаковка','хозтовары','канцелярия'];
+const LEGACY_TO_ID = (typeof KLEVER_LEGACY_CAT_TO_ID === 'object') ? KLEVER_LEGACY_CAT_TO_ID : {};
+const RU_KEY_TO_ID = {
+  'все':'all','бумажная':'paper','одноразовая':'disposable','бытовая':'chemistry',
+  'защита':'protection','упаковка':'packaging','хозтовары':'household','канцелярия':'stationery'
+};
+
+function hbrowseShow(){
+  document.getElementById('hbrowse').classList.add('active');
+  document.getElementById('catalogWrap').style.display = 'none';
+}
+function hbrowseHide(){
+  document.getElementById('hbrowse').classList.remove('active');
+  document.getElementById('catalogWrap').style.display = '';
+}
+
+function escHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function categoryGradient(id){
+  const g = (typeof KLEVER_CATEGORY_GRADIENTS === 'object' && KLEVER_CATEGORY_GRADIENTS[id]) || ['#c8f5dc','#7ee0a8'];
+  return `linear-gradient(135deg, ${g[0]}, ${g[1]})`;
+}
+
+function renderCategoryTiles(){
+  const cats = (typeof sortedCategories === 'function') ? sortedCategories() : [];
+  const counts = (typeof productCountByCategory === 'function') ? productCountByCategory() : {};
+  document.getElementById('hbrowseTitle').textContent = 'Каталог товаров';
+  document.getElementById('hbrowseTitle').setAttribute('data-i18n','crumb.catalog_full');
+  const total = cats.reduce((s,c) => s + (counts[c.id]||0), 0);
+  document.getElementById('hbrowseCount').textContent = total + ' ' + wordForm(total, ['товар','товара','товаров']);
+  document.getElementById('hbrowseCrumb').innerHTML =
+    '<a href="index.html" data-i18n="crumb.home">Главная</a><span class="sep">→</span><span data-i18n="crumb.catalog">Каталог</span>';
+  const body = document.getElementById('hbrowseBody');
+  body.innerHTML = '<div class="hbrowse-grid">' + cats.map(c => {
+    const n = counts[c.id] || 0;
+    const photo = c.img
+      ? `background-image:url('${escHtml(c.img)}')`
+      : `background-image:${categoryGradient(c.id)}`;
+    const iconCls = c.icon ? 'icon icon-'+escHtml(c.icon) : 'icon icon-box';
+    return `<a href="catalog.html?cat=${escHtml(c.id)}" class="cat-tile ${c.img ? 'tinted' : 'no-photo'}">
+      <div class="cat-tile-bg" style="${photo}"></div>
+      ${c.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
+      <div class="cat-tile-overlay">
+        <div class="cat-tile-name">${escHtml(c.name)}</div>
+        <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
+      </div>
+    </a>`;
+  }).join('') + '</div>';
+}
+
+function renderSubcategoryTiles(catId){
+  const cat = getCategoryById(catId);
+  if (!cat) { renderCategoryTiles(); return; }
+  const subs = (cat.subcategories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const counts = (typeof productCountBySubcategory === 'function') ? productCountBySubcategory(catId) : {};
+  const total = Object.values(counts).reduce((s,n)=>s+n,0);
+  document.getElementById('hbrowseTitle').textContent = cat.name;
+  document.getElementById('hbrowseTitle').removeAttribute('data-i18n');
+  document.getElementById('hbrowseCount').textContent = total + ' ' + wordForm(total, ['товар','товара','товаров']);
+  document.getElementById('hbrowseCrumb').innerHTML =
+    `<a href="index.html" data-i18n="crumb.home">Главная</a>
+     <span class="sep">→</span>
+     <a href="catalog.html" data-i18n="crumb.catalog">Каталог</a>
+     <span class="sep">→</span>
+     <span>${escHtml(cat.name)}</span>`;
+
+  if (!subs.length) {
+    // Category has no subs — fall through to product grid for this category.
+    hbrowseHide();
+    applyCatalogForCategory(catId);
+    return;
+  }
+
+  const body = document.getElementById('hbrowseBody');
+  const sidebarLis = subs.map(s => {
+    const n = counts[s.id] || 0;
+    return `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}">
+      <span>${escHtml(s.name)}</span><span class="sub-list-count">${n}</span></a></li>`;
+  }).join('');
+  const mobileChips = subs.map(s => {
+    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="sub-chip">${escHtml(s.name)}</a>`;
+  }).join('');
+  const tiles = subs.map(s => {
+    const n = counts[s.id] || 0;
+    const photo = s.img
+      ? `background-image:url('${escHtml(s.img)}')`
+      : `background-image:${categoryGradient(catId)}`;
+    const iconCls = cat.icon ? 'icon icon-'+escHtml(cat.icon) : 'icon icon-box';
+    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="cat-tile sub-tile ${s.img ? 'tinted' : 'no-photo'}">
+      <div class="cat-tile-bg" style="${photo}"></div>
+      ${s.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
+      <div class="cat-tile-overlay">
+        <div class="cat-tile-name">${escHtml(s.name)}</div>
+        <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
+      </div>
+    </a>`;
+  }).join('');
+
+  body.innerHTML =
+    `<div class="sub-chips">${mobileChips}</div>
+     <div class="hbrowse-with-sidebar">
+       <aside class="sub-sidebar">
+         <div class="sub-sidebar-title">${escHtml(cat.name)}</div>
+         <ul class="sub-list">${sidebarLis}</ul>
+       </aside>
+       <div class="sub-grid">${tiles}</div>
+     </div>`;
+}
+
+// Helper invoked from initFromUrl when ?cat=<id>&sub=<id>: pre-set state + apply filter.
+function applyCatalogForCategory(catId, subId) {
+  const cat = getCategoryById(catId);
   if (!cat) { renderGrid(); return; }
-
-  // Карта URL→ключи фильтра
-  const validCats = ['все','бумажная','одноразовая','бытовая','защита','упаковка','хозтовары','канцелярия'];
-  if (!validCats.includes(cat)) { renderGrid(); return; }
-
-  // Применяем фильтр программно
-  currentCat = cat;
-  const catNames = {'все':'Все товары','бумажная':'Бумажная продукция','одноразовая':'Одноразовая посуда','бытовая':'Бытовая химия','защита':'Средства защиты','упаковка':'Упаковка','хозтовары':'Хозтовары','канцелярия':'Канцелярия'};
-  document.getElementById('catHeading').textContent = catNames[cat];
-
-  // Активируем нужный пункт сайдбара и чипа
+  // Map new id back to legacy filter key (existing applyFilters relies on currentCat = ru-key)
+  const legacyMap = { all:'все', paper:'бумажная', disposable:'одноразовая', chemistry:'бытовая',
+                      protection:'защита', packaging:'упаковка', household:'хозтовары', stationery:'канцелярия' };
+  currentCat = legacyMap[catId] || 'все';
+  currentSub = subId || null;
+  // Heading
+  const heading = document.getElementById('catHeading');
+  if (subId) {
+    const sub = getSubcategoryById(catId, subId);
+    heading.textContent = sub ? sub.name : cat.name;
+    heading.removeAttribute('data-i18n');
+  } else {
+    heading.textContent = cat.name;
+    heading.removeAttribute('data-i18n');
+  }
+  // Activate sidebar item + chip
   document.querySelectorAll('.cat-list li a').forEach(a => a.classList.remove('active'));
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.cat-list li a').forEach(a => {
-    if (a.getAttribute('onclick')?.includes(`'${cat}'`)) a.classList.add('active');
+    if (a.getAttribute('onclick')?.includes(`'${currentCat}'`)) a.classList.add('active');
   });
   document.querySelectorAll('.chip').forEach(c => {
-    if (c.getAttribute('onclick')?.includes(`'${cat}'`)) c.classList.add('active');
+    if (c.getAttribute('onclick')?.includes(`'${currentCat}'`)) c.classList.add('active');
   });
-
+  // Update breadcrumb of products view
+  const oldCrumb = document.querySelector('.breadcrumb');
+  if (oldCrumb) {
+    const sub = subId ? getSubcategoryById(catId, subId) : null;
+    oldCrumb.innerHTML =
+      `<a href="index.html" data-i18n="crumb.home">Главная</a>
+       <span>→</span>
+       <a href="catalog.html" data-i18n="crumb.catalog">Каталог</a>
+       <span>→</span>
+       <a href="catalog.html?cat=${escHtml(catId)}">${escHtml(cat.name)}</a>` +
+      (sub ? `<span>→</span><span>${escHtml(sub.name)}</span>` : '');
+  }
   applyFilters();
+}
+
+(function initFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get('cat');
+  const sub = params.get('sub');
+  const q = params.get('q');
+
+  // No params → Mode A: category tiles
+  if (!cat && !q) { hbrowseShow(); renderCategoryTiles(); return; }
+  // ?cat=all or ?q=... → Mode D: legacy flat catalog
+  if (cat === 'all' || q) {
+    hbrowseHide();
+    if (q) document.getElementById('searchInput').value = q;
+    renderGrid();
+    return;
+  }
+  // Legacy Russian-name URLs keep working in product-grid mode
+  if (LEGACY_CAT_KEYS.includes(cat)) {
+    hbrowseHide();
+    currentCat = cat;
+    const catNames = {'все':'Все товары','бумажная':'Бумажная продукция','одноразовая':'Одноразовая посуда','бытовая':'Бытовая химия','защита':'Средства защиты','упаковка':'Упаковка','хозтовары':'Хозтовары','канцелярия':'Канцелярия'};
+    document.getElementById('catHeading').textContent = catNames[cat];
+    document.querySelectorAll('.cat-list li a').forEach(a => {
+      if (a.getAttribute('onclick')?.includes(`'${cat}'`)) a.classList.add('active');
+    });
+    document.querySelectorAll('.chip').forEach(c => {
+      if (c.getAttribute('onclick')?.includes(`'${cat}'`)) c.classList.add('active');
+    });
+    applyFilters();
+    return;
+  }
+  // New id-based URLs
+  if (cat && getCategoryById(cat)) {
+    if (sub && getSubcategoryById(cat, sub)) {
+      // Mode C: products of a subcategory
+      hbrowseHide();
+      applyCatalogForCategory(cat, sub);
+      return;
+    }
+    // Mode B: subcategory tiles
+    hbrowseShow();
+    renderSubcategoryTiles(cat);
+    return;
+  }
+  // Fallback to Mode A
+  hbrowseShow();
+  renderCategoryTiles();
 })();
 </script>
 <!-- КОРЗИНА -->
