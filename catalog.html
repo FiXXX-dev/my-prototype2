@@ -908,15 +908,38 @@ function categoryGradient(id){
   return `linear-gradient(135deg, ${g[0]}, ${g[1]})`;
 }
 
+// Localized names via translations.js (falls back to stored Russian)
+function catDisplayName(c) {
+  try {
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const t = (typeof TRANSLATIONS === 'object') ? TRANSLATIONS[lang] : null;
+    return (t && t['cat.' + c.id]) || c.name;
+  } catch(e) { return c.name; }
+}
+function subDisplayName(catId, s) {
+  try {
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const t = (typeof TRANSLATIONS === 'object') ? TRANSLATIONS[lang] : null;
+    return (t && t['sub.' + catId + '.' + s.id]) || s.name;
+  } catch(e) { return s.name; }
+}
+
 function renderCategoryTiles(){
   const cats = (typeof sortedCategories === 'function') ? sortedCategories() : [];
   const counts = (typeof productCountByCategory === 'function') ? productCountByCategory() : {};
-  document.getElementById('hbrowseTitle').textContent = 'Каталог товаров';
-  document.getElementById('hbrowseTitle').setAttribute('data-i18n','crumb.catalog_full');
+  const titleEl = document.getElementById('hbrowseTitle');
+  titleEl.setAttribute('data-i18n','crumb.catalog_full');
+  try {
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const t = (typeof TRANSLATIONS === 'object') ? TRANSLATIONS[lang] : null;
+    titleEl.textContent = (t && t['crumb.catalog_full']) || 'Каталог товаров';
+  } catch(e) { titleEl.textContent = 'Каталог товаров'; }
   const total = cats.reduce((s,c) => s + (counts[c.id]||0), 0);
   document.getElementById('hbrowseCount').textContent = total + ' ' + wordForm(total, ['товар','товара','товаров']);
+  const lang0 = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+  const t0 = (typeof TRANSLATIONS === 'object' && TRANSLATIONS[lang0]) || {};
   document.getElementById('hbrowseCrumb').innerHTML =
-    '<a href="index.html" data-i18n="crumb.home">Главная</a><span class="sep">→</span><span data-i18n="crumb.catalog">Каталог</span>';
+    `<a href="index.html" data-i18n="crumb.home">${t0['crumb.home']||'Главная'}</a><span class="sep">→</span><span data-i18n="crumb.catalog">${t0['crumb.catalog']||'Каталог'}</span>`;
   const body = document.getElementById('hbrowseBody');
   body.innerHTML = '<div class="hbrowse-grid">' + cats.map(c => {
     const n = counts[c.id] || 0;
@@ -928,7 +951,7 @@ function renderCategoryTiles(){
       <div class="cat-tile-bg" style="${photo}"></div>
       ${c.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
       <div class="cat-tile-overlay">
-        <div class="cat-tile-name">${escHtml(c.name)}</div>
+        <div class="cat-tile-name">${escHtml(catDisplayName(c))}</div>
         <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
       </div>
     </a>`;
@@ -941,15 +964,17 @@ function renderSubcategoryTiles(catId){
   const subs = (cat.subcategories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
   const counts = (typeof productCountBySubcategory === 'function') ? productCountBySubcategory(catId) : {};
   const total = Object.values(counts).reduce((s,n)=>s+n,0);
-  document.getElementById('hbrowseTitle').textContent = cat.name;
+  document.getElementById('hbrowseTitle').textContent = catDisplayName(cat);
   document.getElementById('hbrowseTitle').removeAttribute('data-i18n');
   document.getElementById('hbrowseCount').textContent = total + ' ' + wordForm(total, ['товар','товара','товаров']);
+  const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+  const t = (typeof TRANSLATIONS === 'object' && TRANSLATIONS[lang]) || {};
   document.getElementById('hbrowseCrumb').innerHTML =
-    `<a href="index.html" data-i18n="crumb.home">Главная</a>
+    `<a href="index.html" data-i18n="crumb.home">${t['crumb.home']||'Главная'}</a>
      <span class="sep">→</span>
-     <a href="catalog.html" data-i18n="crumb.catalog">Каталог</a>
+     <a href="catalog.html" data-i18n="crumb.catalog">${t['crumb.catalog']||'Каталог'}</a>
      <span class="sep">→</span>
-     <span>${escHtml(cat.name)}</span>`;
+     <span>${escHtml(catDisplayName(cat))}</span>`;
 
   if (!subs.length) {
     // Category has no subs — fall through to product grid for this category.
@@ -962,10 +987,10 @@ function renderSubcategoryTiles(catId){
   const sidebarLis = subs.map(s => {
     const n = counts[s.id] || 0;
     return `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}">
-      <span>${escHtml(s.name)}</span><span class="sub-list-count">${n}</span></a></li>`;
+      <span>${escHtml(subDisplayName(catId, s))}</span><span class="sub-list-count">${n}</span></a></li>`;
   }).join('');
   const mobileChips = subs.map(s => {
-    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="sub-chip">${escHtml(s.name)}</a>`;
+    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="sub-chip">${escHtml(subDisplayName(catId, s))}</a>`;
   }).join('');
   const tiles = subs.map(s => {
     const n = counts[s.id] || 0;
@@ -977,7 +1002,7 @@ function renderSubcategoryTiles(catId){
       <div class="cat-tile-bg" style="${photo}"></div>
       ${s.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
       <div class="cat-tile-overlay">
-        <div class="cat-tile-name">${escHtml(s.name)}</div>
+        <div class="cat-tile-name">${escHtml(subDisplayName(catId, s))}</div>
         <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
       </div>
     </a>`;
@@ -987,7 +1012,7 @@ function renderSubcategoryTiles(catId){
     `<div class="sub-chips">${mobileChips}</div>
      <div class="hbrowse-with-sidebar">
        <aside class="sub-sidebar">
-         <div class="sub-sidebar-title">${escHtml(cat.name)}</div>
+         <div class="sub-sidebar-title">${escHtml(catDisplayName(cat))}</div>
          <ul class="sub-list">${sidebarLis}</ul>
        </aside>
        <div class="sub-grid">${tiles}</div>
@@ -1007,10 +1032,10 @@ function applyCatalogForCategory(catId, subId) {
   const heading = document.getElementById('catHeading');
   if (subId) {
     const sub = getSubcategoryById(catId, subId);
-    heading.textContent = sub ? sub.name : cat.name;
+    heading.textContent = sub ? subDisplayName(catId, sub) : catDisplayName(cat);
     heading.removeAttribute('data-i18n');
   } else {
-    heading.textContent = cat.name;
+    heading.textContent = catDisplayName(cat);
     heading.removeAttribute('data-i18n');
   }
   // Activate sidebar item + chip
@@ -1026,13 +1051,17 @@ function applyCatalogForCategory(catId, subId) {
   const oldCrumb = document.querySelector('.breadcrumb');
   if (oldCrumb) {
     const sub = subId ? getSubcategoryById(catId, subId) : null;
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const t = (typeof TRANSLATIONS === 'object' && TRANSLATIONS[lang]) || {};
+    const home = t['crumb.home'] || 'Главная';
+    const cata = t['crumb.catalog'] || 'Каталог';
     oldCrumb.innerHTML =
-      `<a href="index.html" data-i18n="crumb.home">Главная</a>
+      `<a href="index.html" data-i18n="crumb.home">${home}</a>
        <span>→</span>
-       <a href="catalog.html" data-i18n="crumb.catalog">Каталог</a>
+       <a href="catalog.html" data-i18n="crumb.catalog">${cata}</a>
        <span>→</span>
-       <a href="catalog.html?cat=${escHtml(catId)}">${escHtml(cat.name)}</a>` +
-      (sub ? `<span>→</span><span>${escHtml(sub.name)}</span>` : '');
+       <a href="catalog.html?cat=${escHtml(catId)}">${escHtml(catDisplayName(cat))}</a>` +
+      (sub ? `<span>→</span><span>${escHtml(subDisplayName(catId, sub))}</span>` : '');
   }
   applyFilters();
 }
@@ -1084,6 +1113,24 @@ function applyCatalogForCategory(catId, subId) {
   hbrowseShow();
   renderCategoryTiles();
 })();
+
+// Re-render dynamic catalog content when the language changes.
+// translations.js fires a custom event `kleverLangChange` after applyLanguage.
+window.addEventListener('kleverLangChange', () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get('cat');
+    const sub = params.get('sub');
+    if (!cat) { renderCategoryTiles(); return; }
+    if (cat === 'all') return;
+    const c = (typeof getCategoryById === 'function') ? getCategoryById(cat) : null;
+    if (c && !sub) { renderSubcategoryTiles(cat); return; }
+    if (c && sub) {
+      // Refresh heading + crumb (products themselves untranslated)
+      applyCatalogForCategory(cat, sub);
+    }
+  } catch(e){}
+});
 </script>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
