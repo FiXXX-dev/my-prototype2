@@ -260,6 +260,8 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 }
 </style>
 <script src="categories.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -1163,14 +1165,42 @@ function showTab(name, btn) {
   document.querySelectorAll('.side-link').forEach(l => l.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'orders') renderOrders();
+  if (name === 'orders') {
+    // Pull from Supabase first (if configured) then re-render synchronously.
+    if (typeof refreshOrdersFromSupabase === 'function') {
+      refreshOrdersFromSupabase().then(() => { renderOrders(); updateCounts(); });
+    }
+    renderOrders();
+  }
   if (name === 'contacts') renderContacts();
   if (name === 'promotions') renderPromotions();
   if (name === 'news') renderNews();
   if (name === 'products') renderProducts();
-  if (name === 'dashboard') renderDashboard();
+  if (name === 'dashboard') {
+    if (typeof refreshOrdersFromSupabase === 'function') {
+      refreshOrdersFromSupabase().then(() => { renderDashboard(); updateCounts(); });
+    }
+    renderDashboard();
+  }
   if (name === 'settings') loadSettings();
   if (name === 'categories') renderCategoriesAdmin();
+}
+
+// On admin login, prime orders from Supabase and subscribe to live changes
+function _kleverWireSupabaseOrders() {
+  if (typeof refreshOrdersFromSupabase !== 'function') return;
+  refreshOrdersFromSupabase().then(() => { try { renderOrders(); renderDashboard(); updateCounts(); } catch(e){} });
+  if (typeof supaSubscribeOrders === 'function') {
+    supaSubscribeOrders(() => {
+      refreshOrdersFromSupabase().then(() => {
+        const ordersTabActive = document.getElementById('tab-orders')?.classList.contains('active');
+        const dashActive = document.getElementById('tab-dashboard')?.classList.contains('active');
+        if (ordersTabActive) renderOrders();
+        if (dashActive) renderDashboard();
+        updateCounts();
+      });
+    });
+  }
 }
 
 // ===== ДАННЫЕ =====
@@ -1226,6 +1256,7 @@ function getDefaultPromos() {
 function loadAll() {
   updateCounts();
   renderDashboard();
+  if (typeof _kleverWireSupabaseOrders === 'function') _kleverWireSupabaseOrders();
 }
 
 function updateCounts() {
@@ -1576,28 +1607,50 @@ function orderCardHtml(o) {
   `;
 }
 
-function completeOrder(num) {
-  const orders = getOrders().map(o => o.num === num ? {...o, status: 'done'} : o);
+// ===== Supabase orders bridge =====
+// Fetches from Supabase if configured, mirrors result into localStorage so the
+// existing sync renderers (renderOrders/renderDashboard) keep working.
+// Returns a Promise that resolves after sync (or immediately if unconfigured).
+async function refreshOrdersFromSupabase() {
+  if (typeof supaListOrders !== 'function') return null;
+  try {
+    const data = await supaListOrders();
+    if (data === null) return null; // unconfigured / error
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(data));
+    return data;
+  } catch (e) { console.warn('[admin] supa refresh failed', e); return null; }
+}
+
+// Wrap status update: try Supabase first, then mirror to localStorage.
+async function _updateOrderStatus(num, status) {
+  if (typeof supaUpdateOrder === 'function') {
+    try { await supaUpdateOrder(num, { status }); } catch (e) { console.warn('[admin] supa update failed', e); }
+  }
+  const orders = getOrders().map(o => o.num === num ? {...o, status} : o);
   localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
-  renderOrders();
-  renderDashboard();
-  updateCounts();
+}
+
+function completeOrder(num) {
+  _updateOrderStatus(num, 'done').then(() => {
+    renderOrders(); renderDashboard(); updateCounts();
+  });
 }
 
 function reopenOrder(num) {
-  const orders = getOrders().map(o => o.num === num ? {...o, status: 'new'} : o);
-  localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
-  renderOrders();
-  renderDashboard();
-  updateCounts();
+  _updateOrderStatus(num, 'new').then(() => {
+    renderOrders(); renderDashboard(); updateCounts();
+  });
 }
 
 function deleteOrder(num) {
   if (!confirm('Удалить заказ #' + num + '?')) return;
-  localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => o.num !== num)));
-  renderOrders();
-  renderDashboard();
-  updateCounts();
+  const finish = () => {
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => o.num !== num)));
+    renderOrders(); renderDashboard(); updateCounts();
+  };
+  if (typeof supaDeleteOrder === 'function') {
+    supaDeleteOrder(num).then(finish).catch(e => { console.warn('[admin] supa delete failed', e); finish(); });
+  } else { finish(); }
 }
 
 function clearOrders() {

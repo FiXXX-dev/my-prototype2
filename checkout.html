@@ -176,6 +176,8 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 }
 </style>
 <script src="categories.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -720,9 +722,7 @@ function submitOrder() {
   const cart = getCart();
   const total = getTotal();
 
-  // Сохраняем заказ
-  const orders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
-  orders.push({
+  const orderRecord = {
     num: orderNum,
     date: new Date().toLocaleDateString('ru-RU'),
     status: 'new',
@@ -740,7 +740,20 @@ function submitOrder() {
     payment: paymentMethod,
     invoiceCompany: paymentMethod === 'invoice' ? document.getElementById('invoiceCompany').value.trim() : '',
     invoiceInn: paymentMethod === 'invoice' ? document.getElementById('invoiceInn').value.trim() : '',
-  });
+  };
+
+  // Try Supabase first (drops to localStorage-only if unconfigured / fails).
+  // localStorage copy is kept either way so account.html order history works.
+  if (typeof supaInsertOrder === 'function') {
+    supaInsertOrder(orderRecord).then(res => {
+      if (res && res.ok) console.log('[order] saved to Supabase', orderNum);
+      else if (res && res.reason !== 'unconfigured') console.warn('[order] Supabase save failed, kept in localStorage only', res.error);
+    }).catch(e => console.warn('[order] supa exception', e));
+  }
+
+  // Save locally for offline-friendly history + account.html visibility
+  const orders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
+  orders.push(orderRecord);
   localStorage.setItem('klever_orders', JSON.stringify(orders));
 
   // Очищаем корзину
