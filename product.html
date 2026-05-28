@@ -130,6 +130,8 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 </style>
 
 <script src="categories.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -591,7 +593,12 @@ function renderProduct() {
           <span class="badge badge-instock">✓ В наличии</span>
         </div>
 
-        <h1 class="prod-title">${product.name}</h1>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <h1 class="prod-title" style="flex:1;">${product.name}</h1>
+          <button class="prod-fav" id="prodFavBtn" onclick="toggleProdFav()" aria-label="В избранное" style="background:#fff0f5;border:1.5px solid #ffd0d8;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
+            <svg id="prodFavIcon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FF3B6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+          </button>
+        </div>
         <div class="prod-sku">Артикул: ${product.sku} · ${product.cat}</div>
 
         <div class="prod-price-block">
@@ -724,6 +731,39 @@ function productQtyDec(){
 }
 
 renderProduct();
+// Fav button state
+function _prodFavSet(){
+  try {
+    const id = localStorage.getItem('klever_current_user'); if (!id) return new Set();
+    const u = (JSON.parse(localStorage.getItem('klever_users')||'[]')).find(x => x.id === id);
+    return new Set(u && Array.isArray(u.favorites) ? u.favorites : []);
+  } catch(e) { return new Set(); }
+}
+function _prodFavRender(){
+  if (!product) return;
+  const icon = document.getElementById('prodFavIcon'); if (!icon) return;
+  const on = _prodFavSet().has(product.sku);
+  icon.setAttribute('fill', on ? '#FF3B6B' : 'none');
+  document.getElementById('prodFavBtn').style.background = on ? '#ffe8ee' : '#fff0f5';
+}
+window.toggleProdFav = function(){
+  if (!product) return;
+  const id = localStorage.getItem('klever_current_user');
+  if (!id) { alert('Войдите в аккаунт чтобы добавлять в избранное'); location.href='account.html'; return; }
+  const users = JSON.parse(localStorage.getItem('klever_users')||'[]');
+  const i = users.findIndex(u => u.id === id); if (i<0) return;
+  const favs = new Set(users[i].favorites || []);
+  const wasOn = favs.has(product.sku);
+  if (wasOn) favs.delete(product.sku); else favs.add(product.sku);
+  users[i].favorites = [...favs];
+  localStorage.setItem('klever_users', JSON.stringify(users));
+  _prodFavRender();
+  if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    const fn = wasOn ? window.supaRemoveFavorite : window.supaAddFavorite;
+    if (typeof fn === 'function') fn(product.sku).catch(()=>{});
+  }
+};
+_prodFavRender();
 syncCartQtyBlock();
 </script>
 <style id="news-modal-styles">

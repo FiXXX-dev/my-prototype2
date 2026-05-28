@@ -57,33 +57,66 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // ===== Orders =====
 
+  // Insert order. The "row" object below is built from a flexible payload so
+  // it works against minimal schemas. We try once with the rich payload; on
+  // Postgres "column X does not exist" error (PGRST204 / 42703 / undefined
+  // column message) we automatically retry with the minimal set of columns
+  // that match the user's documented schema:
+  //   customer_name, customer_phone, items, total_price, language
+  // That guarantees the insert lands even if your table is bare-minimal,
+  // and uses the extra columns automatically if they exist.
   window.supaInsertOrder = async function(order){
     const sb = getClient();
     if (!sb) return { ok: false, reason: 'unconfigured' };
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
-    const row = {
-      num: order.num,
+
+    const minimal = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
+      items: order.items || [],
+      total_price: order.total != null ? Number(order.total) : 0,
+      language: language,
+    };
+    // Optional fields — if your table has these columns they'll be filled.
+    const optional = {
+      num: order.num,
+      status: order.status || 'new',
       customer_email: order.email || '',
       company: order.company || '',
-      items: order.items || [],
-      subtotal: order.subtotal != null ? order.subtotal : null,
-      delivery_cost: order.delivery != null ? order.delivery : null,
-      total_price: order.total != null ? order.total : 0,
+      subtotal: order.subtotal != null ? Number(order.subtotal) : null,
+      delivery_cost: order.delivery != null ? Number(order.delivery) : null,
       delivery_method: order.method || 'courier',
       delivery_address: order.address || '',
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
       comment: order.comment || '',
-      status: order.status || 'new',
-      language: language,
     };
+    async function insert(row){
+      return await sb.from('orders').insert([row]).select();
+    }
     try {
-      const { data, error } = await sb.from('orders').insert([row]).select();
-      if (error) { console.error('[supabase] insert error', error); return { ok: false, error }; }
+      // First attempt: rich payload
+      let { data, error } = await insert({ ...minimal, ...optional });
+      if (error) {
+        const msg = (error.message || '') + ' ' + (error.details || '');
+        const isMissingColumn = /column .* does not exist/i.test(msg)
+                              || /Could not find/i.test(msg)
+                              || error.code === '42703'
+                              || error.code === 'PGRST204';
+        if (isMissingColumn) {
+          console.warn('[supabase] schema missing optional columns, retrying with minimal payload:', msg);
+          const retry = await insert(minimal);
+          if (retry.error) {
+            console.error('[supabase] minimal insert also failed', retry.error);
+            return { ok: false, error: retry.error };
+          }
+          return { ok: true, data: retry.data && retry.data[0], retried: true };
+        }
+        console.error('[supabase] insert error', error);
+        return { ok: false, error };
+      }
       return { ok: true, data: data && data[0] };
     } catch (e) {
       console.error('[supabase] insert exception', e);
@@ -165,6 +198,140 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       console.warn('[supabase] realtime subscribe failed', e);
       return null;
     }
+  };
+
+  // ===== Auth =====
+  // Required SQL for profile data (optional, see customer_addresses below):
+  //   create table public.customer_addresses (
+  //     id uuid primary key default gen_random_uuid(),
+  //     user_id uuid references auth.users(id) on delete cascade,
+  //     name text, address text, is_default boolean default false,
+  //     created_at timestamptz default now()
+  //   );
+  //   alter table public.customer_addresses enable row level security;
+  //   create policy "own_addresses" on public.customer_addresses for all
+  //     using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  //
+  //   create table public.customer_favorites (
+  //     user_id uuid references auth.users(id) on delete cascade,
+  //     product_id text,
+  //     created_at timestamptz default now(),
+  //     primary key (user_id, product_id)
+  //   );
+  //   alter table public.customer_favorites enable row level security;
+  //   create policy "own_favs" on public.customer_favorites for all
+  //     using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+  window.supaSignUp = async function(email, password, meta){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { data, error } = await sb.auth.signUp({ email, password, options: { data: meta || {} } });
+      if (error) return { ok:false, error };
+      return { ok:true, user: data.user, session: data.session };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaSignIn = async function(email, password){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return { ok:false, error };
+      return { ok:true, user: data.user, session: data.session };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaSignOut = async function(){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try { const { error } = await sb.auth.signOut(); return error ? { ok:false, error } : { ok:true }; }
+    catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaGetCurrentUser = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.auth.getUser();
+      if (error) return null;
+      return data && data.user ? data.user : null;
+    } catch(e) { return null; }
+  };
+
+  // ===== customer_addresses =====
+  window.supaListAddresses = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return [];
+      const { data, error } = await sb.from('customer_addresses').select('*').eq('user_id', u.id).order('is_default', { ascending: false });
+      if (error) { console.error('[supabase] list addresses', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  window.supaInsertAddress = async function(row){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
+      if (row.is_default) {
+        // Clear previous defaults
+        await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
+      }
+      const { data, error } = await sb.from('customer_addresses').insert([{ ...row, user_id: u.id }]).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteAddress = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('customer_addresses').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaSetDefaultAddress = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
+      await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
+      const { error } = await sb.from('customer_addresses').update({ is_default: true }).eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== customer_favorites =====
+  window.supaListFavorites = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return [];
+      const { data, error } = await sb.from('customer_favorites').select('product_id').eq('user_id', u.id);
+      if (error) { console.error('[supabase] list favorites', error); return null; }
+      return (data || []).map(r => r.product_id);
+    } catch(e) { return null; }
+  };
+
+  window.supaAddFavorite = async function(productSku){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
+      const { error } = await sb.from('customer_favorites').upsert({ user_id: u.id, product_id: productSku });
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaRemoveFavorite = async function(productSku){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
+      const { error } = await sb.from('customer_favorites').delete().match({ user_id: u.id, product_id: productSku });
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // Subscribe to auth state changes (login/logout) — pages can re-render on transitions.
+  window.supaOnAuthChange = function(cb){
+    const sb = getClient(); if (!sb) return null;
+    try { return sb.auth.onAuthStateChange((event, session) => cb && cb(event, session)); }
+    catch(e) { return null; }
   };
 
   window.kleverSupabase = { isConfigured, getClient };

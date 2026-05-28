@@ -305,6 +305,12 @@ setTimeout(function(){
       <div class="address-form visible" id="addressForm">
         <hr class="section-divider">
         <div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text);">📍 Адрес доставки</div>
+        <div class="form-group" id="savedAddrGroup" style="display:none;">
+          <label><span data-i18n="checkout.saved_addr">Сохранённые адреса</span></label>
+          <select id="savedAddrSelect" onchange="useSavedAddress(this.value)">
+            <option value="" data-i18n="checkout.pick_addr">— Выберите сохранённый адрес —</option>
+          </select>
+        </div>
         <div class="form-group">
           <label><span data-i18n="checkout.addr_label">Адрес</span> <span class="req">*</span></label>
           <input type="text" id="address" data-i18n-placeholder="ph.address" placeholder="Улица, дом, квартира/офис">
@@ -746,9 +752,13 @@ function submitOrder() {
   // localStorage copy is kept either way so account.html order history works.
   if (typeof supaInsertOrder === 'function') {
     supaInsertOrder(orderRecord).then(res => {
-      if (res && res.ok) console.log('[order] saved to Supabase', orderNum);
-      else if (res && res.reason !== 'unconfigured') console.warn('[order] Supabase save failed, kept in localStorage only', res.error);
-    }).catch(e => console.warn('[order] supa exception', e));
+      if (res && res.ok) {
+        console.log('[order] ✓ saved to Supabase', orderNum, res.retried ? '(retried with minimal payload)' : '');
+      } else if (res && res.reason !== 'unconfigured') {
+        const m = (res.error && (res.error.message || res.error.details)) || JSON.stringify(res.error);
+        console.error('[order] ✗ Supabase save failed:', m, 'Order kept in localStorage only.');
+      }
+    }).catch(e => console.error('[order] supa exception', e));
   }
 
   // Save locally for offline-friendly history + account.html visibility
@@ -817,6 +827,64 @@ document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
   r.addEventListener('change', e => selectPayment(e.target.value));
 });
 prefillInvoiceFromUser();
+
+// Saved-address dropdown for signed-in users
+function _populateSavedAddresses(){
+  const id = (function(){ try { return localStorage.getItem('klever_current_user'); } catch(e){ return null; } })();
+  if (!id) return;
+  let user = null;
+  try { user = (JSON.parse(localStorage.getItem('klever_users')||'[]')).find(u => u.id === id); } catch(e){}
+  const addrs = user && Array.isArray(user.addresses) ? user.addresses : [];
+  if (!addrs.length) return;
+  const sel = document.getElementById('savedAddrSelect');
+  const grp = document.getElementById('savedAddrGroup');
+  if (!sel || !grp) return;
+  // Build options
+  const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+  const t = (typeof TRANSLATIONS === 'object' && TRANSLATIONS[lang]) || {};
+  sel.innerHTML = '<option value="">'+(t['checkout.pick_addr'] || '— Выберите сохранённый адрес —')+'</option>';
+  addrs.forEach((a, i) => {
+    const o = document.createElement('option');
+    o.value = String(i);
+    const label = a.label || a.name || ('Адрес ' + (i+1));
+    o.textContent = label + ' — ' + (a.address || '');
+    if (a.isDefault || a.default) o.selected = true;
+    sel.appendChild(o);
+  });
+  grp.style.display = '';
+  // Auto-apply default address
+  const defIdx = addrs.findIndex(a => a.isDefault || a.default);
+  if (defIdx >= 0) useSavedAddress(String(defIdx));
+}
+window.useSavedAddress = function(idx){
+  if (idx === '' || idx == null) return;
+  try {
+    const id = localStorage.getItem('klever_current_user'); if (!id) return;
+    const u = (JSON.parse(localStorage.getItem('klever_users')||'[]')).find(x => x.id === id);
+    const a = u && u.addresses && u.addresses[Number(idx)];
+    if (a && a.address) document.getElementById('address').value = a.address;
+  } catch(e){}
+};
+// Try Supabase first, then fall back to localStorage list
+if (typeof supaListAddresses === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+  supaListAddresses().then(remote => {
+    if (Array.isArray(remote) && remote.length) {
+      // Cache into the local user for select to read
+      try {
+        const id = localStorage.getItem('klever_current_user');
+        const users = JSON.parse(localStorage.getItem('klever_users')||'[]');
+        const i = users.findIndex(u => u.id === id);
+        if (i >= 0) {
+          users[i].addresses = remote.map(r => ({ id: r.id, label: r.name, name: r.name, address: r.address, isDefault: !!r.is_default, default: !!r.is_default }));
+          localStorage.setItem('klever_users', JSON.stringify(users));
+        }
+      } catch(e){}
+    }
+    _populateSavedAddresses();
+  });
+} else {
+  _populateSavedAddresses();
+}
 </script>
 <style id="news-modal-styles">
 .klever-news-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;}
