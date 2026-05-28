@@ -59,6 +59,10 @@
   .crumb-bar a{color:var(--green-dark);text-decoration:none;}
   .crumb-bar a:hover{text-decoration:underline;}
   .crumb-bar .sep{color:#c0d0c5;}
+  .prod-img{position:relative;}
+  .fav-btn{position:absolute;top:8px;left:8px;width:36px;height:36px;border:none;background:rgba(255,255,255,0.95);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform .15s,background .2s;padding:0;z-index:2;}
+  .fav-btn:hover{transform:scale(1.1);background:white;}
+  .fav-btn.active{background:#fff0f5;}
   /* Mobile-only sub-chip strip; hidden on desktop (sidebar is shown instead) */
   .sub-chips{display:none;}
   .sub-chip{flex-shrink:0;padding:8px 13px;border-radius:30px;background:#f2f7f4;color:var(--text);font-size:13px;font-weight:600;border:1.5px solid #d0e8d8;text-decoration:none;white-space:nowrap;}
@@ -233,6 +237,8 @@
 </style>
 
 <script src="categories.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -697,7 +703,7 @@ let filteredProducts = [...ALL_PRODUCTS];
 
 function img(url) {
   return url
-    ? `<img src="${url}" alt="" onerror="this.parentNode.innerHTML='<span style=font-size:48px>📦</span>'">`
+    ? `<img src="${url}" alt="" onerror="this.outerHTML='<span style=&quot;font-size:48px&quot;>📦</span>'">`
     : '<span style="font-size:48px">📦</span>';
 }
 
@@ -723,9 +729,10 @@ function renderGrid() {
     return;
   }
 
+  const favs = getMyFavorites();
   grid.innerHTML = page.map(p => `
     <a href="product.html?sku=${p.sku}" class="prod-card" data-sku="${p.sku}">
-      <div class="prod-img">${img(p.img)}${badgeHtml(p.badge)}</div>
+      <div class="prod-img">${img(p.img)}${badgeHtml(p.badge)}${favBtnHtml(p.sku, favs.has(p.sku))}</div>
       <div class="prod-info">
         <div class="prod-cat">${p.cat}</div>
         <div class="prod-name">${p.name}</div>
@@ -882,6 +889,46 @@ function qtyDec(sku){
   const newCart = existing.qty <= 0 ? cart.filter(i => i.sku !== sku) : cart;
   saveCart(newCart);
   refreshCardFooter(sku);
+}
+
+// ===== Favorites (works with or without Supabase) =====
+function getMyFavorites(){
+  try {
+    const id = localStorage.getItem('klever_current_user');
+    if (!id) return new Set();
+    const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+    const me = users.find(u => u.id === id);
+    return new Set(me && Array.isArray(me.favorites) ? me.favorites : []);
+  } catch(e) { return new Set(); }
+}
+function favBtnHtml(sku, on){
+  return `<button class="fav-btn ${on?'active':''}" data-sku="${sku}" onclick="event.preventDefault();event.stopPropagation();toggleFav('${sku}', this)" aria-label="В избранное">`
+    + `<svg viewBox="0 0 24 24" width="20" height="20" fill="${on?'#FF3B6B':'none'}" stroke="${on?'#FF3B6B':'#0f1a14'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>`
+    + `</button>`;
+}
+function toggleFav(sku, btn){
+  const id = localStorage.getItem('klever_current_user');
+  if (!id) { alert('Войдите в аккаунт чтобы добавлять в избранное'); location.href = 'account.html'; return; }
+  const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+  const i = users.findIndex(u => u.id === id);
+  if (i < 0) return;
+  const favs = new Set(users[i].favorites || []);
+  const wasOn = favs.has(sku);
+  if (wasOn) favs.delete(sku); else favs.add(sku);
+  users[i].favorites = [...favs];
+  localStorage.setItem('klever_users', JSON.stringify(users));
+  // Reflect on this and any other matching button on the page
+  document.querySelectorAll('.fav-btn[data-sku="'+sku+'"]').forEach(b => {
+    const on = !wasOn;
+    b.classList.toggle('active', on);
+    const svg = b.querySelector('svg');
+    if (svg) { svg.setAttribute('fill', on?'#FF3B6B':'none'); svg.setAttribute('stroke', on?'#FF3B6B':'#0f1a14'); }
+  });
+  // Persist to Supabase if configured
+  if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    const fn = wasOn ? window.supaRemoveFavorite : window.supaAddFavorite;
+    if (typeof fn === 'function') fn(sku).catch(()=>{});
+  }
 }
 
 // ===== Mode dispatcher =====

@@ -137,6 +137,8 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 .addr-loading.visible{display:block;}
 </style>
 <script src="categories.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -514,15 +516,46 @@ function doLogin(){
   const pass = document.getElementById('loginPass').value;
   if (!id || !pass){ showMsg('loginMsg', 'Заполните все поля', 'error'); return; }
 
+  // Supabase auth path (email only — phone-auth needs OTP setup)
+  if (currentLoginMethod === 'email' && typeof supaSignIn === 'function'
+      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    showMsg('loginMsg', 'Вход…', 'info');
+    supaSignIn(id, pass).then(res => {
+      if (res.ok) {
+        // Mirror to local users so existing flows (account dashboard) still work
+        const users = getUsers();
+        let local = users.find(u => u.email && u.email.toLowerCase() === id.toLowerCase());
+        if (!local) {
+          local = { id: res.user.id, email: id, name: res.user.user_metadata?.name || id, password: '*', addresses: [], favorites: [], type: res.user.user_metadata?.type || 'individual' };
+          users.push(local); setUsers(users);
+        } else if (local.id !== res.user.id) {
+          local.id = res.user.id; setUsers(users);
+        }
+        setCurrentUserId(res.user.id);
+        showAccount();
+        return;
+      }
+      // Fall back to local check
+      const msg = (res.error && res.error.message) || '';
+      if (/Invalid login/i.test(msg) || /credentials/i.test(msg)) {
+        showMsg('loginMsg', 'Неверный email или пароль', 'error'); return;
+      }
+      console.warn('[auth] Supabase signin failed, trying local', res.error);
+      _doLoginLocal(id, pass);
+    });
+    return;
+  }
+  _doLoginLocal(id, pass);
+}
+
+function _doLoginLocal(id, pass){
   const users = getUsers();
   const user = users.find(u => {
     if (currentLoginMethod === 'email') return u.email && u.email.toLowerCase() === id.toLowerCase();
     return u.phone && normalizePhone(u.phone) === normalizePhone(id);
   });
-
   if (!user){ showMsg('loginMsg', 'Пользователь не найден', 'error'); return; }
   if (user.password !== pass){ showMsg('loginMsg', 'Неверный пароль', 'error'); return; }
-
   setCurrentUserId(user.id);
   showAccount();
 }
@@ -567,31 +600,88 @@ function doRegister(){
   }
 
   const fullName = [lastName, firstName, middleName].filter(Boolean).join(' ');
-  const newUser = {
-    id: 'u' + Date.now(),
-    type: currentUserType,
-    lastName, firstName, middleName,
-    name: fullName, // для совместимости
-    company: company || undefined,
-    inn: inn || undefined,
-    email: email || undefined,
-    phone: phone || undefined,
-    password: pass,
-    addresses: [],
-    favorites: [],
-    created: new Date().toISOString(),
-  };
-  users.push(newUser);
-  setUsers(users);
+  const meta = { type: currentUserType, lastName, firstName, middleName, name: fullName,
+                 company: company || undefined, inn: inn || undefined, phone: phone || undefined };
+
+  // Supabase auth path (email only)
+  if (email && typeof supaSignUp === 'function'
+      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    showMsg('regMsg', 'Создаём аккаунт…', 'info');
+    supaSignUp(email, pass, meta).then(res => {
+      if (res.ok) {
+        const newUser = { id: res.user.id, ...meta, email, phone: phone||undefined, password: '*', addresses: [], favorites: [], created: new Date().toISOString() };
+        const us = getUsers(); us.push(newUser); setUsers(us);
+        // If session is established immediately (no email confirmation), go in.
+        if (res.session) { setCurrentUserId(newUser.id); showAccount(); }
+        else { showMsg('regMsg', 'Письмо подтверждения отправлено на ' + email, 'info'); }
+        return;
+      }
+      const msg = (res.error && res.error.message) || '';
+      if (/already registered/i.test(msg) || /already exists/i.test(msg)) {
+        showMsg('regMsg', 'Этот email уже зарегистрирован', 'error'); return;
+      }
+      console.warn('[auth] Supabase signup failed, falling back', res.error);
+      _doRegisterLocal(meta, email, phone, pass);
+    });
+    return;
+  }
+  _doRegisterLocal(meta, email, phone, pass);
+}
+
+function _doRegisterLocal(meta, email, phone, pass){
+  const newUser = { id: 'u' + Date.now(), ...meta, email: email||undefined, phone: phone||undefined,
+                    password: pass, addresses: [], favorites: [], created: new Date().toISOString() };
+  const users = getUsers(); users.push(newUser); setUsers(users);
   setCurrentUserId(newUser.id);
   showAccount();
 }
 
 function doLogout(){
   if (!confirm('Выйти из аккаунта?')) return;
-  clearCurrentUser();
-  location.reload();
+  if (typeof supaSignOut === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    supaSignOut().finally(() => { clearCurrentUser(); location.reload(); });
+  } else {
+    clearCurrentUser();
+    location.reload();
+  }
 }
+
+// On boot: if a Supabase session exists, sync it into local current-user state
+// so the rest of the page (which is sync localStorage-based) sees us as signed-in.
+(function bootSupabaseSession(){
+  if (typeof supaGetCurrentUser !== 'function') return;
+  if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
+  supaGetCurrentUser().then(u => {
+    if (!u) return;
+    const users = getUsers();
+    let local = users.find(x => x.id === u.id);
+    if (!local) {
+      const m = u.user_metadata || {};
+      local = { id: u.id, email: u.email, name: m.name || u.email, type: m.type || 'individual',
+                lastName: m.lastName||'', firstName: m.firstName||'', middleName: m.middleName||'',
+                phone: m.phone||'', addresses: [], favorites: [], password: '*' };
+      users.push(local); setUsers(users);
+    }
+    setCurrentUserId(u.id);
+    // Pull addresses + favorites
+    if (typeof supaListAddresses === 'function') {
+      supaListAddresses().then(addrs => {
+        if (Array.isArray(addrs)) {
+          local.addresses = addrs.map(a => ({ id: a.id, name: a.name, address: a.address, default: !!a.is_default }));
+          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i] = local; setUsers(us); }
+        }
+      });
+    }
+    if (typeof supaListFavorites === 'function') {
+      supaListFavorites().then(favs => {
+        if (Array.isArray(favs)) {
+          local.favorites = favs.slice();
+          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i] = local; setUsers(us); }
+        }
+      });
+    }
+  });
+})();
 
 function showAccount(){
   document.getElementById('authWrap').style.display = 'none';
@@ -792,6 +882,9 @@ function removeFav(sku){
   updateCurrentUser({favorites: favs});
   renderMyFavorites();
   updateBadges();
+  if (typeof supaRemoveFavorite === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    supaRemoveFavorite(sku).catch(()=>{});
+  }
 }
 
 function addFavToCart(sku){
@@ -867,25 +960,48 @@ function saveAddress(){
 
   const u = getCurrentUser();
   let addrs = u.addresses || [];
-  if (isDef){ addrs = addrs.map(a => ({...a, isDefault: false})); }
-  const newAddr = {label, address: text, isDefault: isDef};
-  if (editingAddrId !== null){ addrs[editingAddrId] = newAddr; }
-  else { addrs.push(newAddr); if (addrs.length === 1) addrs[0].isDefault = true; }
+  if (isDef){ addrs = addrs.map(a => ({...a, isDefault: false, default: false})); }
+  const newAddr = {label, name: label, address: text, isDefault: isDef, default: isDef};
+  if (editingAddrId !== null){
+    // Preserve cloud id if present
+    if (addrs[editingAddrId] && addrs[editingAddrId].id) newAddr.id = addrs[editingAddrId].id;
+    addrs[editingAddrId] = newAddr;
+  } else {
+    addrs.push(newAddr);
+    if (addrs.length === 1) { addrs[0].isDefault = true; addrs[0].default = true; newAddr.isDefault = true; newAddr.default = true; }
+  }
   updateCurrentUser({addresses: addrs});
   closeAddrModal();
   renderMyAddresses();
   updateBadges();
+  if (editingAddrId === null && typeof supaInsertAddress === 'function'
+      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    supaInsertAddress({ name: label, address: text, is_default: !!newAddr.isDefault }).then(res => {
+      if (res && res.ok && res.data && res.data.id) {
+        // Stash the cloud id locally so future delete/setDefault can target it
+        const cu = getCurrentUser();
+        const list = cu.addresses || [];
+        const last = list[list.length-1];
+        if (last && !last.id) { last.id = res.data.id; updateCurrentUser({addresses: list}); }
+      }
+    }).catch(()=>{});
+  }
 }
 
 function deleteAddress(idx){
   if (!confirm('Удалить адрес?')) return;
   const u = getCurrentUser();
   const addrs = u.addresses || [];
+  const removed = addrs[idx];
   addrs.splice(idx, 1);
-  if (addrs.length > 0 && !addrs.find(a => a.isDefault)){ addrs[0].isDefault = true; }
+  if (addrs.length > 0 && !addrs.find(a => a.isDefault || a.default)){ addrs[0].isDefault = true; addrs[0].default = true; }
   updateCurrentUser({addresses: addrs});
   renderMyAddresses();
   updateBadges();
+  if (removed && removed.id && typeof supaDeleteAddress === 'function'
+      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    supaDeleteAddress(removed.id).catch(()=>{});
+  }
 }
 
 // ====== ПОДСКАЗКИ АДРЕСОВ через OpenStreetMap Nominatim (бесплатно, без ключа) ======
