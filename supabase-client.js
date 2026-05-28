@@ -30,8 +30,8 @@
 //   -- (RLS policies — adjust to your auth model; for demo: full access)
 //   create policy "open" on public.orders for all using (true) with check (true);
 
-const SUPABASE_URL = 'ВСТАВЬ_СЮДА_PROJECT_URL';
-const SUPABASE_ANON_KEY = 'ВСТАВЬ_СЮДА_СКОПИРОВАННЫЙ_KEY';
+const SUPABASE_URL = 'https://fquhoxxcucgesxrexsjn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxdWhveHhjdWNnZXN4cmV4c2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NzM5MDYsImV4cCI6MjA5NTQ0OTkwNn0.z09KuaZ1ybuURb46iWl9Ef-HT2gbecw8Wjw3oFJl9wI';
 
 (function(){
   function isConfigured(){
