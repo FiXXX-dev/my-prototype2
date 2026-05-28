@@ -57,33 +57,66 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // ===== Orders =====
 
+  // Insert order. The "row" object below is built from a flexible payload so
+  // it works against minimal schemas. We try once with the rich payload; on
+  // Postgres "column X does not exist" error (PGRST204 / 42703 / undefined
+  // column message) we automatically retry with the minimal set of columns
+  // that match the user's documented schema:
+  //   customer_name, customer_phone, items, total_price, language
+  // That guarantees the insert lands even if your table is bare-minimal,
+  // and uses the extra columns automatically if they exist.
   window.supaInsertOrder = async function(order){
     const sb = getClient();
     if (!sb) return { ok: false, reason: 'unconfigured' };
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
-    const row = {
-      num: order.num,
+
+    const minimal = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
+      items: order.items || [],
+      total_price: order.total != null ? Number(order.total) : 0,
+      language: language,
+    };
+    // Optional fields — if your table has these columns they'll be filled.
+    const optional = {
+      num: order.num,
+      status: order.status || 'new',
       customer_email: order.email || '',
       company: order.company || '',
-      items: order.items || [],
-      subtotal: order.subtotal != null ? order.subtotal : null,
-      delivery_cost: order.delivery != null ? order.delivery : null,
-      total_price: order.total != null ? order.total : 0,
+      subtotal: order.subtotal != null ? Number(order.subtotal) : null,
+      delivery_cost: order.delivery != null ? Number(order.delivery) : null,
       delivery_method: order.method || 'courier',
       delivery_address: order.address || '',
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
       comment: order.comment || '',
-      status: order.status || 'new',
-      language: language,
     };
+    async function insert(row){
+      return await sb.from('orders').insert([row]).select();
+    }
     try {
-      const { data, error } = await sb.from('orders').insert([row]).select();
-      if (error) { console.error('[supabase] insert error', error); return { ok: false, error }; }
+      // First attempt: rich payload
+      let { data, error } = await insert({ ...minimal, ...optional });
+      if (error) {
+        const msg = (error.message || '') + ' ' + (error.details || '');
+        const isMissingColumn = /column .* does not exist/i.test(msg)
+                              || /Could not find/i.test(msg)
+                              || error.code === '42703'
+                              || error.code === 'PGRST204';
+        if (isMissingColumn) {
+          console.warn('[supabase] schema missing optional columns, retrying with minimal payload:', msg);
+          const retry = await insert(minimal);
+          if (retry.error) {
+            console.error('[supabase] minimal insert also failed', retry.error);
+            return { ok: false, error: retry.error };
+          }
+          return { ok: true, data: retry.data && retry.data[0], retried: true };
+        }
+        console.error('[supabase] insert error', error);
+        return { ok: false, error };
+      }
       return { ok: true, data: data && data[0] };
     } catch (e) {
       console.error('[supabase] insert exception', e);

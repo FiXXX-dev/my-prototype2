@@ -752,9 +752,13 @@ function submitOrder() {
   // localStorage copy is kept either way so account.html order history works.
   if (typeof supaInsertOrder === 'function') {
     supaInsertOrder(orderRecord).then(res => {
-      if (res && res.ok) console.log('[order] saved to Supabase', orderNum);
-      else if (res && res.reason !== 'unconfigured') console.warn('[order] Supabase save failed, kept in localStorage only', res.error);
-    }).catch(e => console.warn('[order] supa exception', e));
+      if (res && res.ok) {
+        console.log('[order] ✓ saved to Supabase', orderNum, res.retried ? '(retried with minimal payload)' : '');
+      } else if (res && res.reason !== 'unconfigured') {
+        const m = (res.error && (res.error.message || res.error.details)) || JSON.stringify(res.error);
+        console.error('[order] ✗ Supabase save failed:', m, 'Order kept in localStorage only.');
+      }
+    }).catch(e => console.error('[order] supa exception', e));
   }
 
   // Save locally for offline-friendly history + account.html visibility
