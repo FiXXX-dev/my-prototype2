@@ -600,7 +600,7 @@ function renderProduct() {
           <div class="price-unit">за 1 штуку · от 1 шт</div>
         </div>
 
-        <div class="counter-wrap">
+        <div class="counter-wrap" id="counterWrap">
           <div class="counter-label" data-i18n="product.qty_label">Количество:</div>
           <div class="counter">
             <button class="counter-btn" onclick="changeQtyLocal(-1)">−</button>
@@ -691,12 +691,18 @@ function syncCartQtyBlock(){
   const qty = getProductQty();
   const buyBtns = document.getElementById('buyBtns');
   const qtyBlock = document.getElementById('cartQtyBlock');
+  const counterWrap = document.getElementById('counterWrap');
   if (!buyBtns || !qtyBlock) return;
   if (qty > 0) {
+    // Item already in cart: hide the pre-purchase qty selector + buy buttons,
+    // show the cart-state block instead.
+    if (counterWrap) counterWrap.style.display = 'none';
     buyBtns.style.display = 'none';
     qtyBlock.style.display = 'block';
     document.getElementById('cartQtyVal').textContent = qty;
   } else {
+    // Not in cart: show the qty selector + buy buttons, hide cart block.
+    if (counterWrap) counterWrap.style.display = '';
     buyBtns.style.display = '';
     qtyBlock.style.display = 'none';
   }
