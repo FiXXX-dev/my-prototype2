@@ -137,6 +137,44 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 .addr-input-wrap{position:relative;}
 .addr-loading{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:14px;color:#8aaa94;display:none;}
 .addr-loading.visible{display:block;}
+/* Cart panel */
+.cart-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:background .2s,transform .15s;flex-shrink:0;padding:0;}
+.cart-btn:hover{background:rgba(255,255,255,0.15);transform:scale(1.05);}
+.cart-badge{position:absolute;top:-4px;right:-4px;background:#FF6B35;color:white;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid #0f1a14;font-family:'Unbounded',sans-serif;}
+.header-actions{display:flex;gap:12px;align-items:center;}
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;backdrop-filter:blur(2px);}
+.cart-overlay.open{opacity:1;visibility:visible;}
+.cart-panel{position:fixed;right:0;top:0;bottom:0;width:440px;max-width:100%;background:white;z-index:201;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,0.15);}
+.cart-panel.open{transform:translateX(0);}
+.cart-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px;border-bottom:1px solid #e0ece4;background:#0f1a14;color:white;}
+.cart-header h3{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;display:flex;align-items:center;gap:10px;}
+.cart-close{width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.cart-close:hover{background:rgba(255,255,255,0.15);}
+.cart-items{flex:1;overflow-y:auto;padding:20px 28px;}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px 20px;}
+.cart-item{display:grid;grid-template-columns:64px 1fr auto;gap:14px;padding:16px 0;border-bottom:1px solid #e8f4ec;align-items:flex-start;}
+.cart-item:last-child{border-bottom:none;}
+.cart-item-img{width:64px;height:64px;background:#f2f7f4;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.cart-item-img img{width:100%;height:100%;object-fit:contain;padding:6px;}
+.cart-item-name{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:4px;color:#1a2e22;}
+.cart-item-sku{font-size:12px;color:#8aaa94;margin-bottom:12px;}
+.cart-item-controls{display:flex;align-items:center;gap:8px;}
+.qty-btn{width:28px;height:28px;background:#f2f7f4;border:1px solid #d0e8d8;border-radius:8px;font-size:16px;font-weight:700;color:#1aab58;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{background:#e0ece4;}
+.qty-val{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;min-width:24px;text-align:center;}
+.remove-btn{margin-left:8px;background:none;border:none;color:#FF3B6B;font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.remove-btn:hover{background:#ffe8ee;}
+.cart-item-price{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:#1aab58;white-space:nowrap;}
+.cart-footer{padding:20px 28px;border-top:1px solid #e0ece4;background:#f2f7f4;}
+.cart-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:16px;}
+.cart-total-price{font-family:'Unbounded',sans-serif;font-size:24px;font-weight:900;color:#1aab58;}
+.btn-checkout{width:100%;padding:16px;background:#2ECC71;border:none;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:#0f1a14;cursor:pointer;transition:all .2s;}
+.btn-checkout:hover{background:#C8F135;transform:translateY(-2px);}
+.cart-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f1a14;color:white;padding:14px 24px;border-radius:30px;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:300;opacity:0;transition:opacity .3s,transform .3s;display:flex;align-items:center;gap:10px;max-width:90%;}
+.cart-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* Mobile-only bottom logout (hidden by default, shown at ≤600px) */
+.acc-logout-bottom{display:none;width:100%;padding:14px;border:1.5px solid #ffd0d8;background:none;border-radius:10px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;font-family:'Onest',sans-serif;margin-top:4px;}
+.acc-logout-bottom:hover{background:#ffe8ee;}
 </style>
 <script src="categories.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -208,7 +246,13 @@ setTimeout(function(){
     <a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
     <a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+  <div class="header-actions">
+    <a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+    <button class="cart-btn" onclick="openCart()">
+      <span class="icon icon-cart"></span>
+      <span class="cart-badge" id="cartBadge" style="display:none;"></span>
+    </button>
+  </div>
 </header>
 
 <div class="breadcrumb">
@@ -403,6 +447,7 @@ setTimeout(function(){
       </div>
     </div>
   </main>
+  <button class="acc-logout acc-logout-bottom" onclick="doLogout()">Выйти из аккаунта</button>
 </div>
 
 <div class="modal-bg" id="addrModal">
@@ -436,6 +481,23 @@ setTimeout(function(){
     </div>
   </div>
 </div>
+
+<!-- КОРЗИНА -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<aside class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <h3 data-i18n="cart.title">🛒 Корзина</h3>
+    <button class="cart-close" onclick="closeCart()" aria-label="Close"><span class="icon icon-close"></span></button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      <span data-i18n="cart.total">Итого:</span>
+      <span class="cart-total-price" id="cartTotal">0 ₽</span>
+    </div>
+    <button class="btn-checkout" onclick="checkout()" data-i18n="cart.checkout">Оформить заказ →</button>
+  </div>
+</aside>
 
 <footer>
   <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></div>
@@ -1115,6 +1177,24 @@ document.addEventListener('click', function(e){
 // Авто-вход
 if (getCurrentUser()){ showAccount(); }
 </script>
+<script id="cart-inline-script">
+const CART_KEY='klever_cart';
+function getCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}catch(e){return[];}}
+function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartBadge();if(typeof window.__kleverUpdateMmCart==='function')window.__kleverUpdateMmCart();if(typeof window.__kleverSyncTabBadge==='function')window.__kleverSyncTabBadge();}
+function addToCart(p){const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:1});saveCart(c);showAddedToast(p.name);}
+function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();}
+function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();}
+function getCartTotal(){return getCart().reduce((s,i)=>s+i.price*i.qty,0);}
+function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
+function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
+function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartPanel').classList.add('open');document.body.style.overflow='hidden';renderCart();}
+function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
+function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
+function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';if(total)total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');if(total)total.textContent=getCartTotal().toLocaleString('ru-RU')+' ₽';}
+function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+document.addEventListener('DOMContentLoaded', updateCartBadge);
+</script>
 <style id="news-modal-styles">
 .klever-news-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;}
 .klever-news-overlay.open{opacity:1;visibility:visible;}
@@ -1274,6 +1354,19 @@ if (getCurrentUser()){ showAccount(); }
 @media(max-width:480px){
   .fav-grid{grid-template-columns:1fr !important;}
   .order-total{align-self:flex-start;}
+}
+@media(max-width:600px){
+  /* Auth form: compact padding */
+  .auth-wrap{margin:20px auto;padding:0 14px;}
+  .auth-box{padding:28px 20px;}
+  .auth-title{font-size:22px;}
+  .auth-sub{font-size:13px;margin-bottom:24px;}
+  /* Order cards: more compact */
+  .order{padding:12px 14px;}
+  .order-num{font-size:14px;}
+  /* Logout: hide in sidebar, show at bottom of page */
+  .account-side .acc-logout{display:none !important;}
+  .acc-logout-bottom{display:block !important;}
 }
 </style>
 <script id="burger-menu-script">
