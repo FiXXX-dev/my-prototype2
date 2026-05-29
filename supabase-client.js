@@ -24,7 +24,8 @@
 //     invoice_inn     text,
 //     comment         text,
 //     status          text default 'new',
-//     language        text default 'ru'
+//     language        text default 'ru',
+//     user_id         uuid references auth.users(id) on delete set null
 //   );
 //   alter table public.orders enable row level security;
 //   -- (RLS policies — adjust to your auth model; for demo: full access)
@@ -92,6 +93,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
+      user_id: order.userId || null,
     };
     async function insert(row){
       return await sb.from('orders').insert([row]).select();
@@ -212,6 +214,41 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch (e) {
       console.error('[supabase] delete exception', e);
       return { ok: false, error: e };
+    }
+  };
+
+  // Returns orders for a specific user (for account history page).
+  window.supaListOrdersByUser = async function(userId){
+    const sb = getClient();
+    if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      if (error) { console.error('[supabase] list orders by user', error); return null; }
+      return (data || []).map(r => ({
+        num: r.num != null ? r.num : r.id,
+        id: r.id,
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+        status: r.status || 'new',
+        items: Array.isArray(r.items) ? r.items : [],
+        subtotal: r.subtotal,
+        delivery: r.delivery_cost,
+        total: r.total_price != null ? Number(r.total_price) : 0,
+        method: r.delivery_method,
+        address: r.delivery_address || '',
+        phone: r.customer_phone || '',
+        name: r.customer_name || '',
+        company: r.company || '',
+        email: r.customer_email || '',
+        comment: r.comment || '',
+        payment: r.payment_method,
+        invoiceCompany: r.invoice_company || '',
+        invoiceInn: r.invoice_inn || '',
+        language: r.language,
+        _supaId: r.id,
+      }));
+    } catch (e) {
+      console.error('[supabase] list orders by user exception', e);
+      return null;
     }
   };
 
