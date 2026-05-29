@@ -1616,7 +1616,7 @@ function orderCardHtml(o) {
             <div class="order-label">Доставка</div>
             <div class="order-value">
               ${o.method === 'pickup' ? '🏪 Самовывоз' : '🚚 Курьер'}<br>
-              ${o.address}
+              ${o.address || '—'}${o.deliveryDate ? '<br>📅 ' + o.deliveryDate : ''}${o.deliveryTime ? ' ⏰ ' + o.deliveryTime : ''}
             </div>
           </div>
         </div>
@@ -1723,7 +1723,7 @@ function buildPrintSlip(o) {
       </div>
       <div class="pi-section">
         <div class="pi-label">Доставка</div>
-        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}</div>
+        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}${o.deliveryDate?'<br>📅 '+o.deliveryDate:''}${o.deliveryTime?' ⏰ '+o.deliveryTime:''}</div>
       </div>
       ${o.payment?`<div class="pi-section">
         <div class="pi-label">Оплата</div>

@@ -753,6 +753,9 @@ async function submitOrder() {
     ? clean(document.getElementById('address').value)
     : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
 
+  const deliveryDateClean = effectiveDelivery === 'courier' ? clean(document.getElementById('delivDate').value) : null;
+  const deliveryTimeClean = effectiveDelivery === 'courier' ? clean(document.getElementById('delivTime').value) || null : null;
+
   const orderRecord = {
     num: null,    // filled below from Supabase id or random fallback
     date: new Date().toLocaleDateString('ru-RU'),
@@ -763,6 +766,8 @@ async function submitOrder() {
     total: total,
     method: effectiveDelivery,
     address: addressClean,
+    deliveryDate: deliveryDateClean,
+    deliveryTime: deliveryTimeClean,
     phone: phoneClean,
     name: nameClean,
     company: companyClean,
@@ -816,7 +821,7 @@ async function submitOrder() {
   document.getElementById('successOrderNum').textContent = '#' + finalNum;
 
   const methodText = effectiveDelivery === 'courier'
-    ? `Доставим по адресу: ${addressClean}<br>Дата: ${document.getElementById('delivDate').value}`
+    ? `Доставим по адресу: ${addressClean}${deliveryDateClean ? '<br>📅 ' + deliveryDateClean : ''}${deliveryTimeClean ? ' ⏰ ' + deliveryTimeClean : ''}`
     : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
   const cashLabel = effectiveDelivery === 'pickup' ? 'при получении' : 'курьеру';
   const paymentLabel = {

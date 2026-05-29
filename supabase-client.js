@@ -72,16 +72,35 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
 
-    const minimal = {
+    // Columns that must always be present — never stripped.
+    const REQUIRED = new Set(['customer_name','customer_phone','items','total_price']);
+
+    function isMissingColumnError(error){
+      const msg = (error?.message || '') + ' ' + (error?.details || '');
+      return /column .* does not exist/i.test(msg)
+          || /Could not find/i.test(msg)
+          || error?.code === '42703'
+          || error?.code === 'PGRST204';
+    }
+
+    // Extract the offending column name from a missing-column error so we can
+    // strip only THAT column and retry — this preserves delivery_method,
+    // payment_method, delivery_address, etc. as long as they exist in the schema.
+    function missingColName(error){
+      const msg = error?.message || '';
+      const m = msg.match(/column ["'`]?(\w+)["'`]? (?:of relation|does not exist)/i)
+             || msg.match(/Could not find .*?["'`](\w+)["'`]/i)
+             || msg.match(/["'`](\w+)["'`] is not present in the table/i);
+      return m ? m[1] : null;
+    }
+
+    const fullRow = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
       items: order.items || [],
       total_price: order.total != null ? Number(order.total) : 0,
       language: language,
       comment: order.comment || '',
-    };
-    // Optional fields — if your table has these columns they'll be filled.
-    const optional = {
       num: order.num,
       status: order.status || 'new',
       customer_email: order.email || '',
@@ -90,57 +109,35 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       delivery_cost: order.delivery != null ? Number(order.delivery) : null,
       delivery_method: order.method || 'courier',
       delivery_address: order.address || '',
+      delivery_date: order.deliveryDate || null,
+      delivery_time: order.deliveryTime || null,
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
       user_id: order.userId || null,
     };
-    async function insert(row){
-      return await sb.from('orders').insert([row]).select();
-    }
-    function isMissingColumnError(error){
-      const msg = (error?.message || '') + ' ' + (error?.details || '');
-      return /column .* does not exist/i.test(msg)
-          || /Could not find/i.test(msg)
-          || error?.code === '42703'
-          || error?.code === 'PGRST204';
-    }
-    try {
-      // Phase 1: rich payload (all optional fields including user_id)
-      let { data, error } = await insert({ ...minimal, ...optional });
+
+    // Recursively retry, removing the offending column on each missing-column error.
+    async function tryInsert(row) {
+      let { data, error } = await sb.from('orders').insert([row]).select();
       if (!error) return { ok: true, data: data && data[0] };
       if (!isMissingColumnError(error)) {
         console.error('[supabase] insert error', error);
         return { ok: false, error };
       }
-      // Phase 2: rich payload WITHOUT user_id.
-      // The user_id column is added in a later migration and may not exist yet.
-      // Dropping only user_id preserves delivery_method, num, status etc.
-      const { user_id, ...optionalNoUserId } = optional;
-      console.warn('[supabase] retrying without user_id:', error.message);
-      let r2 = await insert({ ...minimal, ...optionalNoUserId });
-      if (!r2.error) return { ok: true, data: r2.data && r2.data[0], retried: 'no-user_id' };
-      if (!isMissingColumnError(r2.error)) {
-        console.error('[supabase] no-user_id insert error', r2.error);
-        return { ok: false, error: r2.error };
+      const col = missingColName(error);
+      if (!col || REQUIRED.has(col)) {
+        console.error('[supabase] cannot strip required column or unknown col', error);
+        return { ok: false, error };
       }
-      // Phase 3: minimal only (includes comment so it lands when the column exists)
-      console.warn('[supabase] retrying without optional columns:', r2.error.message);
-      let r3 = await insert(minimal);
-      if (!r3.error) return { ok: true, data: r3.data && r3.data[0], retried: 'minimal' };
-      if (!isMissingColumnError(r3.error)) {
-        console.error('[supabase] minimal insert error', r3.error);
-        return { ok: false, error: r3.error };
-      }
-      // Phase 4: bare minimal without comment
-      console.warn('[supabase] retrying without comment column:', r3.error.message);
-      const { comment, ...minimalNoComment } = minimal;
-      const r4 = await insert(minimalNoComment);
-      if (r4.error) {
-        console.error('[supabase] bare insert also failed', r4.error);
-        return { ok: false, error: r4.error };
-      }
-      return { ok: true, data: r4.data && r4.data[0], retried: 'bare' };
+      const stripped = { ...row };
+      delete stripped[col];
+      console.warn(`[supabase] column "${col}" missing — retrying without it`);
+      return tryInsert(stripped);
+    }
+
+    try {
+      return await tryInsert(fullRow);
     } catch (e) {
       console.error('[supabase] insert exception', e);
       return { ok: false, error: e };
@@ -168,6 +165,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         total: r.total_price != null ? Number(r.total_price) : 0,
         method: r.delivery_method,
         address: r.delivery_address || '',
+        deliveryDate: r.delivery_date || '',
+        deliveryTime: r.delivery_time || '',
         phone: r.customer_phone || '',
         name: r.customer_name || '',
         company: r.company || '',
@@ -268,6 +267,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       total: r.total_price != null ? Number(r.total_price) : 0,
       method: r.delivery_method,
       address: r.delivery_address || '',
+      deliveryDate: r.delivery_date || '',
+      deliveryTime: r.delivery_time || '',
       phone: r.customer_phone || '',
       name: r.customer_name || '',
       company: r.company || '',
