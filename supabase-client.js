@@ -106,30 +106,41 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           || error?.code === 'PGRST204';
     }
     try {
-      // Phase 1: rich payload
+      // Phase 1: rich payload (all optional fields including user_id)
       let { data, error } = await insert({ ...minimal, ...optional });
       if (!error) return { ok: true, data: data && data[0] };
       if (!isMissingColumnError(error)) {
         console.error('[supabase] insert error', error);
         return { ok: false, error };
       }
-      // Phase 2: minimal (includes comment so it lands when the column exists)
-      console.warn('[supabase] retrying without optional columns:', error.message);
-      let r2 = await insert(minimal);
-      if (!r2.error) return { ok: true, data: r2.data && r2.data[0], retried: 'minimal' };
+      // Phase 2: rich payload WITHOUT user_id.
+      // The user_id column is added in a later migration and may not exist yet.
+      // Dropping only user_id preserves delivery_method, num, status etc.
+      const { user_id, ...optionalNoUserId } = optional;
+      console.warn('[supabase] retrying without user_id:', error.message);
+      let r2 = await insert({ ...minimal, ...optionalNoUserId });
+      if (!r2.error) return { ok: true, data: r2.data && r2.data[0], retried: 'no-user_id' };
       if (!isMissingColumnError(r2.error)) {
-        console.error('[supabase] minimal insert error', r2.error);
+        console.error('[supabase] no-user_id insert error', r2.error);
         return { ok: false, error: r2.error };
       }
-      // Phase 3: minimal without comment (bare-bones schema)
-      console.warn('[supabase] retrying without comment column:', r2.error.message);
-      const { comment, ...minimalNoComment } = minimal;
-      const r3 = await insert(minimalNoComment);
-      if (r3.error) {
-        console.error('[supabase] bare insert also failed', r3.error);
+      // Phase 3: minimal only (includes comment so it lands when the column exists)
+      console.warn('[supabase] retrying without optional columns:', r2.error.message);
+      let r3 = await insert(minimal);
+      if (!r3.error) return { ok: true, data: r3.data && r3.data[0], retried: 'minimal' };
+      if (!isMissingColumnError(r3.error)) {
+        console.error('[supabase] minimal insert error', r3.error);
         return { ok: false, error: r3.error };
       }
-      return { ok: true, data: r3.data && r3.data[0], retried: 'bare' };
+      // Phase 4: bare minimal without comment
+      console.warn('[supabase] retrying without comment column:', r3.error.message);
+      const { comment, ...minimalNoComment } = minimal;
+      const r4 = await insert(minimalNoComment);
+      if (r4.error) {
+        console.error('[supabase] bare insert also failed', r4.error);
+        return { ok: false, error: r4.error };
+      }
+      return { ok: true, data: r4.data && r4.data[0], retried: 'bare' };
     } catch (e) {
       console.error('[supabase] insert exception', e);
       return { ok: false, error: e };
@@ -175,6 +186,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // Update by num if the column exists; otherwise retry by id (PK).
+  // Also retries by id when num exists but no row matched (e.g. the order
+  // was inserted without a num value and the admin is holding the UUID).
   window.supaUpdateOrder = async function(numOrId, fields){
     const sb = getClient();
     if (!sb) return { ok: false, reason: 'unconfigured' };
@@ -185,7 +198,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
     try {
       let { data, error } = await sb.from('orders').update(fields).eq('num', numOrId).select();
-      if (error && missing(error)) {
+      // Retry by id when: num column missing (error) OR num matched 0 rows (data empty).
+      if ((error && missing(error)) || (!error && (!data || data.length === 0))) {
         ({ data, error } = await sb.from('orders').update(fields).eq('id', numOrId).select());
       }
       if (error) { console.error('[supabase] update error', error); return { ok: false, error }; }
