@@ -247,8 +247,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // Returns orders for a specific user (for account history page).
-  // opts = { phone, email } — used as fallback when user_id column is absent
-  // or when orders were placed without being linked to a user_id.
+  // opts = { phone, email } — matched alongside user_id in a single OR query.
+  // Phone is matched with ilike+% so +7/8/no-code formats all hit.
   window.supaListOrdersByUser = async function(userId, opts){
     const sb = getClient();
     if (!sb) return null;
@@ -281,31 +281,40 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       _supaId: r.id,
     });
     try {
-      // Primary: query by user_id
-      let rows = [];
-      if (userId) {
-        const { data: d1, error: e1 } = await sb.from('orders').select('*')
-          .eq('user_id', userId).order('created_at', { ascending: false });
-        if (!e1) { rows = d1 || []; }
-        else if (!isMissingCol(e1)) { console.error('[supabase] list orders by user', e1); return null; }
-        // if column missing, fall through to phone/email fallback
+      // Normalize phone to last 10 digits so +7/8/no-code all match via ilike
+      const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
+      const email = ((opts && opts.email) || '').toLowerCase().trim();
+
+      // Build a single OR filter covering all identifiers at once.
+      // This fixes the bug where the old code stopped at user_id if ≥1 row was found,
+      // missing orders stored with only phone/email.
+      const filters = [];
+      if (userId) filters.push(`user_id.eq.${userId}`);
+      if (phone)  filters.push(`customer_phone.ilike.%${phone}%`);
+      if (email)  filters.push(`customer_email.eq.${email}`);
+
+      if (filters.length === 0) return [];
+
+      let { data, error } = await sb.from('orders').select('*')
+        .or(filters.join(','))
+        .order('created_at', { ascending: false });
+
+      // If user_id column is absent in old schema, retry without it
+      if (error && isMissingCol(error)) {
+        const fallback = filters.filter(f => !f.startsWith('user_id'));
+        if (fallback.length === 0) return [];
+        ({ data, error } = await sb.from('orders').select('*')
+          .or(fallback.join(','))
+          .order('created_at', { ascending: false }));
       }
-      // Fallback / supplement: by phone and/or email.
-      // Catches orders placed before user_id existed or as a guest.
-      if (rows.length === 0 && opts) {
-        const { phone, email } = opts;
-        const queries = [];
-        if (phone) queries.push(sb.from('orders').select('*').eq('customer_phone', phone).order('created_at', { ascending: false }));
-        if (email) queries.push(sb.from('orders').select('*').eq('customer_email', email).order('created_at', { ascending: false }));
-        if (queries.length > 0) {
-          const results = await Promise.all(queries);
-          const seen = new Set();
-          for (const { data: d } of results) {
-            if (!Array.isArray(d)) continue;
-            for (const r of d) { if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); } }
-          }
-          rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        }
+
+      if (error) { console.error('[supabase] list orders by user', error); return null; }
+
+      // Deduplicate (OR can theoretically return duplicates if multiple filters hit one row)
+      const seen = new Set();
+      const rows = [];
+      for (const r of (data || [])) {
+        if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); }
       }
       return rows.map(mapRow);
     } catch (e) {
