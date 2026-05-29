@@ -1587,7 +1587,7 @@ function orderCardHtml(o) {
           <div class="order-section">
             <div class="order-label">Доставка</div>
             <div class="order-value">
-              ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
+              ${o.method === 'pickup' ? '🏪 Самовывоз' : '🚚 Курьер'}<br>
               ${o.address}
             </div>
           </div>
