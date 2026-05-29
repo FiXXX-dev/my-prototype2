@@ -77,6 +77,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       items: order.items || [],
       total_price: order.total != null ? Number(order.total) : 0,
       language: language,
+      comment: order.comment || '',
     };
     // Optional fields — if your table has these columns they'll be filled.
     const optional = {
@@ -91,33 +92,42 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
-      comment: order.comment || '',
     };
     async function insert(row){
       return await sb.from('orders').insert([row]).select();
     }
+    function isMissingColumnError(error){
+      const msg = (error?.message || '') + ' ' + (error?.details || '');
+      return /column .* does not exist/i.test(msg)
+          || /Could not find/i.test(msg)
+          || error?.code === '42703'
+          || error?.code === 'PGRST204';
+    }
     try {
-      // First attempt: rich payload
+      // Phase 1: rich payload
       let { data, error } = await insert({ ...minimal, ...optional });
-      if (error) {
-        const msg = (error.message || '') + ' ' + (error.details || '');
-        const isMissingColumn = /column .* does not exist/i.test(msg)
-                              || /Could not find/i.test(msg)
-                              || error.code === '42703'
-                              || error.code === 'PGRST204';
-        if (isMissingColumn) {
-          console.warn('[supabase] schema missing optional columns, retrying with minimal payload:', msg);
-          const retry = await insert(minimal);
-          if (retry.error) {
-            console.error('[supabase] minimal insert also failed', retry.error);
-            return { ok: false, error: retry.error };
-          }
-          return { ok: true, data: retry.data && retry.data[0], retried: true };
-        }
+      if (!error) return { ok: true, data: data && data[0] };
+      if (!isMissingColumnError(error)) {
         console.error('[supabase] insert error', error);
         return { ok: false, error };
       }
-      return { ok: true, data: data && data[0] };
+      // Phase 2: minimal (includes comment so it lands when the column exists)
+      console.warn('[supabase] retrying without optional columns:', error.message);
+      let r2 = await insert(minimal);
+      if (!r2.error) return { ok: true, data: r2.data && r2.data[0], retried: 'minimal' };
+      if (!isMissingColumnError(r2.error)) {
+        console.error('[supabase] minimal insert error', r2.error);
+        return { ok: false, error: r2.error };
+      }
+      // Phase 3: minimal without comment (bare-bones schema)
+      console.warn('[supabase] retrying without comment column:', r2.error.message);
+      const { comment, ...minimalNoComment } = minimal;
+      const r3 = await insert(minimalNoComment);
+      if (r3.error) {
+        console.error('[supabase] bare insert also failed', r3.error);
+        return { ok: false, error: r3.error };
+      }
+      return { ok: true, data: r3.data && r3.data[0], retried: 'bare' };
     } catch (e) {
       console.error('[supabase] insert exception', e);
       return { ok: false, error: e };
@@ -132,7 +142,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
       if (error) { console.error('[supabase] list error', error); return null; }
       return (data || []).map(r => ({
-        num: r.num,
+        // Display id: prefer the supplied "num" column, fall back to the
+        // Supabase row id so admin never shows "#undefined". This also makes
+        // bare-minimal schemas (only id+5 fields) display nicely as #1, #2…
+        num: r.num != null ? r.num : r.id,
+        id: r.id,
         date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
         status: r.status || 'new',
         items: Array.isArray(r.items) ? r.items : [],
@@ -158,11 +172,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
   };
 
-  window.supaUpdateOrder = async function(num, fields){
+  // Update by num if the column exists; otherwise retry by id (PK).
+  window.supaUpdateOrder = async function(numOrId, fields){
     const sb = getClient();
     if (!sb) return { ok: false, reason: 'unconfigured' };
+    function missing(error){
+      const m = (error?.message||'') + ' ' + (error?.details||'');
+      return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
+          || error?.code === '42703' || error?.code === 'PGRST204';
+    }
     try {
-      const { data, error } = await sb.from('orders').update(fields).eq('num', num).select();
+      let { data, error } = await sb.from('orders').update(fields).eq('num', numOrId).select();
+      if (error && missing(error)) {
+        ({ data, error } = await sb.from('orders').update(fields).eq('id', numOrId).select());
+      }
       if (error) { console.error('[supabase] update error', error); return { ok: false, error }; }
       return { ok: true, data };
     } catch (e) {
@@ -171,11 +194,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
   };
 
-  window.supaDeleteOrder = async function(num){
+  window.supaDeleteOrder = async function(numOrId){
     const sb = getClient();
     if (!sb) return { ok: false, reason: 'unconfigured' };
+    function missing(error){
+      const m = (error?.message||'') + ' ' + (error?.details||'');
+      return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
+          || error?.code === '42703' || error?.code === 'PGRST204';
+    }
     try {
-      const { error } = await sb.from('orders').delete().eq('num', num);
+      let { error } = await sb.from('orders').delete().eq('num', numOrId);
+      if (error && missing(error)) {
+        ({ error } = await sb.from('orders').delete().eq('id', numOrId));
+      }
       if (error) { console.error('[supabase] delete error', error); return { ok: false, error }; }
       return { ok: true };
     } catch (e) {
