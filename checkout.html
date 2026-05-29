@@ -556,6 +556,10 @@ function getTotal() {
 function selectDelivery(method) {
   deliveryMethod = method;
 
+  // Keep the hidden radio input in sync so :checked selector stays accurate
+  const radio = document.querySelector(`input[name="delivery"][value="${method}"]`);
+  if (radio) radio.checked = true;
+
   document.getElementById('optCourier').classList.toggle('selected', method === 'courier');
   document.getElementById('optPickup').classList.toggle('selected', method === 'pickup');
 
@@ -681,10 +685,19 @@ function updateSummary() {
 function submitOrder() {
   if (getSubtotal() < MIN_ORDER) return;
 
+  // Read the authoritative delivery/payment values from the DOM.
+  // The module-level variables are kept in sync by selectDelivery/selectPayment,
+  // but reading from :checked is the single source of truth and guards against
+  // any edge case where the variable and the visual state diverge.
+  const _delivChecked = document.querySelector('input[name="delivery"]:checked');
+  const effectiveDelivery = _delivChecked ? _delivChecked.value : deliveryMethod;
+  const _payChecked = document.querySelector('input[name="paymentMethod"]:checked');
+  const effectivePayment = _payChecked ? _payChecked.value : paymentMethod;
+
   const errors = [];
 
   // Проверка адреса (только для курьера)
-  if (deliveryMethod === 'courier') {
+  if (effectiveDelivery === 'courier') {
     const addr = document.getElementById('address').value.trim();
     const dPhone = document.getElementById('deliveryPhone').value.trim();
     const dDate = document.getElementById('delivDate').value;
@@ -709,7 +722,7 @@ function submitOrder() {
   if (!phone || phone.replace(/\D/g,'').length < 10) { showError('clientPhone', 'clientPhoneErr'); errors.push('phone'); }
 
   // Проверка реквизитов для безналичного расчёта
-  if (paymentMethod === 'invoice') {
+  if (effectivePayment === 'invoice') {
     const invCompany = document.getElementById('invoiceCompany').value.trim();
     const invInn = document.getElementById('invoiceInn').value.trim();
     clearError('invoiceCompany', 'invoiceCompanyErr');
@@ -719,7 +732,6 @@ function submitOrder() {
   }
 
   if (errors.length > 0) {
-    // Скроллим к первой ошибке
     document.querySelector('.error') && document.querySelector('.error').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
@@ -736,8 +748,8 @@ function submitOrder() {
   const nameClean    = clean(document.getElementById('clientName').value);
   const emailClean   = clean(document.getElementById('clientEmail').value);
   const companyClean = clean(document.getElementById('company').value);
-  const commentClean = clean(document.getElementById('comment').value); // '' when empty, never undefined
-  const addressClean = deliveryMethod === 'courier'
+  const commentClean = clean(document.getElementById('comment').value);
+  const addressClean = effectiveDelivery === 'courier'
     ? clean(document.getElementById('address').value)
     : 'Самовывоз';
 
@@ -749,16 +761,16 @@ function submitOrder() {
     subtotal: getSubtotal(),
     delivery: getDeliveryCost(),
     total: total,
-    method: deliveryMethod,
+    method: effectiveDelivery,
     address: addressClean,
     phone: phoneClean,
     name: nameClean,
     company: companyClean,
     email: emailClean,
     comment: commentClean,
-    payment: paymentMethod,
-    invoiceCompany: paymentMethod === 'invoice' ? clean(document.getElementById('invoiceCompany').value) : '',
-    invoiceInn: paymentMethod === 'invoice' ? clean(document.getElementById('invoiceInn').value) : '',
+    payment: effectivePayment,
+    invoiceCompany: effectivePayment === 'invoice' ? clean(document.getElementById('invoiceCompany').value) : '',
+    invoiceInn: effectivePayment === 'invoice' ? clean(document.getElementById('invoiceInn').value) : '',
     userId: _checkoutUserId || null,
   };
 
