@@ -233,6 +233,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
   };
 
+  window.supaDeleteAllOrders = async function(){
+    const sb = getClient();
+    if (!sb) return { ok: false, reason: 'unconfigured' };
+    try {
+      // Delete all orders — neq on a column that's always set ensures no-WHERE-clause error.
+      const { error } = await sb.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) { console.error('[supabase] delete-all error', error); return { ok: false, error }; }
+      return { ok: true };
+    } catch (e) {
+      console.error('[supabase] delete-all exception', e);
+      return { ok: false, error: e };
+    }
+  };
+
   // Returns orders for a specific user (for account history page).
   window.supaListOrdersByUser = async function(userId){
     const sb = getClient();
