@@ -598,6 +598,23 @@ function doLogin(){
         }
         setCurrentUserId(res.user.id);
         showAccount();
+        // Merge cloud profile (name/phone/company) so it reflects across browsers.
+        if (typeof supaGetProfile === 'function') {
+          supaGetProfile(res.user.id).then(p => {
+            if (!p) return;
+            const upd = {};
+            if (p.first_name)  upd.firstName  = p.first_name;
+            if (p.last_name)   upd.lastName   = p.last_name;
+            if (p.middle_name) upd.middleName = p.middle_name;
+            if (p.phone)       upd.phone      = p.phone;
+            if (p.user_type)   upd.type       = p.user_type;
+            if (p.company)     upd.company    = p.company;
+            if (p.inn)         upd.inn        = p.inn;
+            upd.name = [upd.lastName||p.last_name, upd.firstName||p.first_name, upd.middleName||p.middle_name].filter(Boolean).join(' ') || undefined;
+            updateCurrentUser(upd);
+            renderProfile();
+          }).catch(()=>{});
+        }
         return;
       }
       // Fall back to local check
@@ -676,6 +693,10 @@ function doRegister(){
       if (res.ok) {
         const newUser = { id: res.user.id, ...meta, email, phone: phone||undefined, password: '*', addresses: [], favorites: [], created: new Date().toISOString() };
         const us = getUsers(); us.push(newUser); setUsers(us);
+        // Persist profile to Supabase so it syncs across browsers/devices.
+        if (typeof supaUpsertProfile === 'function') {
+          supaUpsertProfile({ user_id: newUser.id, email, phone, first_name: firstName, last_name: lastName, middle_name: middleName, user_type: currentUserType, company, inn }).catch(()=>{});
+        }
         // If session is established immediately (no email confirmation), go in.
         if (res.session) { setCurrentUserId(newUser.id); showAccount(); }
         else { showMsg('regMsg', 'Письмо подтверждения отправлено на ' + email, 'info'); }
@@ -739,20 +760,41 @@ function doLogout(){
         if (Array.isArray(list)) document.getElementById('cntMyOrders').textContent = list.length;
       });
     }
-    // Pull addresses + favorites
-    if (typeof supaListAddresses === 'function') {
-      supaListAddresses().then(addrs => {
+    // Pull profile from Supabase (source of truth across browsers) and merge.
+    if (typeof supaGetProfile === 'function') {
+      supaGetProfile(u.id).then(p => {
+        if (!p) return;
+        const us = getUsers(); const i = us.findIndex(x => x.id === u.id); if (i < 0) return;
+        const merged = { ...us[i] };
+        if (p.first_name)  merged.firstName  = p.first_name;
+        if (p.last_name)   merged.lastName   = p.last_name;
+        if (p.middle_name) merged.middleName = p.middle_name;
+        if (p.email)       merged.email      = p.email;
+        if (p.phone)       merged.phone      = p.phone;
+        if (p.user_type)   merged.type       = p.user_type;
+        if (p.company)     merged.company    = p.company;
+        if (p.inn)         merged.inn        = p.inn;
+        merged.name = [merged.lastName, merged.firstName, merged.middleName].filter(Boolean).join(' ') || merged.name;
+        us[i] = merged; setUsers(us);
+        if (document.getElementById('accountWrap').classList.contains('visible')) renderProfile();
+      });
+    }
+    // Pull addresses (email-keyed) + favorites (email-keyed)
+    if (typeof supaListAddressesByEmail === 'function') {
+      supaListAddressesByEmail().then(addrs => {
         if (Array.isArray(addrs)) {
-          local.addresses = addrs.map(a => ({ id: a.id, label: a.name, name: a.name, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
-          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i] = local; setUsers(us); }
+          local.addresses = addrs.map(a => ({ id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
+          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i].addresses = local.addresses; setUsers(us); }
+          document.getElementById('cntMyAddr').textContent = local.addresses.length;
         }
       });
     }
-    if (typeof supaListFavorites === 'function') {
-      supaListFavorites().then(favs => {
+    if (typeof supaGetFavorites === 'function') {
+      supaGetFavorites().then(favs => {
         if (Array.isArray(favs)) {
           local.favorites = favs.slice();
-          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i] = local; setUsers(us); }
+          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i].favorites = local.favorites; setUsers(us); }
+          document.getElementById('cntMyFav').textContent = local.favorites.length;
         }
       });
     }
@@ -846,6 +888,18 @@ function saveProfile(){
   }
   updateCurrentUser(updates);
   renderProfile();
+  // Sync profile to Supabase so it persists across browsers/devices.
+  if (typeof supaUpsertProfile === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    supaUpsertProfile({
+      user_id: u.id,
+      email: updates.email || '',
+      phone: updates.phone || '',
+      first_name: firstName, last_name: lastName, middle_name: middleName,
+      user_type: u.type || 'individual',
+      company: updates.company || (u.company || ''),
+      inn: updates.inn || (u.inn || ''),
+    }).catch(e => console.warn('[account] profile sync failed', e));
+  }
   alert('✓ Данные сохранены');
 }
 
@@ -934,10 +988,22 @@ function repeatOrder(idx){
   window.location.href = 'checkout.html';
 }
 
-function renderMyFavorites(){
+async function renderMyFavorites(){
   const u = getCurrentUser();
-  const favs = u.favorites || [];
   const list = document.getElementById('myFavoritesList');
+
+  // Load from Supabase (source of truth across browsers); fall back to local.
+  let favs = u.favorites || [];
+  if (typeof supaGetFavorites === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    try {
+      const cloud = await supaGetFavorites();
+      if (Array.isArray(cloud)) {
+        favs = cloud;
+        updateCurrentUser({ favorites: cloud });
+        document.getElementById('cntMyFav').textContent = cloud.length;
+      }
+    } catch(e) { console.warn('[account] favorites load failed', e); }
+  }
 
   if (favs.length === 0){
     list.innerHTML = `<div class="empty">
@@ -1003,10 +1069,22 @@ function addFavToCart(sku){
   alert('✓ "' + p.name + '" добавлен в корзину');
 }
 
-function renderMyAddresses(){
+async function renderMyAddresses(){
   const u = getCurrentUser();
-  const addrs = u.addresses || [];
   const list = document.getElementById('myAddressesList');
+
+  // Load from Supabase (source of truth across browsers); fall back to local.
+  let addrs = u.addresses || [];
+  if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    try {
+      const cloud = await supaListAddressesByEmail();
+      if (Array.isArray(cloud)) {
+        addrs = cloud.map(a => ({ id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
+        updateCurrentUser({ addresses: addrs });
+        document.getElementById('cntMyAddr').textContent = addrs.length;
+      }
+    } catch(e) { console.warn('[account] addresses load failed', e); }
+  }
 
   if (addrs.length === 0){
     list.innerHTML = `<div class="empty">
@@ -1074,29 +1152,20 @@ function saveAddress(){
     if (addrs.length === 1) { addrs[0].isDefault = true; addrs[0].default = true; newAddr.isDefault = true; newAddr.default = true; }
   }
   updateCurrentUser({addresses: addrs});
+  const wasEditing = editingAddrId;
   closeAddrModal();
   renderMyAddresses();
   updateBadges();
   if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    const payload = { name: label, address: text, is_default: !!newAddr.isDefault };
-    if (editingAddrId === null) {
-      // New address — insert and stash the returned cloud id
-      if (typeof supaInsertAddress === 'function') {
-        supaInsertAddress(payload).then(res => {
-          if (res && res.ok && res.data && res.data.id) {
-            const cu = getCurrentUser();
-            const list = cu.addresses || [];
-            const last = list[list.length - 1];
-            if (last && !last.id) { last.id = res.data.id; updateCurrentUser({addresses: list}); }
-          }
-        }).catch(()=>{});
+    const payload = { label: label, address: text, is_default: !!newAddr.isDefault };
+    if (wasEditing === null) {
+      // New address — insert, then re-render to pick up the cloud id
+      if (typeof supaSaveAddress === 'function') {
+        supaSaveAddress(payload).then(() => renderMyAddresses()).catch(()=>{});
       }
-    } else {
-      // Editing existing — update in Supabase if we have the cloud id
-      const cloudId = newAddr.id;
-      if (cloudId && typeof supaUpdateAddress === 'function') {
-        supaUpdateAddress(cloudId, payload).catch(()=>{});
-      }
+    } else if (newAddr.id && typeof supaUpdateAddressById === 'function') {
+      // Editing existing — update by cloud id
+      supaUpdateAddressById(newAddr.id, payload).then(() => renderMyAddresses()).catch(()=>{});
     }
   }
 }
@@ -1111,9 +1180,9 @@ function deleteAddress(idx){
   updateCurrentUser({addresses: addrs});
   renderMyAddresses();
   updateBadges();
-  if (removed && removed.id && typeof supaDeleteAddress === 'function'
+  if (removed && removed.id && typeof supaDeleteAddressById === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    supaDeleteAddress(removed.id).catch(()=>{});
+    supaDeleteAddressById(removed.id).catch(()=>{});
   }
 }
 
@@ -1357,14 +1426,33 @@ document.addEventListener('DOMContentLoaded', updateCartBadge);
   .order-total{align-self:flex-start;}
 }
 @media(max-width:600px){
+  /* Layout: single column, tight gutters */
+  .account-wrap.visible{grid-template-columns:1fr !important;padding:0 12px !important;gap:12px !important;margin:16px auto !important;}
+  .account-side{position:relative !important;top:0 !important;padding:16px !important;}
+  /* Compact profile row in sidebar */
+  .user-card{display:flex !important;align-items:center !important;gap:12px !important;padding-bottom:12px !important;margin-bottom:12px !important;}
+  .user-avatar{width:40px !important;height:40px !important;font-size:16px !important;margin-bottom:0 !important;flex-shrink:0;}
+  .user-name{font-size:14px !important;}
+  .user-contact{display:none;}
+  /* Navigation as horizontal scroll strip */
+  .acc-nav{flex-direction:row !important;overflow-x:auto !important;gap:4px !important;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .acc-nav::-webkit-scrollbar{display:none;}
+  .acc-link{white-space:nowrap !important;padding:8px 12px !important;font-size:13px !important;border-radius:20px !important;}
+  /* Headings + forms */
+  .acc-title{font-size:20px !important;}
+  .profile-form{grid-template-columns:1fr !important;}
+  /* Favorites: 2-up compact */
+  .fav-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+  /* Order cards */
+  .order{padding:14px !important;}
+  .order-num{font-size:14px;}
+  .order-head{flex-direction:column;align-items:flex-start !important;}
+  .order-total{font-size:18px !important;}
   /* Auth form: compact padding */
-  .auth-wrap{margin:20px auto;padding:0 14px;}
-  .auth-box{padding:28px 20px;}
+  .auth-wrap{margin:24px auto !important;padding:0 14px;}
+  .auth-box{padding:24px 16px !important;}
   .auth-title{font-size:22px;}
   .auth-sub{font-size:13px;margin-bottom:24px;}
-  /* Order cards: more compact */
-  .order{padding:12px 14px;}
-  .order-num{font-size:14px;}
   /* Logout: hide in sidebar, show at bottom of page */
   .account-side .acc-logout{display:none !important;}
   .acc-logout-bottom{display:block !important;}

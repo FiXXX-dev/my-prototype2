@@ -291,7 +291,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const filters = [];
       if (userId) filters.push(`user_id.eq.${userId}`);
       if (phone)  filters.push(`customer_phone.ilike.%${phone}%`);
-      if (email)  filters.push(`customer_email.eq.${email}`);
+      if (email)  filters.push(`customer_email.ilike.%${email}%`);
 
       if (filters.length === 0) return [];
 
@@ -450,32 +450,166 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
-  // ===== customer_favorites =====
-  window.supaListFavorites = async function(){
+  // ===== Cross-browser sync: email-keyed identity =====
+  // The app has a hybrid auth model (Supabase-auth users AND local-only users),
+  // so favorites/addresses/profile are keyed by a stable identifier derived from
+  // the current user in localStorage rather than auth.uid(). This lets the same
+  // account sync across browsers/devices as long as we know its email (or phone).
+  //
+  // Returns { id, email, phone10, key } or null.
+  //   key = email (lowercased) if present, else 'tel:<last10digits>', else null.
+  function currentUserIdentity(){
+    try {
+      const id = localStorage.getItem('klever_current_user');
+      if (!id) return null;
+      const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+      const me = users.find(u => u.id === id) || {};
+      const email = (me.email || '').toLowerCase().trim();
+      const phone10 = (me.phone || '').replace(/\D/g, '').slice(-10);
+      let key = '';
+      if (email) key = email;
+      else if (phone10.length === 10) key = 'tel:' + phone10;
+      return { id, email, phone10, key };
+    } catch(e) { return null; }
+  }
+  // Resolve a user_email key from an explicit value or the current identity.
+  function resolveUserKey(explicit){
+    if (explicit) {
+      const e = String(explicit).toLowerCase().trim();
+      return e;
+    }
+    const idn = currentUserIdentity();
+    return idn ? idn.key : '';
+  }
+  window.kleverCurrentUserKey = function(){ return resolveUserKey(); };
+
+  // ===== favorites (email-keyed, table: public.favorites) =====
+  // supaGetFavorites([email])           → string[] of product_sku
+  // supaListFavorites([email])          → alias of supaGetFavorites
+  // supaAddFavorite(sku) | (email, sku) → { ok }
+  // supaRemoveFavorite(sku) | (email, sku) → { ok }
+  window.supaGetFavorites = async function(email){
     const sb = getClient(); if (!sb) return null;
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return [];
-      const { data, error } = await sb.from('customer_favorites').select('product_id').eq('user_id', u.id);
-      if (error) { console.error('[supabase] list favorites', error); return null; }
-      return (data || []).map(r => r.product_id);
-    } catch(e) { return null; }
+      const key = resolveUserKey(email);
+      if (!key) return [];
+      const { data, error } = await sb.from('favorites').select('product_sku').eq('user_email', key);
+      if (error) { console.error('[supabase] get favorites', error); return null; }
+      return (data || []).map(r => r.product_sku);
+    } catch(e) { console.error('[supabase] get favorites exception', e); return null; }
   };
+  window.supaListFavorites = window.supaGetFavorites;
 
-  window.supaAddFavorite = async function(productSku){
+  window.supaAddFavorite = async function(a, b){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      const { error } = await sb.from('customer_favorites').upsert({ user_id: u.id, product_id: productSku });
+      let key, sku;
+      if (b !== undefined) { key = resolveUserKey(a); sku = b; }
+      else { sku = a; key = resolveUserKey(); }
+      if (!key || !sku) return { ok:false, reason:'no_identity' };
+      const idn = currentUserIdentity();
+      const { error } = await sb.from('favorites')
+        .upsert({ user_email: key, user_phone: (idn && idn.phone10) || null, product_sku: sku },
+                { onConflict: 'user_email,product_sku' });
       return error ? { ok:false, error } : { ok:true };
     } catch(e) { return { ok:false, error:e }; }
   };
 
-  window.supaRemoveFavorite = async function(productSku){
+  window.supaRemoveFavorite = async function(a, b){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      const { error } = await sb.from('customer_favorites').delete().match({ user_id: u.id, product_id: productSku });
+      let key, sku;
+      if (b !== undefined) { key = resolveUserKey(a); sku = b; }
+      else { sku = a; key = resolveUserKey(); }
+      if (!key || !sku) return { ok:false, reason:'no_identity' };
+      const { error } = await sb.from('favorites').delete().match({ user_email: key, product_sku: sku });
       return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== addresses (email-keyed, table: public.user_addresses) =====
+  window.supaListAddressesByEmail = async function(email){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const key = resolveUserKey(email);
+      if (!key) return [];
+      const { data, error } = await sb.from('user_addresses').select('*')
+        .eq('user_email', key).order('is_default', { ascending: false }).order('id', { ascending: true });
+      if (error) { console.error('[supabase] list addresses by email', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  // addr = { label, address, is_default, email? }
+  window.supaSaveAddress = async function(addr){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const key = resolveUserKey(addr && addr.email);
+      if (!key) return { ok:false, reason:'no_identity' };
+      if (addr.is_default) {
+        await sb.from('user_addresses').update({ is_default: false }).eq('user_email', key);
+      }
+      const { data, error } = await sb.from('user_addresses')
+        .insert([{ user_email: key, label: addr.label, address: addr.address, is_default: !!addr.is_default }])
+        .select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaUpdateAddressById = async function(id, addr){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const key = resolveUserKey(addr && addr.email);
+      if (addr.is_default && key) {
+        await sb.from('user_addresses').update({ is_default: false }).eq('user_email', key);
+      }
+      const { data, error } = await sb.from('user_addresses')
+        .update({ label: addr.label, address: addr.address, is_default: !!addr.is_default })
+        .eq('id', id).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteAddressById = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('user_addresses').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== profile (table: public.user_profiles, keyed by user_id text) =====
+  window.supaGetProfile = async function(userId){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('user_profiles').select('*').eq('user_id', String(userId)).maybeSingle();
+      if (error) { console.error('[supabase] get profile', error); return null; }
+      return data || null;
+    } catch(e) { return null; }
+  };
+
+  // p = { user_id, email, phone, first_name, last_name, middle_name, user_type, company, inn }
+  window.supaUpsertProfile = async function(p){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      if (!p || !p.user_id) return { ok:false, reason:'no_user_id' };
+      const row = {
+        user_id: String(p.user_id),
+        email: p.email || null,
+        phone: p.phone || null,
+        first_name: p.first_name || null,
+        last_name: p.last_name || null,
+        middle_name: p.middle_name || null,
+        user_type: p.user_type || 'individual',
+        company: p.company || null,
+        inn: p.inn || null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await sb.from('user_profiles').upsert(row, { onConflict: 'user_id' }).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
     } catch(e) { return { ok:false, error:e }; }
   };
 
