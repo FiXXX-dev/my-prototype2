@@ -1166,6 +1166,27 @@ function applyCatalogForCategory(catId, subId) {
 })();
 
 // Re-render dynamic catalog content when the language changes.
+// Sync favorites from Supabase on page load so hearts reflect the real state.
+(function _syncFavoritesFromSupabase(){
+  if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
+  if (typeof supaListFavorites !== 'function') return;
+  supaListFavorites().then(favs => {
+    if (!Array.isArray(favs)) return;
+    const id = localStorage.getItem('klever_current_user'); if (!id) return;
+    const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+    const i = users.findIndex(u => u.id === id); if (i < 0) return;
+    users[i].favorites = favs;
+    localStorage.setItem('klever_users', JSON.stringify(users));
+    // Re-render all visible fav buttons to reflect the loaded state
+    document.querySelectorAll('.fav-btn[data-sku]').forEach(btn => {
+      const on = favs.includes(btn.dataset.sku);
+      btn.classList.toggle('active', on);
+      const svg = btn.querySelector('svg');
+      if (svg) { svg.setAttribute('fill', on ? '#FF3B6B' : 'none'); svg.setAttribute('stroke', on ? '#FF3B6B' : '#0f1a14'); }
+    });
+  }).catch(()=>{});
+})();
+
 // translations.js fires a custom event `kleverLangChange` after applyLanguage.
 window.addEventListener('kleverLangChange', () => {
   try {

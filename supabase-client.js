@@ -348,6 +348,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
+  window.supaUpdateAddress = async function(id, row){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
+      if (row.is_default) {
+        await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
+      }
+      const { data, error } = await sb.from('customer_addresses').update(row).eq('id', id).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
   window.supaDeleteAddress = async function(id){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
