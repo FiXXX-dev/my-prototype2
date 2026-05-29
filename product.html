@@ -765,6 +765,21 @@ window.toggleProdFav = function(){
 };
 _prodFavRender();
 syncCartQtyBlock();
+
+// Sync favorites from Supabase so the heart shows correctly on fresh devices.
+(function _syncProdFavFromSupabase(){
+  if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
+  if (typeof supaListFavorites !== 'function') return;
+  supaListFavorites().then(favs => {
+    if (!Array.isArray(favs)) return;
+    const id = localStorage.getItem('klever_current_user'); if (!id) return;
+    const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+    const i = users.findIndex(u => u.id === id); if (i < 0) return;
+    users[i].favorites = favs;
+    localStorage.setItem('klever_users', JSON.stringify(users));
+    _prodFavRender();
+  }).catch(()=>{});
+})();
 </script>
 <style id="news-modal-styles">
 .klever-news-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;}

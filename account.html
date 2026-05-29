@@ -677,7 +677,7 @@ function doLogout(){
     if (typeof supaListAddresses === 'function') {
       supaListAddresses().then(addrs => {
         if (Array.isArray(addrs)) {
-          local.addresses = addrs.map(a => ({ id: a.id, name: a.name, address: a.address, default: !!a.is_default }));
+          local.addresses = addrs.map(a => ({ id: a.id, label: a.name, name: a.name, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
           const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i] = local; setUsers(us); }
         }
       });
@@ -1011,17 +1011,27 @@ function saveAddress(){
   closeAddrModal();
   renderMyAddresses();
   updateBadges();
-  if (editingAddrId === null && typeof supaInsertAddress === 'function'
-      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    supaInsertAddress({ name: label, address: text, is_default: !!newAddr.isDefault }).then(res => {
-      if (res && res.ok && res.data && res.data.id) {
-        // Stash the cloud id locally so future delete/setDefault can target it
-        const cu = getCurrentUser();
-        const list = cu.addresses || [];
-        const last = list[list.length-1];
-        if (last && !last.id) { last.id = res.data.id; updateCurrentUser({addresses: list}); }
+  if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    const payload = { name: label, address: text, is_default: !!newAddr.isDefault };
+    if (editingAddrId === null) {
+      // New address — insert and stash the returned cloud id
+      if (typeof supaInsertAddress === 'function') {
+        supaInsertAddress(payload).then(res => {
+          if (res && res.ok && res.data && res.data.id) {
+            const cu = getCurrentUser();
+            const list = cu.addresses || [];
+            const last = list[list.length - 1];
+            if (last && !last.id) { last.id = res.data.id; updateCurrentUser({addresses: list}); }
+          }
+        }).catch(()=>{});
       }
-    }).catch(()=>{});
+    } else {
+      // Editing existing — update in Supabase if we have the cloud id
+      const cloudId = newAddr.id;
+      if (cloudId && typeof supaUpdateAddress === 'function') {
+        supaUpdateAddress(cloudId, payload).catch(()=>{});
+      }
+    }
   }
 }
 
