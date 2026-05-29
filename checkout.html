@@ -728,6 +728,18 @@ function submitOrder() {
   const cart = getCart();
   const total = getTotal();
 
+  // Sanitize inputs: trim whitespace, normalise empty strings (NEVER undefined,
+  // because Supabase rejects undefined values and locks up the request).
+  const clean = s => (s == null ? '' : String(s).trim());
+  const phoneClean   = clean(document.getElementById('clientPhone').value);
+  const nameClean    = clean(document.getElementById('clientName').value);
+  const emailClean   = clean(document.getElementById('clientEmail').value);
+  const companyClean = clean(document.getElementById('company').value);
+  const commentClean = clean(document.getElementById('comment').value); // '' when empty, never undefined
+  const addressClean = deliveryMethod === 'courier'
+    ? clean(document.getElementById('address').value)
+    : 'Самовывоз';
+
   const orderRecord = {
     num: orderNum,
     date: new Date().toLocaleDateString('ru-RU'),
@@ -737,56 +749,74 @@ function submitOrder() {
     delivery: getDeliveryCost(),
     total: total,
     method: deliveryMethod,
-    address: deliveryMethod === 'courier' ? document.getElementById('address').value : 'Самовывоз',
-    phone: document.getElementById('clientPhone').value,
-    name: document.getElementById('clientName').value,
-    company: document.getElementById('company').value,
-    email: document.getElementById('clientEmail').value,
-    comment: document.getElementById('comment').value,
+    address: addressClean,
+    phone: phoneClean,
+    name: nameClean,
+    company: companyClean,
+    email: emailClean,
+    comment: commentClean,
     payment: paymentMethod,
-    invoiceCompany: paymentMethod === 'invoice' ? document.getElementById('invoiceCompany').value.trim() : '',
-    invoiceInn: paymentMethod === 'invoice' ? document.getElementById('invoiceInn').value.trim() : '',
+    invoiceCompany: paymentMethod === 'invoice' ? clean(document.getElementById('invoiceCompany').value) : '',
+    invoiceInn: paymentMethod === 'invoice' ? clean(document.getElementById('invoiceInn').value) : '',
   };
 
-  // Try Supabase first (drops to localStorage-only if unconfigured / fails).
-  // localStorage copy is kept either way so account.html order history works.
-  if (typeof supaInsertOrder === 'function') {
-    supaInsertOrder(orderRecord).then(res => {
+  // Lock the submit button while we talk to Supabase so the user can't double-fire.
+  const submitBtn = document.getElementById('submitBtn');
+  const _origBtnTxt = submitBtn ? submitBtn.textContent : '';
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Отправляем…'; }
+  function _unlockBtn(){ if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _origBtnTxt; } }
+
+  // Bullet-proof Supabase insert: try/catch around the whole call, surface
+  // any error to the user with a visible alert, never leave the button stuck.
+  async function _sendToSupabase(){
+    if (typeof supaInsertOrder !== 'function') return { skipped: true };
+    try {
+      const res = await supaInsertOrder(orderRecord);
       if (res && res.ok) {
-        console.log('[order] ✓ saved to Supabase', orderNum, res.retried ? '(retried with minimal payload)' : '');
-      } else if (res && res.reason !== 'unconfigured') {
-        const m = (res.error && (res.error.message || res.error.details)) || JSON.stringify(res.error);
-        console.error('[order] ✗ Supabase save failed:', m, 'Order kept in localStorage only.');
+        console.log('Данные успешно отправлены в Supabase:', res.data);
+        return { ok: true, data: res.data };
       }
-    }).catch(e => console.error('[order] supa exception', e));
+      if (res && res.reason === 'unconfigured') return { skipped: true };
+      const message = (res && res.error && (res.error.message || res.error.details))
+                    || 'Неизвестная ошибка от сервера';
+      throw new Error(message);
+    } catch (error) {
+      console.error('[order] Supabase insert failed:', error);
+      alert('Ошибка при оформлении заказа: ' + (error && error.message ? error.message : error));
+      return { ok: false, error };
+    }
   }
 
-  // Save locally for offline-friendly history + account.html visibility
-  const orders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
-  orders.push(orderRecord);
-  localStorage.setItem('klever_orders', JSON.stringify(orders));
+  _sendToSupabase().finally(() => {
+    _unlockBtn();
+    // Always preserve a local copy so the success screen, account history
+    // and the offline fallback path keep working — even if the cloud failed.
+    const orders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
+    orders.push(orderRecord);
+    localStorage.setItem('klever_orders', JSON.stringify(orders));
 
-  // Очищаем корзину
-  localStorage.removeItem(CART_KEY);
+    // Очищаем корзину
+    localStorage.removeItem(CART_KEY);
 
-  // Показываем экран успеха
-  document.getElementById('checkoutWrap').style.display = 'none';
-  const successWrap = document.getElementById('successWrap');
-  successWrap.classList.add('visible');
-  document.getElementById('successOrderNum').textContent = '#' + orderNum;
+    // Показываем экран успеха
+    document.getElementById('checkoutWrap').style.display = 'none';
+    const successWrap = document.getElementById('successWrap');
+    successWrap.classList.add('visible');
+    document.getElementById('successOrderNum').textContent = '#' + orderNum;
 
-  const methodText = deliveryMethod === 'courier'
-    ? `Доставим по адресу: ${document.getElementById('address').value}<br>Дата: ${document.getElementById('delivDate').value}`
-    : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
-  const paymentLabel = {
-    cash: '💵 Наличными или картой курьеру',
-    invoice: '🏦 Безналичный расчёт — выставим счёт',
-    transfer: '💳 Перевод на карту — пришлём реквизиты'
-  }[paymentMethod] || '';
-  document.getElementById('successDetails').innerHTML =
-    `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${document.getElementById('clientPhone').value}</strong>`;
+    const methodText = deliveryMethod === 'courier'
+      ? `Доставим по адресу: ${addressClean}<br>Дата: ${document.getElementById('delivDate').value}`
+      : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
+    const paymentLabel = {
+      cash: '💵 Наличными или картой курьеру',
+      invoice: '🏦 Безналичный расчёт — выставим счёт',
+      transfer: '💳 Перевод на карту — пришлём реквизиты'
+    }[paymentMethod] || '';
+    document.getElementById('successDetails').innerHTML =
+      `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${phoneClean}</strong>`;
 
-  window.scrollTo({top: 0, behavior: 'smooth'});
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
 }
 
 function showError(fieldId, hintId) {
