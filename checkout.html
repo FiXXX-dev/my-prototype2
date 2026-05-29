@@ -943,9 +943,9 @@ window.useSavedAddress = function(idx){
     if (a && a.address) document.getElementById('address').value = a.address;
   } catch(e){}
 };
-// Try Supabase first, then fall back to localStorage list
-if (typeof supaListAddresses === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-  supaListAddresses().then(remote => {
+// Try Supabase first (email-keyed user_addresses table), then fall back to localStorage
+if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+  supaListAddressesByEmail().then(remote => {
     if (Array.isArray(remote) && remote.length) {
       // Cache into the local user for select to read
       try {
@@ -953,7 +953,7 @@ if (typeof supaListAddresses === 'function' && window.kleverSupabase && window.k
         const users = JSON.parse(localStorage.getItem('klever_users')||'[]');
         const i = users.findIndex(u => u.id === id);
         if (i >= 0) {
-          users[i].addresses = remote.map(r => ({ id: r.id, label: r.name, name: r.name, address: r.address, isDefault: !!r.is_default, default: !!r.is_default }));
+          users[i].addresses = remote.map(r => ({ id: r.id, label: r.label, name: r.label, address: r.address, isDefault: !!r.is_default, default: !!r.is_default }));
           localStorage.setItem('klever_users', JSON.stringify(users));
         }
       } catch(e){}
