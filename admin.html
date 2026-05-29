@@ -1644,15 +1644,15 @@ function orderCardHtml(o) {
         </div>` : ''}
         <div class="order-actions">
           <div class="status-select-wrap">
-            <button class="status-badge-btn status-${sClass}" onclick="toggleStatusDrop('${o.num}',event)">
+            <button class="status-badge-btn status-${sClass}" onclick="toggleStatusMenu(this, event)">
               ${sLabel} <span class="sa">▼</span>
             </button>
-            <div class="status-drop-menu" id="sdm-${o.num}">
-              <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus('${o.num}','new')">📋 В обработке</button>
-              <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus('${o.num}','assembling')">📦 В сборке</button>
-              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus('${o.num}','courier')">🚚 Передан курьеру</button>
-              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus('${o.num}','done')">✅ Доставлен</button>
-              <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus('${o.num}','cancelled')">❌ Отменён</button>
+            <div class="status-drop-menu">
+              <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus(this,'${o.num}','new')">📋 В обработке</button>
+              <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus(this,'${o.num}','assembling')">📦 В сборке</button>
+              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus(this,'${o.num}','courier')">🚚 Передан курьеру</button>
+              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus(this,'${o.num}','done')">✅ Доставлен</button>
+              <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus(this,'${o.num}','cancelled')">❌ Отменён</button>
             </div>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="printOrder('${o.num}')">🖨️ Накладная</button>
@@ -1699,30 +1699,39 @@ function setOrderStatus(num, status) {
   }
 }
 
-function toggleStatusDrop(num, e) {
-  e.stopPropagation();
-  const btn = e.currentTarget;
-  const rect = btn.getBoundingClientRect();
-  // Close all other open menus
-  document.querySelectorAll('.status-drop-menu.open').forEach(m => {
-    if (m.id !== 'sdm-' + num) m.classList.remove('open');
-  });
-  const menu = document.getElementById('sdm-' + num);
+// Toggle the dropdown belonging to THIS button (via its sibling menu, not by id —
+// the same order is rendered in both the dashboard and the orders tab, so ids
+// are duplicated and getElementById would grab the wrong/hidden one).
+function toggleStatusMenu(btn, e) {
+  if (e) e.stopPropagation();
+  const menu = btn.nextElementSibling;
   if (!menu) return;
-  if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
-  menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
-  menu.style.left = (rect.left + window.scrollX) + 'px';
+  const wasOpen = menu.classList.contains('open');
+  // Close every open menu first
+  document.querySelectorAll('.status-drop-menu.open').forEach(m => m.classList.remove('open'));
+  if (wasOpen) return;
+  // Position with fixed coords (viewport-relative — no scroll offset) so the
+  // menu escapes the card's overflow:hidden clipping.
+  const rect = btn.getBoundingClientRect();
+  let left = rect.left;
+  const menuWidth = 200;
+  if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.max(8, left) + 'px';
   menu.classList.add('open');
 }
 
-function pickStatus(num, status) {
-  const menu = document.getElementById('sdm-' + num);
+function pickStatus(el, num, status) {
+  const menu = el.closest('.status-drop-menu');
   if (menu) menu.classList.remove('open');
   setOrderStatus(num, status);
 }
 
-document.addEventListener('click', function() {
-  document.querySelectorAll('.status-drop-menu.open').forEach(m => m.classList.remove('open'));
+// Close any open status menu when clicking outside the dropdown widget.
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.status-select-wrap')) {
+    document.querySelectorAll('.status-drop-menu.open').forEach(m => m.classList.remove('open'));
+  }
 });
 
 function printOrder(num) {
