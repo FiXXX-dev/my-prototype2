@@ -570,6 +570,9 @@ function selectDelivery(method) {
   if (paymentStep) {
     const isPickup = method === 'pickup';
     paymentStep.classList.toggle('hidden', isPickup);
+    // Update cash payment label to reflect pickup vs courier context
+    const cashTitle = document.querySelector('.payment-option[data-pay="cash"] .delivery-option-title');
+    if (cashTitle) cashTitle.textContent = isPickup ? 'Наличными или картой при получении' : 'Наличными или картой курьеру';
     if (isPickup) {
       // При самовывозе используем оплату наличными по умолчанию (передаём курьеру/при получении не актуально)
       paymentMethod = 'cash';
@@ -682,7 +685,7 @@ function updateSummary() {
 }
 
 // Валидация и отправка
-function submitOrder() {
+async function submitOrder() {
   if (getSubtotal() < MIN_ORDER) return;
 
   // Read the authoritative delivery/payment values from the DOM.
@@ -737,12 +740,9 @@ function submitOrder() {
   }
 
   // Всё ок — оформляем заказ
-  const orderNum = Math.floor(100000 + Math.random() * 900000);
   const cart = getCart();
   const total = getTotal();
 
-  // Sanitize inputs: trim whitespace, normalise empty strings (NEVER undefined,
-  // because Supabase rejects undefined values and locks up the request).
   const clean = s => (s == null ? '' : String(s).trim());
   const phoneClean   = clean(document.getElementById('clientPhone').value);
   const nameClean    = clean(document.getElementById('clientName').value);
@@ -751,10 +751,10 @@ function submitOrder() {
   const commentClean = clean(document.getElementById('comment').value);
   const addressClean = effectiveDelivery === 'courier'
     ? clean(document.getElementById('address').value)
-    : 'Самовывоз';
+    : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
 
   const orderRecord = {
-    num: orderNum,
+    num: null,    // filled below from Supabase id or random fallback
     date: new Date().toLocaleDateString('ru-RU'),
     status: 'new',
     items: cart,
@@ -774,63 +774,60 @@ function submitOrder() {
     userId: _checkoutUserId || null,
   };
 
-  // Lock the submit button while we talk to Supabase so the user can't double-fire.
   const submitBtn = document.getElementById('submitBtn');
   const _origBtnTxt = submitBtn ? submitBtn.textContent : '';
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Отправляем…'; }
-  function _unlockBtn(){ if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _origBtnTxt; } }
+  const _unlockBtn = () => { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _origBtnTxt; } };
 
-  // Bullet-proof Supabase insert: try/catch around the whole call, surface
-  // any error to the user with a visible alert, never leave the button stuck.
-  async function _sendToSupabase(){
-    if (typeof supaInsertOrder !== 'function') return { skipped: true };
+  // Try Supabase first; use the real server-assigned id as the order number.
+  // Fall back to a random local number only when Supabase is not configured.
+  let finalNum = Math.floor(100000 + Math.random() * 900000);
+  if (typeof supaInsertOrder === 'function') {
+    let supaRes;
     try {
-      const res = await supaInsertOrder(orderRecord);
-      if (res && res.ok) {
-        console.log('Данные успешно отправлены в Supabase:', res.data);
-        return { ok: true, data: res.data };
-      }
-      if (res && res.reason === 'unconfigured') return { skipped: true };
-      const message = (res && res.error && (res.error.message || res.error.details))
-                    || 'Неизвестная ошибка от сервера';
-      throw new Error(message);
-    } catch (error) {
-      console.error('[order] Supabase insert failed:', error);
-      alert('Ошибка при оформлении заказа: ' + (error && error.message ? error.message : error));
-      return { ok: false, error };
+      supaRes = await supaInsertOrder(orderRecord);
+    } catch (e) {
+      supaRes = { ok: false, error: e };
+    }
+    if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
+      finalNum = supaRes.data.id;
+      console.log('[order] saved to Supabase, id:', finalNum);
+    } else if (supaRes && !supaRes.ok && supaRes.reason !== 'unconfigured') {
+      const msg = (supaRes.error && (supaRes.error.message || supaRes.error.details)) || 'Неизвестная ошибка от сервера';
+      alert('Ошибка при оформлении заказа: ' + msg);
+      _unlockBtn();
+      return;
     }
   }
+  orderRecord.num = finalNum;
 
-  _sendToSupabase().finally(() => {
-    _unlockBtn();
-    // Always preserve a local copy so the success screen, account history
-    // and the offline fallback path keep working — even if the cloud failed.
-    const orders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
-    orders.push(orderRecord);
-    localStorage.setItem('klever_orders', JSON.stringify(orders));
+  _unlockBtn();
 
-    // Очищаем корзину
-    localStorage.removeItem(CART_KEY);
+  // Mirror to localStorage for offline / account history access.
+  const _localOrders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
+  _localOrders.push(orderRecord);
+  localStorage.setItem('klever_orders', JSON.stringify(_localOrders));
 
-    // Показываем экран успеха
-    document.getElementById('checkoutWrap').style.display = 'none';
-    const successWrap = document.getElementById('successWrap');
-    successWrap.classList.add('visible');
-    document.getElementById('successOrderNum').textContent = '#' + orderNum;
+  localStorage.removeItem(CART_KEY);
 
-    const methodText = deliveryMethod === 'courier'
-      ? `Доставим по адресу: ${addressClean}<br>Дата: ${document.getElementById('delivDate').value}`
-      : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
-    const paymentLabel = {
-      cash: '💵 Наличными или картой курьеру',
-      invoice: '🏦 Безналичный расчёт — выставим счёт',
-      transfer: '💳 Перевод на карту — пришлём реквизиты'
-    }[paymentMethod] || '';
-    document.getElementById('successDetails').innerHTML =
-      `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${phoneClean}</strong>`;
+  document.getElementById('checkoutWrap').style.display = 'none';
+  const successWrap = document.getElementById('successWrap');
+  successWrap.classList.add('visible');
+  document.getElementById('successOrderNum').textContent = '#' + finalNum;
 
-    window.scrollTo({top: 0, behavior: 'smooth'});
-  });
+  const methodText = effectiveDelivery === 'courier'
+    ? `Доставим по адресу: ${addressClean}<br>Дата: ${document.getElementById('delivDate').value}`
+    : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
+  const cashLabel = effectiveDelivery === 'pickup' ? 'при получении' : 'курьеру';
+  const paymentLabel = {
+    cash: `💵 Наличными или картой ${cashLabel}`,
+    invoice: '🏦 Безналичный расчёт — выставим счёт',
+    transfer: '💳 Перевод на карту — пришлём реквизиты'
+  }[effectivePayment] || '';
+  document.getElementById('successDetails').innerHTML =
+    `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${phoneClean}</strong>`;
+
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 function showError(fieldId, hintId) {

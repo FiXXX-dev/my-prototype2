@@ -1622,7 +1622,7 @@ function orderCardHtml(o) {
         </div>
         ${o.payment ? `<div class="order-section" style="margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;">
           <div class="order-label">Оплата</div>
-          <div class="order-value">${({cash:'💵 Наличными или картой курьеру',invoice:'🏦 Безналичный расчёт (счёт)',transfer:'💳 Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
+          <div class="order-value">${({cash: o.method==='pickup'?'💵 Наличными или картой при получении':'💵 Наличными или картой курьеру', invoice:'🏦 Безналичный расчёт (счёт)', transfer:'💳 Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
         </div>` : ''}
         ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
         ${o.comment && String(o.comment).trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
@@ -1703,7 +1703,7 @@ function buildPrintSlip(o) {
     </tr>`).join('');
   const statusLabel = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'Доставлен'}[o.status] || o.status;
   const methodLabel = o.method === 'pickup' ? 'Самовывоз' : 'Курьерская доставка';
-  const paymentLabel = {cash:'Наличными / картой курьеру',invoice:'Безналичный расчёт (счёт)',transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
+  const paymentLabel = {cash: o.method==='pickup'?'Наличными / картой при получении':'Наличными / картой курьеру', invoice:'Безналичный расчёт (счёт)', transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
   const safeComment = o.comment ? String(o.comment).replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;') : '';
   return `
     <div class="pi-header">
