@@ -663,6 +663,16 @@ function doLogout(){
       users.push(local); setUsers(users);
     }
     setCurrentUserId(u.id);
+    // Session confirmed asynchronously — make sure the dashboard is shown
+    // even if the synchronous boot check (bottom of script) ran first while
+    // klever_current_user wasn't yet persisted.
+    if (!document.getElementById('accountWrap').classList.contains('visible')) showAccount();
+    // Refresh the orders badge from Supabase (source of truth when configured)
+    if (typeof supaListOrdersByUser === 'function') {
+      supaListOrdersByUser(u.id).then(list => {
+        if (Array.isArray(list)) document.getElementById('cntMyOrders').textContent = list.length;
+      });
+    }
     // Pull addresses + favorites
     if (typeof supaListAddresses === 'function') {
       supaListAddresses().then(addrs => {

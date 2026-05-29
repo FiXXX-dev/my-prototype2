@@ -860,24 +860,36 @@ document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
 });
 prefillInvoiceFromUser();
 
-// Autofill contact fields from Supabase auth profile
+// Autofill contact fields from Supabase auth profile (user_metadata).
+// Only fills empty fields so we never clobber what the user has typed.
+function _applyAuthAutofill(user){
+  if (!user) return;
+  _checkoutUserId = user.id;
+  const m = user.user_metadata || {};
+  const fullName = [m.lastName, m.firstName, m.middleName].filter(Boolean).join(' ') || m.name || '';
+  const phone = m.phone || '';
+  const email = user.email || '';
+  const nameEl  = document.getElementById('clientName');
+  const phoneEl = document.getElementById('clientPhone');
+  const emailEl = document.getElementById('clientEmail');
+  if (nameEl  && !nameEl.value  && fullName) nameEl.value  = fullName;
+  if (phoneEl && !phoneEl.value && phone)    phoneEl.value = phone;
+  if (emailEl && !emailEl.value && email)    emailEl.value = email;
+}
+
 (function _autofillFromAuth(){
-  if (typeof supaGetCurrentUser !== 'function') return;
   if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
-  supaGetCurrentUser().then(u => {
-    if (!u) return;
-    _checkoutUserId = u.id;
-    const m = u.user_metadata || {};
-    const fullName = [m.lastName, m.firstName, m.middleName].filter(Boolean).join(' ') || m.name || '';
-    const phone = m.phone || '';
-    const email = u.email || '';
-    const nameEl  = document.getElementById('clientName');
-    const phoneEl = document.getElementById('clientPhone');
-    const emailEl = document.getElementById('clientEmail');
-    if (nameEl  && !nameEl.value  && fullName) nameEl.value  = fullName;
-    if (phoneEl && !phoneEl.value && phone)    phoneEl.value = phone;
-    if (emailEl && !emailEl.value && email)    emailEl.value = email;
-  });
+  // 1) Immediate one-shot in case the session is already available.
+  if (typeof supaGetCurrentUser === 'function') {
+    supaGetCurrentUser().then(u => { if (u) _applyAuthAutofill(u); });
+  }
+  // 2) React to session restoration / sign-in (INITIAL_SESSION, SIGNED_IN).
+  if (typeof supaOnAuthChange === 'function') {
+    supaOnAuthChange((event, session) => {
+      if (session && session.user) _applyAuthAutofill(session.user);
+      else if (event === 'SIGNED_OUT') _checkoutUserId = null;
+    });
+  }
 })();
 
 // Saved-address dropdown for signed-in users
