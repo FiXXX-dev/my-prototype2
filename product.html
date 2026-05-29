@@ -91,6 +91,31 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 @media(max-width:900px){.product-wrap{grid-template-columns:1fr;padding:0 20px;gap:32px;margin:24px auto;}.related-grid{grid-template-columns:repeat(2,1fr);gap:14px;}header{padding:0 20px;}nav{display:none;}.related,.description{padding:0 20px;}}
 @media(max-width:600px){.product-wrap{padding:0 16px;gap:24px;margin:16px auto;}.related,.description{padding:0 16px;}}
 @media(max-width:360px){.related-grid{grid-template-columns:1fr;}}
+
+/* ===== Sticky buy bar (mobile only) ===== */
+.sticky-buy-bar{
+  display:none;
+  position:fixed;bottom:64px;left:0;right:0;
+  background:white;border-top:1px solid #e0ece4;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.1);
+  padding:10px 16px;z-index:145;
+  transition:transform .25s ease,opacity .25s ease;
+  transform:translateY(0);
+}
+.sticky-buy-bar.hidden{transform:translateY(120%);opacity:0;pointer-events:none;}
+.sticky-buy-bar-inner{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto;}
+.sticky-buy-price{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;color:#1a2e22;flex-shrink:0;}
+.sticky-buy-price small{font-family:'Onest',sans-serif;font-size:12px;font-weight:400;color:#8aaa94;display:block;}
+.sticky-btn-add{flex:1;padding:13px 16px;border-radius:12px;background:#2ECC71;border:none;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;color:#0f1a14;cursor:pointer;transition:background .2s;}
+.sticky-btn-add:hover{background:#C8F135;}
+.sticky-qty-wrap{display:none;flex:1;align-items:center;gap:8px;}
+.sticky-qty-wrap.show{display:flex;}
+.sticky-qty-btn{width:38px;height:38px;border-radius:50%;background:#2ECC71;border:none;font-size:18px;font-weight:700;color:#0f1a14;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+.sticky-qty-btn:hover{background:#C8F135;}
+.sticky-qty-val{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;min-width:32px;text-align:center;}
+.sticky-open-cart{flex:1;padding:13px 16px;border-radius:12px;background:white;border:2px solid #2ECC71;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:#1a2e22;cursor:pointer;text-align:center;}
+@media(max-width:900px){.sticky-buy-bar{display:block;}}
+@media(max-width:600px){.sticky-buy-bar{bottom:64px;padding:8px 12px;}.sticky-buy-price{font-size:16px;}}
 </style>
 <style id="cart-inline-styles">
 .cart-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:background .2s,transform .15s;flex-shrink:0;padding:0;}
@@ -209,6 +234,25 @@ setTimeout(function(){
 </div>
 
 <div id="productContent"></div>
+
+<!-- Sticky buy bar (mobile only, appears when inline buttons scroll out of view) -->
+<div class="sticky-buy-bar hidden" id="stickyBuyBar" aria-hidden="true">
+  <div class="sticky-buy-bar-inner">
+    <div class="sticky-buy-price" id="stickyPrice">
+      <span id="stickyPriceVal">—</span> ₽
+      <small data-i18n="product.price_unit">за 1 шт.</small>
+    </div>
+    <!-- State A: not in cart -->
+    <button class="sticky-btn-add" id="stickyBtnAdd" onclick="addCurrentToCart()" data-i18n="product.add_to_cart">В корзину</button>
+    <!-- State B: in cart -->
+    <div class="sticky-qty-wrap" id="stickyQtyWrap">
+      <button class="sticky-qty-btn" onclick="productQtyDec()">−</button>
+      <span class="sticky-qty-val" id="stickyQtyVal">0</span>
+      <button class="sticky-qty-btn" onclick="productQtyInc()">+</button>
+      <button class="sticky-open-cart" onclick="openCart()" data-i18n="product.open_cart">Корзина →</button>
+    </div>
+  </div>
+</div>
 
 <footer>
   <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></div>
@@ -713,6 +757,23 @@ function syncCartQtyBlock(){
     buyBtns.style.display = '';
     qtyBlock.style.display = 'none';
   }
+  _syncStickyBar(qty);
+}
+
+function _syncStickyBar(qty){
+  const bar = document.getElementById('stickyBuyBar'); if (!bar) return;
+  const addBtn   = document.getElementById('stickyBtnAdd');
+  const qtyWrap  = document.getElementById('stickyQtyWrap');
+  const qtyVal   = document.getElementById('stickyQtyVal');
+  const priceEl  = document.getElementById('stickyPriceVal');
+  if (priceEl && product) priceEl.textContent = product.price;
+  if (qty > 0) {
+    if (addBtn)  addBtn.style.display  = 'none';
+    if (qtyWrap){ qtyWrap.classList.add('show'); if (qtyVal) qtyVal.textContent = qty; }
+  } else {
+    if (addBtn)  addBtn.style.display  = '';
+    if (qtyWrap) qtyWrap.classList.remove('show');
+  }
 }
 
 function productQtyInc(){
@@ -765,6 +826,21 @@ window.toggleProdFav = function(){
 };
 _prodFavRender();
 syncCartQtyBlock();
+
+// Show sticky bar when inline buy buttons scroll out of viewport
+(function _initStickyBar(){
+  const anchor = document.getElementById('buyBtns') || document.getElementById('cartQtyBlock');
+  const bar = document.getElementById('stickyBuyBar');
+  if (!anchor || !bar) return;
+  // Use the parent product-info column as the sentinel — covers both buyBtns and cartQtyBlock
+  const sentinel = anchor.closest('.product-info') || anchor;
+  const obs = new IntersectionObserver(entries => {
+    const visible = entries[0].isIntersecting;
+    bar.classList.toggle('hidden', visible);
+    bar.setAttribute('aria-hidden', visible ? 'true' : 'false');
+  }, { threshold: 0.01 });
+  obs.observe(sentinel);
+})();
 
 // Sync favorites from Supabase so the heart shows correctly on fresh devices.
 (function _syncProdFavFromSupabase(){
