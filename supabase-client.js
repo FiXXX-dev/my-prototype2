@@ -340,27 +340,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== Auth =====
-  // Required SQL for profile data (optional, see customer_addresses below):
-  //   create table public.customer_addresses (
-  //     id uuid primary key default gen_random_uuid(),
-  //     user_id uuid references auth.users(id) on delete cascade,
-  //     name text, address text, is_default boolean default false,
-  //     created_at timestamptz default now()
-  //   );
-  //   alter table public.customer_addresses enable row level security;
-  //   create policy "own_addresses" on public.customer_addresses for all
-  //     using (auth.uid() = user_id) with check (auth.uid() = user_id);
-  //
-  //   create table public.customer_favorites (
-  //     user_id uuid references auth.users(id) on delete cascade,
-  //     product_id text,
-  //     created_at timestamptz default now(),
-  //     primary key (user_id, product_id)
-  //   );
-  //   alter table public.customer_favorites enable row level security;
-  //   create policy "own_favs" on public.customer_favorites for all
-  //     using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
   window.supaSignUp = async function(email, password, meta){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
@@ -392,62 +371,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       if (error) return null;
       return data && data.user ? data.user : null;
     } catch(e) { return null; }
-  };
-
-  // ===== customer_addresses =====
-  window.supaListAddresses = async function(){
-    const sb = getClient(); if (!sb) return null;
-    try {
-      const u = await window.supaGetCurrentUser(); if (!u) return [];
-      const { data, error } = await sb.from('customer_addresses').select('*').eq('user_id', u.id).order('is_default', { ascending: false });
-      if (error) { console.error('[supabase] list addresses', error); return null; }
-      return data || [];
-    } catch(e) { return null; }
-  };
-
-  window.supaInsertAddress = async function(row){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      if (row.is_default) {
-        // Clear previous defaults
-        await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
-      }
-      const { data, error } = await sb.from('customer_addresses').insert([{ ...row, user_id: u.id }]).select();
-      if (error) return { ok:false, error };
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
-  window.supaUpdateAddress = async function(id, row){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      if (row.is_default) {
-        await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
-      }
-      const { data, error } = await sb.from('customer_addresses').update(row).eq('id', id).select();
-      if (error) return { ok:false, error };
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
-  window.supaDeleteAddress = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('customer_addresses').delete().eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
-  window.supaSetDefaultAddress = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
-      const { error } = await sb.from('customer_addresses').update({ is_default: true }).eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
   };
 
   // ===== Cross-browser sync: email-keyed identity =====
