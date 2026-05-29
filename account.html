@@ -983,7 +983,22 @@ function repeatOrder(idx){
     alert('Не удалось найти товары из этого заказа');
     return;
   }
-  localStorage.setItem('klever_cart', JSON.stringify(order.items));
+  // Normalize to the EXACT shape checkout.html expects: {name, sku, price, qty, img}.
+  // Older orders / different sources may use quantity/image or store numbers as strings,
+  // which made checkout count "0 шт." — coerce everything here.
+  const cart = order.items.map(it => ({
+    name: it.name || it.title || '',
+    sku: String(it.sku != null ? it.sku : (it.id != null ? it.id : '')),
+    price: Number(it.price != null ? it.price : it.cost) || 0,
+    qty: Number(it.qty != null ? it.qty : (it.quantity != null ? it.quantity : 1)) || 1,
+    img: it.img || it.image || ''
+  })).filter(i => i.name && i.price > 0);
+
+  if (cart.length === 0) {
+    alert('Не удалось найти товары из этого заказа');
+    return;
+  }
+  localStorage.setItem('klever_cart', JSON.stringify(cart));
   alert('✓ Товары добавлены в корзину');
   window.location.href = 'checkout.html';
 }
