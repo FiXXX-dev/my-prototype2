@@ -1324,8 +1324,14 @@ function renderDashboard() {
   document.getElementById('doneAll').textContent = doneOrders.length;
   document.getElementById('doneAllSum').textContent = doneOrders.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
 
-  // Последние новые заказы
-  const recent = allOrders.slice(-3).reverse();
+  // Последние заказы — сортируем по дате убывания, показываем до 10
+  const recent = allOrders.slice().sort((a, b) => {
+    const da = parseRuDate(a.date), db = parseRuDate(b.date);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db - da;
+  }).slice(0, 10);
   const last = document.getElementById('dashLastOrders');
   if (recent.length === 0) {
     last.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
@@ -1573,7 +1579,7 @@ function orderCardHtml(o) {
           <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
           <div class="order-total" style="margin-left:auto;">${o.total.toLocaleString('ru-RU')} ₽</div>
         </div>
-        <button class="order-toggle" onclick="toggleOrderCard(this, ${o.num})" title="Развернуть/свернуть">▼</button>
+        <button class="order-toggle" onclick="toggleOrderCard(this, '${o.num}')" title="Развернуть/свернуть">▼</button>
       </div>
       <div class="order-collapse"><div class="order-collapse-inner">
         <div class="order-body">
@@ -1602,8 +1608,8 @@ function orderCardHtml(o) {
           <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${String(o.comment).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;')}</div>
         </div>` : ''}
         <div class="order-actions">
-          ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
-          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
+          ${o.status === 'done' ? `<button class="btn btn-secondary btn-sm" onclick="reopenOrder('${o.num}')">↩ Вернуть в новые</button>` : `<button class="btn btn-primary btn-sm" onclick="completeOrder('${o.num}')">✓ Отметить выполненным</button>`}
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.num}')">🗑️ Удалить</button>
         </div>
       </div></div>
     </div>
@@ -1641,7 +1647,7 @@ async function _updateOrderStatus(num, status) {
   if (typeof supaUpdateOrder === 'function') {
     try { await supaUpdateOrder(num, { status }); } catch (e) { console.warn('[admin] supa update failed', e); }
   }
-  const orders = getOrders().map(o => o.num === num ? {...o, status} : o);
+  const orders = getOrders().map(o => String(o.num) === String(num) ? {...o, status} : o);
   localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
 }
 
@@ -1662,7 +1668,7 @@ function deleteOrder(num) {
   // Mark as deleted immediately so any in-flight refresh won't restore it.
   _deletedNums.add(String(num));
   const finish = () => {
-    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => o.num !== num)));
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => String(o.num) !== String(num))));
     renderOrders(); renderDashboard(); updateCounts();
   };
   if (typeof supaDeleteOrder === 'function') {
@@ -1680,6 +1686,9 @@ function clearOrders() {
   localStorage.removeItem(STORAGE_ORDERS);
   renderOrders();
   updateCounts();
+  if (typeof supaDeleteAllOrders === 'function') {
+    supaDeleteAllOrders().catch(e => console.warn('[admin] supa clear-all failed', e));
+  }
 }
 
 // ===== ЗАЯВКИ =====
