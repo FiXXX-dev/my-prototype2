@@ -709,6 +709,9 @@ function updateBadges(){
   document.getElementById('cntMyAddr').textContent = (u.addresses || []).length;
 }
 
+// Cache of orders currently rendered — used by repeatOrder(idx)
+let _renderedOrders = [];
+
 function renderProfile(){
   const u = getCurrentUser();
   if (!u) return;
@@ -786,11 +789,33 @@ function changePassword(){
   showMsg('passMsg', '✓ Пароль успешно изменён', 'success');
 }
 
-function renderMyOrders(){
+async function renderMyOrders(){
   const u = getCurrentUser();
-  const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
-  const myOrders = allOrders.filter(o => o.userId === u.id).reverse();
+  if (!u) return;
   const list = document.getElementById('myOrdersList');
+  list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#8aaa94;font-size:14px;">Загружаем историю заказов…</div>';
+
+  let myOrders = [];
+
+  // Try Supabase first — orders linked by user_id
+  if (typeof supaListOrdersByUser === 'function'
+      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+    try {
+      const sbOrders = await supaListOrdersByUser(u.id);
+      if (Array.isArray(sbOrders)) myOrders = sbOrders;
+    } catch(e) {
+      console.warn('[account] Supabase order history failed, falling back to localStorage', e);
+    }
+  }
+
+  // Fallback: localStorage (orders saved with userId)
+  if (myOrders.length === 0) {
+    const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
+    myOrders = allOrders.filter(o => o.userId === u.id).reverse();
+  }
+
+  _renderedOrders = myOrders;
+  document.getElementById('cntMyOrders').textContent = myOrders.length;
 
   if (myOrders.length === 0){
     list.innerHTML = `<div class="empty">
@@ -802,7 +827,7 @@ function renderMyOrders(){
     return;
   }
 
-  list.innerHTML = myOrders.map(o => `
+  list.innerHTML = myOrders.map((o, idx) => `
     <div class="order">
       <div class="order-head">
         <div>
@@ -810,22 +835,24 @@ function renderMyOrders(){
           <div class="order-date">${o.date}</div>
         </div>
         <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'В обработке'}</span>
-        <div class="order-total">${o.total.toLocaleString('ru-RU')} ₽</div>
+        <div class="order-total">${(o.total || 0).toLocaleString('ru-RU')} ₽</div>
       </div>
       <div class="order-items">
         ${(o.items || []).map(i => `<div class="order-line"><span>${i.name} × ${i.qty}</span><span>${(i.price * i.qty).toLocaleString('ru-RU')} ₽</span></div>`).join('')}
       </div>
       <div class="order-actions">
-        <button class="btn btn-primary btn-sm" onclick="repeatOrder(${o.num})">↻ Повторить заказ</button>
+        <button class="btn btn-primary btn-sm" onclick="repeatOrder(${idx})">↻ Повторить заказ</button>
       </div>
     </div>
   `).join('');
 }
 
-function repeatOrder(orderNum){
-  const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
-  const order = allOrders.find(o => o.num === orderNum);
-  if (!order) return;
+function repeatOrder(idx){
+  const order = _renderedOrders[idx];
+  if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+    alert('Не удалось найти товары из этого заказа');
+    return;
+  }
   localStorage.setItem('klever_cart', JSON.stringify(order.items));
   alert('✓ Товары добавлены в корзину');
   window.location.href = 'checkout.html';

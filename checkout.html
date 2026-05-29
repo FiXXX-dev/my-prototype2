@@ -500,6 +500,7 @@ const DELIVERY_COST = 0;
 
 let deliveryMethod = 'courier';
 let paymentMethod = 'cash';
+let _checkoutUserId = null;
 
 function selectPayment(method) {
   paymentMethod = method;
@@ -758,6 +759,7 @@ function submitOrder() {
     payment: paymentMethod,
     invoiceCompany: paymentMethod === 'invoice' ? clean(document.getElementById('invoiceCompany').value) : '',
     invoiceInn: paymentMethod === 'invoice' ? clean(document.getElementById('invoiceInn').value) : '',
+    userId: _checkoutUserId || null,
   };
 
   // Lock the submit button while we talk to Supabase so the user can't double-fire.
@@ -857,6 +859,26 @@ document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
   r.addEventListener('change', e => selectPayment(e.target.value));
 });
 prefillInvoiceFromUser();
+
+// Autofill contact fields from Supabase auth profile
+(function _autofillFromAuth(){
+  if (typeof supaGetCurrentUser !== 'function') return;
+  if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
+  supaGetCurrentUser().then(u => {
+    if (!u) return;
+    _checkoutUserId = u.id;
+    const m = u.user_metadata || {};
+    const fullName = [m.lastName, m.firstName, m.middleName].filter(Boolean).join(' ') || m.name || '';
+    const phone = m.phone || '';
+    const email = u.email || '';
+    const nameEl  = document.getElementById('clientName');
+    const phoneEl = document.getElementById('clientPhone');
+    const emailEl = document.getElementById('clientEmail');
+    if (nameEl  && !nameEl.value  && fullName) nameEl.value  = fullName;
+    if (phoneEl && !phoneEl.value && phone)    phoneEl.value = phone;
+    if (emailEl && !emailEl.value && email)    emailEl.value = email;
+  });
+})();
 
 // Saved-address dropdown for signed-in users
 function _populateSavedAddresses(){
