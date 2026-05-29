@@ -219,9 +219,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           || error?.code === '42703' || error?.code === 'PGRST204';
     }
     try {
-      let { error } = await sb.from('orders').delete().eq('num', numOrId);
-      if (error && missing(error)) {
-        ({ error } = await sb.from('orders').delete().eq('id', numOrId));
+      // Use .select() so we know whether any row was actually deleted.
+      let { data, error } = await sb.from('orders').delete().eq('num', numOrId).select();
+      // Retry by id when: num column missing (error) OR num matched 0 rows.
+      if ((error && missing(error)) || (!error && (!data || data.length === 0))) {
+        ({ data, error } = await sb.from('orders').delete().eq('id', numOrId).select());
       }
       if (error) { console.error('[supabase] delete error', error); return { ok: false, error }; }
       return { ok: true };
