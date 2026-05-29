@@ -1612,6 +1612,11 @@ function orderCardHtml(o) {
 
 // ===== Supabase orders bridge =====
 // Fetches from Supabase if configured, mirrors result into localStorage so the
+// Set of order nums/ids that have been deleted locally but a stale
+// in-flight refresh might try to bring back. Cleared automatically
+// once a fresh refresh confirms the row is gone.
+const _deletedNums = new Set();
+
 // existing sync renderers (renderOrders/renderDashboard) keep working.
 // Returns a Promise that resolves after sync (or immediately if unconfigured).
 async function refreshOrdersFromSupabase() {
@@ -1619,8 +1624,15 @@ async function refreshOrdersFromSupabase() {
   try {
     const data = await supaListOrders();
     if (data === null) return null; // unconfigured / error
-    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(data));
-    return data;
+    // Filter out any orders that were just deleted locally so a slow
+    // in-flight refresh can't race and bring them back.
+    const filtered = _deletedNums.size > 0
+      ? data.filter(o => !_deletedNums.has(String(o.num)) && !_deletedNums.has(String(o._supaId)))
+      : data;
+    // Clear stale deletion markers for orders that are truly gone from Supabase.
+    _deletedNums.forEach(k => { if (!data.find(o => String(o.num) === k || String(o._supaId) === k)) _deletedNums.delete(k); });
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(filtered));
+    return filtered;
   } catch (e) { console.warn('[admin] supa refresh failed', e); return null; }
 }
 
@@ -1647,12 +1659,19 @@ function reopenOrder(num) {
 
 function deleteOrder(num) {
   if (!confirm('Удалить заказ #' + num + '?')) return;
+  // Mark as deleted immediately so any in-flight refresh won't restore it.
+  _deletedNums.add(String(num));
   const finish = () => {
     localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => o.num !== num)));
     renderOrders(); renderDashboard(); updateCounts();
   };
   if (typeof supaDeleteOrder === 'function') {
-    supaDeleteOrder(num).then(finish).catch(e => { console.warn('[admin] supa delete failed', e); finish(); });
+    supaDeleteOrder(num)
+      .then(res => {
+        if (!res.ok) console.warn('[admin] supa delete returned not-ok', res);
+        finish();
+      })
+      .catch(e => { console.warn('[admin] supa delete failed', e); finish(); });
   } else { finish(); }
 }
 
