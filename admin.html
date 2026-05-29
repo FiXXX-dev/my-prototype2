@@ -1324,8 +1324,14 @@ function renderDashboard() {
   document.getElementById('doneAll').textContent = doneOrders.length;
   document.getElementById('doneAllSum').textContent = doneOrders.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
 
-  // Последние новые заказы
-  const recent = allOrders.slice(-3).reverse();
+  // Последние заказы — сортируем по дате убывания, показываем до 10
+  const recent = allOrders.slice().sort((a, b) => {
+    const da = parseRuDate(a.date), db = parseRuDate(b.date);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db - da;
+  }).slice(0, 10);
   const last = document.getElementById('dashLastOrders');
   if (recent.length === 0) {
     last.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
