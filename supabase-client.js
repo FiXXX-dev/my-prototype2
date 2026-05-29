@@ -248,34 +248,65 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // Returns orders for a specific user (for account history page).
-  window.supaListOrdersByUser = async function(userId){
+  // opts = { phone, email } — used as fallback when user_id column is absent
+  // or when orders were placed without being linked to a user_id.
+  window.supaListOrdersByUser = async function(userId, opts){
     const sb = getClient();
     if (!sb) return null;
+    const isMissingCol = e => e && (
+      /column .* does not exist/i.test((e.message||'') + ' ' + (e.details||'')) ||
+      e.code === '42703' || e.code === 'PGRST204'
+    );
+    const mapRow = r => ({
+      num: r.num != null ? r.num : r.id,
+      id: r.id,
+      date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+      status: r.status || 'new',
+      items: Array.isArray(r.items) ? r.items : [],
+      subtotal: r.subtotal,
+      delivery: r.delivery_cost,
+      total: r.total_price != null ? Number(r.total_price) : 0,
+      method: r.delivery_method,
+      address: r.delivery_address || '',
+      phone: r.customer_phone || '',
+      name: r.customer_name || '',
+      company: r.company || '',
+      email: r.customer_email || '',
+      comment: r.comment || '',
+      payment: r.payment_method,
+      invoiceCompany: r.invoice_company || '',
+      invoiceInn: r.invoice_inn || '',
+      language: r.language,
+      _supaId: r.id,
+    });
     try {
-      const { data, error } = await sb.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-      if (error) { console.error('[supabase] list orders by user', error); return null; }
-      return (data || []).map(r => ({
-        num: r.num != null ? r.num : r.id,
-        id: r.id,
-        date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
-        status: r.status || 'new',
-        items: Array.isArray(r.items) ? r.items : [],
-        subtotal: r.subtotal,
-        delivery: r.delivery_cost,
-        total: r.total_price != null ? Number(r.total_price) : 0,
-        method: r.delivery_method,
-        address: r.delivery_address || '',
-        phone: r.customer_phone || '',
-        name: r.customer_name || '',
-        company: r.company || '',
-        email: r.customer_email || '',
-        comment: r.comment || '',
-        payment: r.payment_method,
-        invoiceCompany: r.invoice_company || '',
-        invoiceInn: r.invoice_inn || '',
-        language: r.language,
-        _supaId: r.id,
-      }));
+      // Primary: query by user_id
+      let rows = [];
+      if (userId) {
+        const { data: d1, error: e1 } = await sb.from('orders').select('*')
+          .eq('user_id', userId).order('created_at', { ascending: false });
+        if (!e1) { rows = d1 || []; }
+        else if (!isMissingCol(e1)) { console.error('[supabase] list orders by user', e1); return null; }
+        // if column missing, fall through to phone/email fallback
+      }
+      // Fallback / supplement: by phone and/or email.
+      // Catches orders placed before user_id existed or as a guest.
+      if (rows.length === 0 && opts) {
+        const { phone, email } = opts;
+        const queries = [];
+        if (phone) queries.push(sb.from('orders').select('*').eq('customer_phone', phone).order('created_at', { ascending: false }));
+        if (email) queries.push(sb.from('orders').select('*').eq('customer_email', email).order('created_at', { ascending: false }));
+        if (queries.length > 0) {
+          const results = await Promise.all(queries);
+          const seen = new Set();
+          for (const { data: d } of results) {
+            if (!Array.isArray(d)) continue;
+            for (const r of d) { if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); } }
+          }
+          rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+      }
+      return rows.map(mapRow);
     } catch (e) {
       console.error('[supabase] list orders by user exception', e);
       return null;

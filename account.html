@@ -90,6 +90,8 @@ nav a:hover{color:var(--lime);}
 .order-total{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;}
 .order-status{padding:4px 12px;border-radius:30px;font-size:11px;font-weight:700;display:inline-block;}
 .status-new{background:#fff3ee;color:var(--accent);}
+.status-assembling{background:#e8f0ff;color:#3b5bdb;}
+.status-courier{background:#f3e8ff;color:#7c3aed;}
 .status-done{background:#e8faf0;color:var(--green-dark);}
 .order-items{display:flex;flex-direction:column;gap:6px;}
 .order-line{display:flex;justify-content:space-between;font-size:13px;color:#6b8a74;}
@@ -669,7 +671,8 @@ function doLogout(){
     if (!document.getElementById('accountWrap').classList.contains('visible')) showAccount();
     // Refresh the orders badge from Supabase (source of truth when configured)
     if (typeof supaListOrdersByUser === 'function') {
-      supaListOrdersByUser(u.id).then(list => {
+      const _phone = (u.user_metadata && u.user_metadata.phone) || local.phone || '';
+      supaListOrdersByUser(u.id, { phone: _phone, email: u.email }).then(list => {
         if (Array.isArray(list)) document.getElementById('cntMyOrders').textContent = list.length;
       });
     }
@@ -807,21 +810,21 @@ async function renderMyOrders(){
 
   let myOrders = [];
 
-  // Try Supabase first — orders linked by user_id
+  // Try Supabase first — by user_id, then by phone/email as fallback
   if (typeof supaListOrdersByUser === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     try {
-      const sbOrders = await supaListOrdersByUser(u.id);
+      const sbOrders = await supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' });
       if (Array.isArray(sbOrders)) myOrders = sbOrders;
     } catch(e) {
       console.warn('[account] Supabase order history failed, falling back to localStorage', e);
     }
   }
 
-  // Fallback: localStorage (orders saved with userId)
+  // Fallback: localStorage (orders saved with userId or matching phone)
   if (myOrders.length === 0) {
     const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
-    myOrders = allOrders.filter(o => o.userId === u.id).reverse();
+    myOrders = allOrders.filter(o => o.userId === u.id || o.phone === u.phone).reverse();
   }
 
   _renderedOrders = myOrders;
@@ -844,7 +847,7 @@ async function renderMyOrders(){
           <div class="order-num">Заказ #${o.num}</div>
           <div class="order-date">${o.date}</div>
         </div>
-        <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'В обработке'}</span>
+        <span class="order-status status-${({assembling:'assembling',courier:'courier',done:'done'}[o.status]||'new')}">${{new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен'}[o.status]||'В обработке'}</span>
         <div class="order-total">${(o.total || 0).toLocaleString('ru-RU')} ₽</div>
       </div>
       <div class="order-items">
