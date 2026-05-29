@@ -165,11 +165,19 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .order-items{margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;}
 .order-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
 .order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;flex-wrap:wrap;align-items:center;}
-.status-assembling{background:#e8f0ff;color:#3b5bdb;}
-.status-courier{background:#f3e8ff;color:#7c3aed;}
-.btn-status{background:#f0f4f0;color:#4a6b55;border:1.5px solid #c8ddd0;font-size:12px;padding:5px 12px;border-radius:8px;cursor:pointer;font-family:'Onest',sans-serif;font-weight:600;transition:background .15s,border-color .15s;}
-.btn-status:hover{background:#e0ece4;border-color:#6ab87a;}
-.btn-status.s-active{background:var(--green);color:white;border-color:var(--green);}
+.status-assembling{background:#fffbe8;color:#a07800;}
+.status-courier{background:#e8f0ff;color:#3b5bdb;}
+.status-cancelled{background:#ffe8ee;color:#FF3B6B;}
+/* Status dropdown widget */
+.status-select-wrap{position:relative;display:inline-flex;align-items:center;}
+.status-badge-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:'Onest',sans-serif;transition:filter .15s,transform .1s;line-height:1.4;}
+.status-badge-btn:hover{filter:brightness(.88);transform:scale(1.03);}
+.status-badge-btn .sa{font-size:9px;opacity:0.65;margin-left:1px;}
+.status-drop-menu{position:fixed;top:0;left:0;background:white;border:1.5px solid #e0ece4;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.14);z-index:600;min-width:195px;padding:6px;display:none;}
+.status-drop-menu.open{display:block;}
+.status-drop-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:none;background:none;width:100%;text-align:left;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:8px;color:#1a2e22;transition:background .12s;}
+.status-drop-item:hover{background:#f2f7f4;}
+.status-drop-item.cur{color:var(--green-dark);background:#e8faf0;}
 @media print{
   body>*:not(#printSlip){display:none!important;}
   #printSlip{display:block!important;font-family:'Onest',sans-serif;color:#111;padding:24px;}
@@ -1590,6 +1598,11 @@ function renderOrders() {
 function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
+  const STATUS_CLASS = {assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'};
+  const STATUS_LABEL = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'❌ Отменён'};
+  const sClass = STATUS_CLASS[o.status] || 'new';
+  const sLabel = STATUS_LABEL[o.status] || 'Новый';
+  const isCur = s => ((!o.status || o.status==='new') && s==='new') || o.status===s;
   return `
     <div class="order-card" data-num="${o.num}" data-expanded="${expanded}">
       <div class="order-head">
@@ -1598,7 +1611,7 @@ function orderCardHtml(o) {
             <div class="order-num">#${o.num != null ? o.num : (o.id != null ? o.id : '?')}</div>
             <div class="order-date">${o.date}</div>
           </div>
-          <span class="order-status status-${({assembling:'assembling',courier:'courier',done:'done'}[o.status]||'new')}">${{new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен'}[o.status]||'Новый'}</span>
+          <span class="order-status status-${sClass}">${sLabel}</span>
           <div class="order-total" style="margin-left:auto;">${o.total.toLocaleString('ru-RU')} ₽</div>
         </div>
         <button class="order-toggle" onclick="toggleOrderCard(this, '${o.num}')" title="Развернуть/свернуть">▼</button>
@@ -1630,9 +1643,18 @@ function orderCardHtml(o) {
           <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${String(o.comment).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;')}</div>
         </div>` : ''}
         <div class="order-actions">
-          ${o.status === 'done'
-            ? `<button class="btn btn-secondary btn-sm" onclick="setOrderStatus('${o.num}','new')">↩ Вернуть в новые</button>`
-            : `<button class="btn-status${o.status==='assembling'?' s-active':''}" onclick="setOrderStatus('${o.num}','assembling')">📦 В сборке</button><button class="btn-status${o.status==='courier'?' s-active':''}" onclick="setOrderStatus('${o.num}','courier')">🚚 Курьеру</button><button class="btn-status" onclick="setOrderStatus('${o.num}','done')">✅ Доставлен</button>`}
+          <div class="status-select-wrap">
+            <button class="status-badge-btn status-${sClass}" onclick="toggleStatusDrop('${o.num}',event)">
+              ${sLabel} <span class="sa">▼</span>
+            </button>
+            <div class="status-drop-menu" id="sdm-${o.num}">
+              <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus('${o.num}','new')">📋 В обработке</button>
+              <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus('${o.num}','assembling')">📦 В сборке</button>
+              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus('${o.num}','courier')">🚚 Передан курьеру</button>
+              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus('${o.num}','done')">✅ Доставлен</button>
+              <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus('${o.num}','cancelled')">❌ Отменён</button>
+            </div>
+          </div>
           <button class="btn btn-secondary btn-sm" onclick="printOrder('${o.num}')">🖨️ Накладная</button>
           <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.num}')">🗑️ Удалить</button>
         </div>
@@ -1667,20 +1689,41 @@ async function refreshOrdersFromSupabase() {
   } catch (e) { console.warn('[admin] supa refresh failed', e); return null; }
 }
 
-// Wrap status update: try Supabase first, then mirror to localStorage.
-async function _updateOrderStatus(num, status) {
-  if (typeof supaUpdateOrder === 'function') {
-    try { await supaUpdateOrder(num, { status }); } catch (e) { console.warn('[admin] supa update failed', e); }
-  }
+function setOrderStatus(num, status) {
+  // Instant localStorage update + UI, then async Supabase sync
   const orders = getOrders().map(o => String(o.num) === String(num) ? {...o, status} : o);
   localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
+  renderOrders(); renderDashboard(); updateCounts();
+  if (typeof supaUpdateOrder === 'function') {
+    supaUpdateOrder(num, { status }).catch(e => console.warn('[admin] supa status update failed', e));
+  }
 }
 
-function setOrderStatus(num, status) {
-  _updateOrderStatus(num, status).then(() => {
-    renderOrders(); renderDashboard(); updateCounts();
+function toggleStatusDrop(num, e) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  // Close all other open menus
+  document.querySelectorAll('.status-drop-menu.open').forEach(m => {
+    if (m.id !== 'sdm-' + num) m.classList.remove('open');
   });
+  const menu = document.getElementById('sdm-' + num);
+  if (!menu) return;
+  if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+  menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  menu.style.left = (rect.left + window.scrollX) + 'px';
+  menu.classList.add('open');
 }
+
+function pickStatus(num, status) {
+  const menu = document.getElementById('sdm-' + num);
+  if (menu) menu.classList.remove('open');
+  setOrderStatus(num, status);
+}
+
+document.addEventListener('click', function() {
+  document.querySelectorAll('.status-drop-menu.open').forEach(m => m.classList.remove('open'));
+});
 
 function printOrder(num) {
   const o = getOrders().find(o => String(o.num) === String(num));
