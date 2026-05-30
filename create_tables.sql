@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS public.favorites (
   created_at   timestamptz not null default timezone('utc'::text, now()),
   UNIQUE (user_email, product_sku)
 );
+-- Кэш данных товара — добавлено для работы без localStorage в новых браузерах
+ALTER TABLE public.favorites ADD COLUMN IF NOT EXISTS product_name  text;
+ALTER TABLE public.favorites ADD COLUMN IF NOT EXISTS product_price numeric;
+ALTER TABLE public.favorites ADD COLUMN IF NOT EXISTS product_img   text;
 CREATE INDEX IF NOT EXISTS favorites_user_email_idx ON public.favorites (user_email);
 
 -- ---------- АДРЕСА ДОСТАВКИ ----------

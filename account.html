@@ -753,13 +753,8 @@ function doLogout(){
     // even if the synchronous boot check (bottom of script) ran first while
     // klever_current_user wasn't yet persisted.
     if (!document.getElementById('accountWrap').classList.contains('visible')) showAccount();
-    // Refresh the orders badge from Supabase (source of truth when configured)
-    if (typeof supaListOrdersByUser === 'function') {
-      const _phone = (u.user_metadata && u.user_metadata.phone) || local.phone || '';
-      supaListOrdersByUser(u.id, { phone: _phone, email: u.email }).then(list => {
-        if (Array.isArray(list)) document.getElementById('cntMyOrders').textContent = list.length;
-      });
-    }
+    // Orders / favorites / addresses badges are filled by loadAccountData()
+    // (called from showAccount) — no duplicate orders request here.
     // Pull profile from Supabase (source of truth across browsers) and merge.
     if (typeof supaGetProfile === 'function') {
       supaGetProfile(u.id).then(p => {
@@ -779,33 +774,100 @@ function doLogout(){
         if (document.getElementById('accountWrap').classList.contains('visible')) renderProfile();
       });
     }
-    // Pull addresses (email-keyed) + favorites (email-keyed)
-    if (typeof supaListAddressesByEmail === 'function') {
-      supaListAddressesByEmail().then(addrs => {
-        if (Array.isArray(addrs)) {
-          local.addresses = addrs.map(a => ({ id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
-          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i].addresses = local.addresses; setUsers(us); }
-          document.getElementById('cntMyAddr').textContent = local.addresses.length;
-        }
-      });
-    }
-    if (typeof supaGetFavorites === 'function') {
-      supaGetFavorites().then(favs => {
-        if (Array.isArray(favs)) {
-          local.favorites = favs.slice();
-          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i].favorites = local.favorites; setUsers(us); }
-          document.getElementById('cntMyFav').textContent = local.favorites.length;
-        }
-      });
-    }
+    // Orders / favorites / addresses are fetched once by loadAccountData()
+    // (called from showAccount) — no per-tab or duplicate requests here.
   });
 })();
 
-function showAccount(){
+// ============================================================================
+// SINGLE-LOAD data store — the ONLY place that talks to Supabase for the
+// account dashboard. All data (orders + favorites + addresses) is fetched ONCE
+// per visit in one parallel batch (3 requests total). Render functions only
+// draw from these arrays; they NEVER hit the network. This eliminates the
+// request storm that was tripping the free-tier connection limit.
+// ============================================================================
+let myOrders = [];
+let myFavorites = [];
+let myAddresses = [];                // mapped to local {id,label,address,isDefault} shape
+let accountDataLoaded = false;
+let accountDataLoadedFor = null;     // user id the loaded data belongs to
+let accountDataLoading = null;       // in-flight promise (dedupes concurrent callers)
+
+function mapAddrRow(a){
+  return { id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default };
+}
+
+function updateAccountBadges(){
+  const o = document.getElementById('cntMyOrders'); if (o) o.textContent = myOrders.length;
+  const f = document.getElementById('cntMyFav');    if (f) f.textContent = myFavorites.length;
+  const a = document.getElementById('cntMyAddr');   if (a) a.textContent = myAddresses.length;
+}
+// Back-compat alias (old callers).
+function updateBadges(){ updateAccountBadges(); }
+
+// Reset the cache so the next loadAccountData() re-fetches. Call after the user
+// changes data we did NOT mirror locally, or when switching users.
+function invalidateAccountCache(){
+  accountDataLoaded = false;
+  accountDataLoadedFor = null;
+  accountDataLoading = null;
+  myOrders = [];
+  myFavorites = [];
+  myAddresses = [];
+}
+
+// Fetch orders + favorites + addresses in ONE parallel batch. Guarded so it
+// runs at most once per user per visit; concurrent callers share the promise.
+async function loadAccountData(){
+  const u = getCurrentUser();
+  if (!u) return;
+  if (accountDataLoaded && accountDataLoadedFor === u.id) return;   // already have this user's data
+  if (accountDataLoading) return accountDataLoading;                // dedupe concurrent calls
+
+  if (!(window.kleverSupabase && window.kleverSupabase.isConfigured())) {
+    // No backend → use whatever is in localStorage.
+    const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
+    myOrders = allOrders.filter(o => o.userId === u.id || o.phone === u.phone).reverse();
+    myFavorites = [];
+    myAddresses = (u.addresses || []);
+    accountDataLoaded = true; accountDataLoadedFor = u.id;
+    updateAccountBadges();
+    return;
+  }
+
+  accountDataLoading = (async () => {
+    try {
+      const [orders, favs, addrs] = await Promise.all([
+        (typeof supaListOrdersByUser === 'function')
+          ? supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' }) : Promise.resolve(null),
+        (typeof supaGetFavoritesFull === 'function') ? supaGetFavoritesFull() : Promise.resolve(null),
+        (typeof supaListAddressesByEmail === 'function') ? supaListAddressesByEmail() : Promise.resolve(null),
+      ]);
+      myOrders    = Array.isArray(orders) ? orders : [];
+      myFavorites = Array.isArray(favs)   ? favs   : [];
+      myAddresses = Array.isArray(addrs)  ? addrs.map(mapAddrRow) : [];
+      updateCurrentUser({ addresses: myAddresses });   // keep local user in sync for edit/delete-by-index
+      accountDataLoaded = true; accountDataLoadedFor = u.id;
+    } catch(e) {
+      console.warn('[account] loadAccountData failed', e);
+    } finally {
+      accountDataLoading = null;
+      updateAccountBadges();
+    }
+  })();
+  return accountDataLoading;
+}
+
+async function showAccount(){
   document.getElementById('authWrap').style.display = 'none';
   document.getElementById('accountWrap').classList.add('visible');
   renderProfile();
-  updateBadges();
+  await loadAccountData();          // single batched load (orders + favorites + addresses)
+  // Render whichever tab is active (orders by default) from the freshly loaded cache.
+  const active = document.querySelector('.acc-tab.active');
+  if (active && active.id === 'accTab-favorites') renderMyFavorites();
+  else if (active && active.id === 'accTab-addresses') renderMyAddresses();
+  else renderMyOrders();
 }
 
 function showAccTab(name, btn){
@@ -813,18 +875,10 @@ function showAccTab(name, btn){
   document.querySelectorAll('.acc-link').forEach(l => l.classList.remove('active'));
   document.getElementById('accTab-' + name).classList.add('active');
   btn.classList.add('active');
+  // Render from cache ONLY — never hit the network on tab switch.
   if (name === 'orders') renderMyOrders();
   if (name === 'favorites') renderMyFavorites();
   if (name === 'addresses') renderMyAddresses();
-}
-
-function updateBadges(){
-  const u = getCurrentUser();
-  if (!u) return;
-  const orders = (JSON.parse(localStorage.getItem(ORDERS_KEY)) || []).filter(o => o.userId === u.id);
-  document.getElementById('cntMyOrders').textContent = orders.length;
-  document.getElementById('cntMyFav').textContent = (u.favorites || []).length;
-  document.getElementById('cntMyAddr').textContent = (u.addresses || []).length;
 }
 
 // Cache of orders currently rendered — used by repeatOrder(idx)
@@ -919,31 +973,10 @@ function changePassword(){
   showMsg('passMsg', '✓ Пароль успешно изменён', 'success');
 }
 
-async function renderMyOrders(){
-  const u = getCurrentUser();
-  if (!u) return;
+function renderMyOrders(){
   const list = document.getElementById('myOrdersList');
-  list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#8aaa94;font-size:14px;">Загружаем историю заказов…</div>';
-
-  let myOrders = [];
-
-  // Try Supabase first — by user_id, then by phone/email as fallback
-  if (typeof supaListOrdersByUser === 'function'
-      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    try {
-      const sbOrders = await supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' });
-      if (Array.isArray(sbOrders)) myOrders = sbOrders;
-    } catch(e) {
-      console.warn('[account] Supabase order history failed, falling back to localStorage', e);
-    }
-  }
-
-  // Fallback: localStorage (orders saved with userId or matching phone)
-  if (myOrders.length === 0) {
-    const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
-    myOrders = allOrders.filter(o => o.userId === u.id || o.phone === u.phone).reverse();
-  }
-
+  if (!list) return;
+  // Renders from the in-memory store only — never fetches.
   _renderedOrders = myOrders;
   document.getElementById('cntMyOrders').textContent = myOrders.length;
 
@@ -1003,24 +1036,11 @@ function repeatOrder(idx){
   window.location.href = 'checkout.html';
 }
 
-async function renderMyFavorites(){
-  const u = getCurrentUser();
+function renderMyFavorites(){
   const list = document.getElementById('myFavoritesList');
-
-  // Load from Supabase (source of truth across browsers); fall back to local.
-  let favs = u.favorites || [];
-  if (typeof supaGetFavorites === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    try {
-      const cloud = await supaGetFavorites();
-      if (Array.isArray(cloud)) {
-        favs = cloud;
-        updateCurrentUser({ favorites: cloud });
-        document.getElementById('cntMyFav').textContent = cloud.length;
-      }
-    } catch(e) { console.warn('[account] favorites load failed', e); }
-  }
-
-  if (favs.length === 0){
+  if (!list) return;
+  // Renders from the in-memory store only — never fetches.
+  if (myFavorites.length === 0){
     list.innerHTML = `<div class="empty">
       <div class="empty-icon">❤️</div>
       <div class="empty-title">Список избранного пуст</div>
@@ -1030,30 +1050,17 @@ async function renderMyFavorites(){
     return;
   }
 
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
-  const favProducts = favs.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
-
-  if (favProducts.length === 0){
-    list.innerHTML = `<div class="empty">
-      <div class="empty-icon">❤️</div>
-      <div class="empty-title">Откройте каталог чтобы загрузить товары</div>
-      <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">В каталог</a>
-    </div>`;
-    return;
-  }
-
-  list.innerHTML = '<div class="fav-grid">' + favProducts.map(p => `
+  list.innerHTML = '<div class="fav-grid">' + myFavorites.map(f => `
     <div class="fav-card">
-      <a href="product.html?sku=${p.sku}" style="text-decoration:none;color:inherit;">
-        <div class="fav-img">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div>
+      <a href="product.html?sku=${f.product_sku}" style="text-decoration:none;color:inherit;">
+        <div class="fav-img">${f.product_img ? `<img src="${f.product_img}" onerror="this.outerHTML='📦'">` : '📦'}</div>
       </a>
       <div class="fav-body">
-        <div class="fav-name">${p.name}</div>
-        <div class="fav-price">${p.price} ₽</div>
+        <div class="fav-name">${f.product_name || f.product_sku}</div>
+        <div class="fav-price">${f.product_price != null ? f.product_price + ' ₽' : ''}</div>
         <div class="fav-actions">
-          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addFavToCart('${p.sku}')">+ В корзину</button>
-          <button class="btn btn-danger btn-sm" onclick="removeFav('${p.sku}')">✕</button>
+          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addFavToCart('${f.product_sku}')">+ В корзину</button>
+          <button class="btn btn-danger btn-sm" onclick="removeFav('${f.product_sku}')">✕</button>
         </div>
       </div>
     </div>
@@ -1061,47 +1068,33 @@ async function renderMyFavorites(){
 }
 
 function removeFav(sku){
+  // Optimistic in-memory update — no refetch needed.
+  myFavorites = myFavorites.filter(f => f.product_sku !== sku);
   const u = getCurrentUser();
-  const favs = (u.favorites || []).filter(s => s !== sku);
-  updateCurrentUser({favorites: favs});
+  updateCurrentUser({favorites: (u.favorites || []).filter(s => s !== sku)});
   renderMyFavorites();
-  updateBadges();
+  updateAccountBadges();
   if (typeof supaRemoveFavorite === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     supaRemoveFavorite(sku).catch(()=>{});
   }
 }
 
 function addFavToCart(sku){
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
-  const p = products.find(x => x.sku === sku);
-  if (!p) return;
+  const f = myFavorites.find(x => x.product_sku === sku);
+  if (!f) { alert('Товар не найден в избранном'); return; }
   const cart = JSON.parse(localStorage.getItem('klever_cart') || '[]');
   const existing = cart.find(i => i.sku === sku);
   if (existing) existing.qty++;
-  else cart.push({name: p.name, sku: p.sku, price: p.price, img: p.img || '', qty: 1});
+  else cart.push({name: f.product_name || sku, sku: sku, price: f.product_price || 0, img: f.product_img || '', qty: 1});
   localStorage.setItem('klever_cart', JSON.stringify(cart));
-  alert('✓ "' + p.name + '" добавлен в корзину');
+  alert('✓ "' + (f.product_name || sku) + '" добавлен в корзину');
 }
 
-async function renderMyAddresses(){
-  const u = getCurrentUser();
+function renderMyAddresses(){
   const list = document.getElementById('myAddressesList');
-
-  // Load from Supabase (source of truth across browsers); fall back to local.
-  let addrs = u.addresses || [];
-  if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    try {
-      const cloud = await supaListAddressesByEmail();
-      if (Array.isArray(cloud)) {
-        addrs = cloud.map(a => ({ id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
-        updateCurrentUser({ addresses: addrs });
-        document.getElementById('cntMyAddr').textContent = addrs.length;
-      }
-    } catch(e) { console.warn('[account] addresses load failed', e); }
-  }
-
-  if (addrs.length === 0){
+  if (!list) return;
+  // Renders from the in-memory store only — never fetches.
+  if (myAddresses.length === 0){
     list.innerHTML = `<div class="empty">
       <div class="empty-icon">📍</div>
       <div class="empty-title">Адресов пока нет</div>
@@ -1110,7 +1103,7 @@ async function renderMyAddresses(){
     return;
   }
 
-  list.innerHTML = addrs.map((a, idx) => `
+  list.innerHTML = myAddresses.map((a, idx) => `
     <div class="addr-card ${a.isDefault ? 'default' : ''}">
       <div class="addr-info">
         <div class="addr-label">${a.label || 'Адрес'}${a.isDefault ? '<span class="addr-tag">По умолчанию</span>' : ''}</div>
@@ -1134,8 +1127,8 @@ function openAddrModal(){
 }
 
 function editAddress(idx){
-  const u = getCurrentUser();
-  const a = u.addresses[idx];
+  const a = myAddresses[idx];
+  if (!a) return;
   editingAddrId = idx;
   document.getElementById('addrModalTitle').textContent = 'Редактировать адрес';
   document.getElementById('addrLabel').value = a.label || '';
@@ -1154,47 +1147,51 @@ function saveAddress(){
   const isDef = document.getElementById('addrDefault').checked;
   if (!label || !text){ alert('Заполните название и адрес'); return; }
 
-  const u = getCurrentUser();
-  let addrs = u.addresses || [];
+  // Work against the in-memory store (kept in sync with the local user).
+  let addrs = myAddresses.slice();
   if (isDef){ addrs = addrs.map(a => ({...a, isDefault: false, default: false})); }
   const newAddr = {label, name: label, address: text, isDefault: isDef, default: isDef};
   if (editingAddrId !== null){
-    // Preserve cloud id if present
     if (addrs[editingAddrId] && addrs[editingAddrId].id) newAddr.id = addrs[editingAddrId].id;
     addrs[editingAddrId] = newAddr;
   } else {
     addrs.push(newAddr);
     if (addrs.length === 1) { addrs[0].isDefault = true; addrs[0].default = true; newAddr.isDefault = true; newAddr.default = true; }
   }
+  myAddresses = addrs;                       // optimistic in-memory update
   updateCurrentUser({addresses: addrs});
   const wasEditing = editingAddrId;
   closeAddrModal();
   renderMyAddresses();
-  updateBadges();
+  updateAccountBadges();
   if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     const payload = { label: label, address: text, is_default: !!newAddr.isDefault };
     if (wasEditing === null) {
-      // New address — insert, then re-render to pick up the cloud id
+      // New address — persist and patch the cloud id into the cached row (no refetch).
       if (typeof supaSaveAddress === 'function') {
-        supaSaveAddress(payload).then(() => renderMyAddresses()).catch(()=>{});
+        supaSaveAddress(payload).then(res => {
+          if (res && res.ok && res.data && res.data.id) {
+            const last = myAddresses[myAddresses.length - 1];
+            if (last && !last.id) { last.id = res.data.id; updateCurrentUser({addresses: myAddresses}); }
+          }
+        }).catch(()=>{});
       }
     } else if (newAddr.id && typeof supaUpdateAddressById === 'function') {
-      // Editing existing — update by cloud id
-      supaUpdateAddressById(newAddr.id, payload).then(() => renderMyAddresses()).catch(()=>{});
+      supaUpdateAddressById(newAddr.id, payload).catch(()=>{});
     }
   }
 }
 
 function deleteAddress(idx){
   if (!confirm('Удалить адрес?')) return;
-  const u = getCurrentUser();
-  const addrs = u.addresses || [];
+  const addrs = myAddresses.slice();
   const removed = addrs[idx];
   addrs.splice(idx, 1);
   if (addrs.length > 0 && !addrs.find(a => a.isDefault || a.default)){ addrs[0].isDefault = true; addrs[0].default = true; }
+  myAddresses = addrs;                       // optimistic in-memory update
   updateCurrentUser({addresses: addrs});
   renderMyAddresses();
-  updateBadges();
+  updateAccountBadges();
   if (removed && removed.id && typeof supaDeleteAddressById === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     supaDeleteAddressById(removed.id).catch(()=>{});

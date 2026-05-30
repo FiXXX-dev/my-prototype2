@@ -820,8 +820,11 @@ window.toggleProdFav = function(){
   localStorage.setItem('klever_users', JSON.stringify(users));
   _prodFavRender();
   if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    const fn = wasOn ? window.supaRemoveFavorite : window.supaAddFavorite;
-    if (typeof fn === 'function') fn(product.sku).catch(()=>{});
+    if (!wasOn && typeof window.supaAddFavorite === 'function') {
+      window.supaAddFavorite({sku: product.sku, name: product.name, price: product.price, img: product.img||''}).catch(()=>{});
+    } else if (wasOn && typeof window.supaRemoveFavorite === 'function') {
+      window.supaRemoveFavorite(product.sku).catch(()=>{});
+    }
   }
 };
 _prodFavRender();

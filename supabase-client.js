@@ -407,10 +407,21 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.kleverCurrentUserKey = function(){ return resolveUserKey(); };
 
   // ===== favorites (email-keyed, table: public.favorites) =====
-  // supaGetFavorites([email])           → string[] of product_sku
-  // supaListFavorites([email])          → alias of supaGetFavorites
-  // supaAddFavorite(sku) | (email, sku) → { ok }
-  // supaRemoveFavorite(sku) | (email, sku) → { ok }
+  // Rows cache product_name/product_price/product_img so the account page can
+  // render the favorites grid WITHOUT depending on localStorage (klever_products_v2),
+  // which is empty in a fresh browser.
+  //
+  // supaGetFavorites([email])      → string[] of product_sku  (for catalog/product hearts)
+  // supaGetFavoritesFull([email])  → full rows               (for account favorites grid)
+  // supaListFavorites([email])     → alias of supaGetFavorites
+  // supaAddFavorite(sku | {sku,name,price,img})
+  // supaRemoveFavorite(sku)
+  function _isMissingColErr(e){
+    const m = (e && (e.message||'')) + ' ' + (e && (e.details||''));
+    return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
+        || (e && (e.code === '42703' || e.code === 'PGRST204'));
+  }
+
   window.supaGetFavorites = async function(email){
     const sb = getClient(); if (!sb) return null;
     try {
@@ -423,29 +434,52 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
   window.supaListFavorites = window.supaGetFavorites;
 
-  window.supaAddFavorite = async function(a, b){
+  window.supaGetFavoritesFull = async function(email){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const key = resolveUserKey(email);
+      if (!key) return [];
+      const { data, error } = await sb.from('favorites').select('*').eq('user_email', key).order('id', { ascending: false });
+      if (error) { console.error('[supabase] get favorites full', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get favorites full exception', e); return null; }
+  };
+
+  // Accepts a bare sku string OR a product object { sku, name, price, img }.
+  window.supaAddFavorite = async function(skuOrObj){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      let key, sku;
-      if (b !== undefined) { key = resolveUserKey(a); sku = b; }
-      else { sku = a; key = resolveUserKey(); }
-      if (!key || !sku) return { ok:false, reason:'no_identity' };
+      const key = resolveUserKey();
+      if (!key) return { ok:false, reason:'no_identity' };
       const idn = currentUserIdentity();
-      const { error } = await sb.from('favorites')
-        .upsert({ user_email: key, user_phone: (idn && idn.phone10) || null, product_sku: sku },
-                { onConflict: 'user_email,product_sku' });
+      const isObj = skuOrObj && typeof skuOrObj === 'object';
+      const sku = String(isObj ? skuOrObj.sku : skuOrObj);
+      if (!sku) return { ok:false, reason:'no_sku' };
+      const full = {
+        user_email: key,
+        user_phone: (idn && idn.phone10) || null,
+        product_sku: sku,
+        product_name: isObj ? (skuOrObj.name || null) : null,
+        product_price: isObj && skuOrObj.price != null ? Number(skuOrObj.price) : null,
+        product_img: isObj ? (skuOrObj.img || null) : null,
+      };
+      let { error } = await sb.from('favorites').upsert(full, { onConflict: 'user_email,product_sku' });
+      // If the cache columns don't exist yet (SQL not run), retry with the minimal row.
+      if (error && _isMissingColErr(error)) {
+        ({ error } = await sb.from('favorites').upsert(
+          { user_email: key, user_phone: full.user_phone, product_sku: sku },
+          { onConflict: 'user_email,product_sku' }));
+      }
       return error ? { ok:false, error } : { ok:true };
     } catch(e) { return { ok:false, error:e }; }
   };
 
-  window.supaRemoveFavorite = async function(a, b){
+  window.supaRemoveFavorite = async function(sku){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      let key, sku;
-      if (b !== undefined) { key = resolveUserKey(a); sku = b; }
-      else { sku = a; key = resolveUserKey(); }
-      if (!key || !sku) return { ok:false, reason:'no_identity' };
-      const { error } = await sb.from('favorites').delete().match({ user_email: key, product_sku: sku });
+      const key = resolveUserKey();
+      if (!key || sku == null) return { ok:false, reason:'no_identity' };
+      const { error } = await sb.from('favorites').delete().match({ user_email: key, product_sku: String(sku) });
       return error ? { ok:false, error } : { ok:true };
     } catch(e) { return { ok:false, error:e }; }
   };
