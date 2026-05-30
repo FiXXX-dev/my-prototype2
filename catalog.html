@@ -926,8 +926,12 @@ function toggleFav(sku, btn){
   });
   // Persist to Supabase if configured
   if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    const fn = wasOn ? window.supaRemoveFavorite : window.supaAddFavorite;
-    if (typeof fn === 'function') fn(sku).catch(()=>{});
+    if (!wasOn && typeof window.supaAddFavorite === 'function') {
+      const p = ALL_PRODUCTS.find(x => x.sku === sku);
+      window.supaAddFavorite(p ? {sku: p.sku, name: p.name, price: p.price, img: p.img||''} : sku).catch(()=>{});
+    } else if (wasOn && typeof window.supaRemoveFavorite === 'function') {
+      window.supaRemoveFavorite(sku).catch(()=>{});
+    }
   }
 }
 

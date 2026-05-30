@@ -779,33 +779,66 @@ function doLogout(){
         if (document.getElementById('accountWrap').classList.contains('visible')) renderProfile();
       });
     }
-    // Pull addresses (email-keyed) + favorites (email-keyed)
-    if (typeof supaListAddressesByEmail === 'function') {
-      supaListAddressesByEmail().then(addrs => {
-        if (Array.isArray(addrs)) {
-          local.addresses = addrs.map(a => ({ id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
-          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i].addresses = local.addresses; setUsers(us); }
-          document.getElementById('cntMyAddr').textContent = local.addresses.length;
-        }
-      });
-    }
-    if (typeof supaGetFavorites === 'function') {
-      supaGetFavorites().then(favs => {
-        if (Array.isArray(favs)) {
-          local.favorites = favs.slice();
-          const us = getUsers(); const i = us.findIndex(x=>x.id===u.id); if (i>=0) { us[i].favorites = local.favorites; setUsers(us); }
-          document.getElementById('cntMyFav').textContent = local.favorites.length;
-        }
-      });
-    }
+    // Orders / favorites / addresses are fetched once by loadAllAccountData()
+    // (called from showAccount) — no per-tab or duplicate requests here.
   });
 })();
+
+// ===== In-memory cache (NOT localStorage) — loaded once per page visit =====
+let cachedOrders = null;
+let cachedFavorites = null;   // full rows from Supabase favorites table
+let cachedAddresses = null;   // mapped to local {id,label,address,isDefault} shape
+
+function invalidateOrdersCache(){ cachedOrders = null; }
+function invalidateFavoritesCache(){ cachedFavorites = null; }
+function invalidateAddressesCache(){ cachedAddresses = null; }
+
+function mapAddrRow(a){
+  return { id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default };
+}
+
+// Load orders + favorites + addresses in ONE parallel batch and fill caches +
+// badge counts. Called once from showAccount(). Subsequent tab clicks read cache.
+async function loadAllAccountData(){
+  const u = getCurrentUser();
+  if (!u) return;
+  if (!(window.kleverSupabase && window.kleverSupabase.isConfigured())) return;
+  try {
+    const [orders, favs, addrs] = await Promise.all([
+      (typeof supaListOrdersByUser === 'function')
+        ? supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' }) : Promise.resolve(null),
+      (typeof supaGetFavoritesFull === 'function') ? supaGetFavoritesFull() : Promise.resolve(null),
+      (typeof supaListAddressesByEmail === 'function') ? supaListAddressesByEmail() : Promise.resolve(null),
+    ]);
+    if (Array.isArray(orders)) {
+      cachedOrders = orders;
+      document.getElementById('cntMyOrders').textContent = orders.length;
+    }
+    if (Array.isArray(favs)) {
+      cachedFavorites = favs;
+      document.getElementById('cntMyFav').textContent = favs.length;
+    }
+    if (Array.isArray(addrs)) {
+      cachedAddresses = addrs.map(mapAddrRow);
+      updateCurrentUser({ addresses: cachedAddresses });
+      document.getElementById('cntMyAddr').textContent = cachedAddresses.length;
+    }
+    // If a tab is already open, refresh its view now that data arrived.
+    const active = document.querySelector('.acc-tab.active');
+    if (active) {
+      if (active.id === 'accTab-orders') renderMyOrders();
+      else if (active.id === 'accTab-favorites') renderMyFavorites();
+      else if (active.id === 'accTab-addresses') renderMyAddresses();
+    }
+  } catch(e) { console.warn('[account] loadAllAccountData failed', e); }
+}
 
 function showAccount(){
   document.getElementById('authWrap').style.display = 'none';
   document.getElementById('accountWrap').classList.add('visible');
   renderProfile();
   updateBadges();
+  loadAllAccountData();   // single batched load → fills caches + badge counts
 }
 
 function showAccTab(name, btn){
@@ -923,25 +956,26 @@ async function renderMyOrders(){
   const u = getCurrentUser();
   if (!u) return;
   const list = document.getElementById('myOrdersList');
-  list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#8aaa94;font-size:14px;">Загружаем историю заказов…</div>';
 
-  let myOrders = [];
+  let myOrders = cachedOrders;
 
-  // Try Supabase first — by user_id, then by phone/email as fallback
-  if (typeof supaListOrdersByUser === 'function'
-      && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    try {
-      const sbOrders = await supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' });
-      if (Array.isArray(sbOrders)) myOrders = sbOrders;
-    } catch(e) {
-      console.warn('[account] Supabase order history failed, falling back to localStorage', e);
+  // No cache yet → fetch (showing a spinner). Subsequent calls read the cache.
+  if (!Array.isArray(myOrders)) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#8aaa94;font-size:14px;">Загружаем историю заказов…</div>';
+    if (typeof supaListOrdersByUser === 'function'
+        && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+      try {
+        const sbOrders = await supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' });
+        if (Array.isArray(sbOrders)) { myOrders = sbOrders; cachedOrders = sbOrders; }
+      } catch(e) {
+        console.warn('[account] Supabase order history failed, falling back to localStorage', e);
+      }
     }
-  }
-
-  // Fallback: localStorage (orders saved with userId or matching phone)
-  if (myOrders.length === 0) {
-    const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
-    myOrders = allOrders.filter(o => o.userId === u.id || o.phone === u.phone).reverse();
+    // Fallback: localStorage (orders saved with userId or matching phone)
+    if (!Array.isArray(myOrders) || myOrders.length === 0) {
+      const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
+      myOrders = allOrders.filter(o => o.userId === u.id || o.phone === u.phone).reverse();
+    }
   }
 
   _renderedOrders = myOrders;
@@ -1004,20 +1038,20 @@ function repeatOrder(idx){
 }
 
 async function renderMyFavorites(){
-  const u = getCurrentUser();
   const list = document.getElementById('myFavoritesList');
 
-  // Load from Supabase (source of truth across browsers); fall back to local.
-  let favs = u.favorites || [];
-  if (typeof supaGetFavorites === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+  let favs = cachedFavorites;
+  if (!Array.isArray(favs)) {
+    list.innerHTML = '<div class="empty"><div style="text-align:center;padding:20px;color:#8aaa94;">Загрузка...</div></div>';
     try {
-      const cloud = await supaGetFavorites();
-      if (Array.isArray(cloud)) {
-        favs = cloud;
-        updateCurrentUser({ favorites: cloud });
-        document.getElementById('cntMyFav').textContent = cloud.length;
+      if (typeof supaGetFavoritesFull === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+        favs = await supaGetFavoritesFull();
       }
-    } catch(e) { console.warn('[account] favorites load failed', e); }
+      if (Array.isArray(favs)) {
+        cachedFavorites = favs;
+        document.getElementById('cntMyFav').textContent = favs.length;
+      } else { favs = []; }
+    } catch(e) { console.warn('[account] favorites load failed', e); favs = []; }
   }
 
   if (favs.length === 0){
@@ -1030,30 +1064,17 @@ async function renderMyFavorites(){
     return;
   }
 
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
-  const favProducts = favs.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
-
-  if (favProducts.length === 0){
-    list.innerHTML = `<div class="empty">
-      <div class="empty-icon">❤️</div>
-      <div class="empty-title">Откройте каталог чтобы загрузить товары</div>
-      <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">В каталог</a>
-    </div>`;
-    return;
-  }
-
-  list.innerHTML = '<div class="fav-grid">' + favProducts.map(p => `
+  list.innerHTML = '<div class="fav-grid">' + favs.map(f => `
     <div class="fav-card">
-      <a href="product.html?sku=${p.sku}" style="text-decoration:none;color:inherit;">
-        <div class="fav-img">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div>
+      <a href="product.html?sku=${f.product_sku}" style="text-decoration:none;color:inherit;">
+        <div class="fav-img">${f.product_img ? `<img src="${f.product_img}" onerror="this.outerHTML='📦'">` : '📦'}</div>
       </a>
       <div class="fav-body">
-        <div class="fav-name">${p.name}</div>
-        <div class="fav-price">${p.price} ₽</div>
+        <div class="fav-name">${f.product_name || f.product_sku}</div>
+        <div class="fav-price">${f.product_price != null ? f.product_price + ' ₽' : ''}</div>
         <div class="fav-actions">
-          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addFavToCart('${p.sku}')">+ В корзину</button>
-          <button class="btn btn-danger btn-sm" onclick="removeFav('${p.sku}')">✕</button>
+          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addFavToCart('${f.product_sku}')">+ В корзину</button>
+          <button class="btn btn-danger btn-sm" onclick="removeFav('${f.product_sku}')">✕</button>
         </div>
       </div>
     </div>
@@ -1061,9 +1082,13 @@ async function renderMyFavorites(){
 }
 
 function removeFav(sku){
+  // Update in-memory cache immediately
+  if (Array.isArray(cachedFavorites)) {
+    cachedFavorites = cachedFavorites.filter(f => f.product_sku !== sku);
+    document.getElementById('cntMyFav').textContent = cachedFavorites.length;
+  }
   const u = getCurrentUser();
-  const favs = (u.favorites || []).filter(s => s !== sku);
-  updateCurrentUser({favorites: favs});
+  updateCurrentUser({favorites: (u.favorites || []).filter(s => s !== sku)});
   renderMyFavorites();
   updateBadges();
   if (typeof supaRemoveFavorite === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
@@ -1072,33 +1097,33 @@ function removeFav(sku){
 }
 
 function addFavToCart(sku){
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
-  const p = products.find(x => x.sku === sku);
-  if (!p) return;
+  const f = Array.isArray(cachedFavorites) ? cachedFavorites.find(x => x.product_sku === sku) : null;
+  if (!f) { alert('Товар не найден в избранном'); return; }
   const cart = JSON.parse(localStorage.getItem('klever_cart') || '[]');
   const existing = cart.find(i => i.sku === sku);
   if (existing) existing.qty++;
-  else cart.push({name: p.name, sku: p.sku, price: p.price, img: p.img || '', qty: 1});
+  else cart.push({name: f.product_name || sku, sku: sku, price: f.product_price || 0, img: f.product_img || '', qty: 1});
   localStorage.setItem('klever_cart', JSON.stringify(cart));
-  alert('✓ "' + p.name + '" добавлен в корзину');
+  alert('✓ "' + (f.product_name || sku) + '" добавлен в корзину');
 }
 
 async function renderMyAddresses(){
-  const u = getCurrentUser();
   const list = document.getElementById('myAddressesList');
 
-  // Load from Supabase (source of truth across browsers); fall back to local.
-  let addrs = u.addresses || [];
-  if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+  let addrs = cachedAddresses;
+  if (!Array.isArray(addrs)) {
     try {
-      const cloud = await supaListAddressesByEmail();
-      if (Array.isArray(cloud)) {
-        addrs = cloud.map(a => ({ id: a.id, label: a.label, name: a.label, address: a.address, isDefault: !!a.is_default, default: !!a.is_default }));
-        updateCurrentUser({ addresses: addrs });
-        document.getElementById('cntMyAddr').textContent = addrs.length;
+      if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
+        const cloud = await supaListAddressesByEmail();
+        if (Array.isArray(cloud)) {
+          cachedAddresses = cloud.map(mapAddrRow);
+          updateCurrentUser({ addresses: cachedAddresses });
+          document.getElementById('cntMyAddr').textContent = cachedAddresses.length;
+          addrs = cachedAddresses;
+        }
       }
-    } catch(e) { console.warn('[account] addresses load failed', e); }
+      if (!Array.isArray(addrs)) addrs = getCurrentUser().addresses || [];
+    } catch(e) { console.warn('[account] addresses load failed', e); addrs = getCurrentUser().addresses || []; }
   }
 
   if (addrs.length === 0){
@@ -1167,6 +1192,8 @@ function saveAddress(){
     if (addrs.length === 1) { addrs[0].isDefault = true; addrs[0].default = true; newAddr.isDefault = true; newAddr.default = true; }
   }
   updateCurrentUser({addresses: addrs});
+  cachedAddresses = addrs;   // sync in-memory cache optimistically
+  document.getElementById('cntMyAddr').textContent = addrs.length;
   const wasEditing = editingAddrId;
   closeAddrModal();
   renderMyAddresses();
@@ -1174,13 +1201,12 @@ function saveAddress(){
   if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     const payload = { label: label, address: text, is_default: !!newAddr.isDefault };
     if (wasEditing === null) {
-      // New address — insert, then re-render to pick up the cloud id
+      // New address — insert, then invalidate cache to pick up the cloud id
       if (typeof supaSaveAddress === 'function') {
-        supaSaveAddress(payload).then(() => renderMyAddresses()).catch(()=>{});
+        supaSaveAddress(payload).then(() => { invalidateAddressesCache(); renderMyAddresses(); }).catch(()=>{});
       }
     } else if (newAddr.id && typeof supaUpdateAddressById === 'function') {
-      // Editing existing — update by cloud id
-      supaUpdateAddressById(newAddr.id, payload).then(() => renderMyAddresses()).catch(()=>{});
+      supaUpdateAddressById(newAddr.id, payload).then(() => { invalidateAddressesCache(); renderMyAddresses(); }).catch(()=>{});
     }
   }
 }
@@ -1193,6 +1219,8 @@ function deleteAddress(idx){
   addrs.splice(idx, 1);
   if (addrs.length > 0 && !addrs.find(a => a.isDefault || a.default)){ addrs[0].isDefault = true; addrs[0].default = true; }
   updateCurrentUser({addresses: addrs});
+  cachedAddresses = addrs;   // sync in-memory cache
+  document.getElementById('cntMyAddr').textContent = addrs.length;
   renderMyAddresses();
   updateBadges();
   if (removed && removed.id && typeof supaDeleteAddressById === 'function'
