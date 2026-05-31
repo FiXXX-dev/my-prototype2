@@ -2331,12 +2331,27 @@ async function toggleCatHomepage(id){
     const count = Object.values(_catHomeState).filter(Boolean).length;
     if (count >= 8) { toast('Максимум 8 категорий на главной'); return; }
   }
-  if (typeof window.supaUpdateCategoryHomepage === 'function') {
-    const r = await window.supaUpdateCategoryHomepage(id, newVal);
-    if (!r.ok) {
-      toast('Ошибка сохранения в Supabase');
-      console.error(r.error);
-    }
+  if (typeof window.supaUpsertCategory !== 'function') {
+    toast('Supabase не настроен — изменение не сохранится');
+    return;
+  }
+  const cat = getCategoryById(id);
+  if (!cat) { toast('Категория не найдена'); return; }
+  const counts = productCountByCategory();
+  // Upsert полную запись категории, чтобы строка точно существовала в Supabase
+  // и фильтр show_on_homepage=true на главной её нашёл.
+  const r = await window.supaUpsertCategory({
+    id: cat.id,
+    name: cat.name,
+    image_url: cat.img || null,
+    sort_order: cat.order || 0,
+    product_count: counts[cat.id] || 0,
+    show_on_homepage: newVal
+  });
+  if (!r.ok) {
+    toast('Ошибка сохранения в Supabase');
+    console.error('[admin] toggleCatHomepage', r.error);
+    return;
   }
   _catHomeState[id] = newVal;
   renderCategoriesAdmin();

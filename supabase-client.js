@@ -647,7 +647,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const { data, error } = await sb.from('categories').select('*')
         .eq('show_on_homepage', true)
         .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
+        .order('id', { ascending: true })
+        .limit(8);
       if (error) { console.error('[supabase] get homepage categories', error); return null; }
       return data || [];
     } catch(e) { console.error('[supabase] get homepage categories', e); return null; }
