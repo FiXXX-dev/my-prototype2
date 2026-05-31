@@ -1,5 +1,5 @@
 // Clever — i18n dictionary (ru / en / zh / ko)
-// Used by all client pages (admin.html stays in Russian).
+// Used by all client pages (the management panel stays in Russian).
 const TRANSLATIONS = {
   ru: {
     // ===== HEADER NAV =====
@@ -48,7 +48,6 @@ const TRANSLATIONS = {
     'footer.account': 'Личный кабинет',
     'footer.copyright': '© 2025 ООО «Клевер». Все права защищены.',
     'footer.copyright_short': '© 2025 ООО «Клевер»',
-    'footer.admin': '⚙️ Админка',
     'footer.home_link': 'Главная',
     'footer.contacts_link': 'Контакты',
 
@@ -598,7 +597,6 @@ const TRANSLATIONS = {
     'footer.account': 'My Account',
     'footer.copyright': '© 2025 Klever LLC. All rights reserved.',
     'footer.copyright_short': '© 2025 Klever LLC',
-    'footer.admin': '⚙️ Admin',
     'footer.home_link': 'Home',
     'footer.contacts_link': 'Contacts',
 
@@ -1127,7 +1125,6 @@ const TRANSLATIONS = {
     'footer.account': '个人中心',
     'footer.copyright': '© 2025 Klever 有限公司。版权所有。',
     'footer.copyright_short': '© 2025 Klever 有限公司',
-    'footer.admin': '⚙️ 管理后台',
     'footer.home_link': '首页',
     'footer.contacts_link': '联系方式',
 
@@ -1656,7 +1653,6 @@ const TRANSLATIONS = {
     'footer.account': '마이페이지',
     'footer.copyright': '© 2025 Klever LLC. 모든 권리 보유.',
     'footer.copyright_short': '© 2025 Klever LLC',
-    'footer.admin': '⚙️ 관리자',
     'footer.home_link': '홈',
     'footer.contacts_link': '연락처',
 
