@@ -848,7 +848,7 @@ setTimeout(function(){
 </script>
 
 <!-- CATEGORIES -->
-<section class="categories">
+<section class="categories" id="homeCategoriesSection">
   <div class="section-header">
     <div>
       <div class="section-tag" data-i18n="home.section_catalog_tag">Каталог</div>
@@ -860,6 +860,7 @@ setTimeout(function(){
 </section>
 <script id="home-cats-script">
 (function(){
+  // Цвета подложки для категорий без фото (по id).
   var GRADIENTS = {
     'disposable':'linear-gradient(135deg,#fff8e6,#ffe9a8)',
     'chemistry':'linear-gradient(135deg,#e8f4ff,#b8d8ff)',
@@ -869,29 +870,24 @@ setTimeout(function(){
     'household':'linear-gradient(135deg,#e8fff8,#b8f0e4)',
     'stationery':'linear-gradient(135deg,#fff5e8,#ffd8a8)'
   };
-  var FALLBACK_CATS = [
-    {id:'paper',name:'Бумажная продукция'},
-    {id:'disposable',name:'Одноразовая посуда'},
-    {id:'chemistry',name:'Бытовая химия'},
-    {id:'protection',name:'Средства защиты'},
-    {id:'packaging',name:'Упаковка'},
-    {id:'household',name:'Хозтовары'},
-    {id:'stationery',name:'Канцелярия'}
-  ];
   function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function plural(n,w){var v=Math.abs(n)%100,v1=v%10;if(v>10&&v<20)return w[2];if(v1>1&&v1<5)return w[1];if(v1===1)return w[0];return w[2];}
-  function renderCats(cats, fromSupabase){
+  function hideSection(){
+    var s = document.getElementById('homeCategoriesSection');
+    if (s) s.style.display = 'none';
+  }
+  function renderCats(cats){
     var grid = document.getElementById('homeCatGrid');
-    if (!grid || !cats.length) return;
+    if (!grid) return;
     grid.innerHTML = cats.slice(0,8).map(function(c){
-      var id = fromSupabase ? (c.id||c.slug||'') : (c.id||'');
-      var name = c.name||'';
-      var img = fromSupabase ? (c.image_url||'') : (c.img||'');
-      var count = fromSupabase ? (c.product_count||0) : 0;
+      var id = c.id || c.slug || '';
+      var name = c.name || '';
+      var img = c.image_url || '';
+      var count = c.product_count || 0;
       var hasPhoto = !!img;
       var bgStyle = hasPhoto
         ? 'background-image:url('+esc(img)+')'
-        : ('background:' + (GRADIENTS[id]||'#f2f7f4'));
+        : ('background:' + (GRADIENTS[id] || '#f2f7f4'));
       var countStr = (count>0) ? (count+' '+plural(count,['товар','товара','товаров'])) : '';
       return '<a href="catalog.html?cat='+esc(id)+'" class="cat-tile-home '+(hasPhoto?'tinted':'no-photo')+'">'
         +'<div class="cat-tile-home-bg" style="'+bgStyle+'"></div>'
@@ -901,17 +897,14 @@ setTimeout(function(){
         +'</div></a>';
     }).join('');
   }
+  // Категории на главной берутся ТОЛЬКО из Supabase (show_on_homepage=true).
+  // Никакого хардкода/localStorage-фоллбэка: если данных нет — секция скрывается.
   async function loadCats(){
-    if (typeof window.supaGetHomepageCategories === 'function') {
-      try {
-        var data = await window.supaGetHomepageCategories();
-        if (data && data.length) { renderCats(data, true); return; }
-      } catch(e) {}
-    }
-    var localCats = (typeof window.sortedCategories === 'function')
-      ? window.sortedCategories()
-      : FALLBACK_CATS;
-    renderCats(localCats.length ? localCats : FALLBACK_CATS, false);
+    if (typeof window.supaGetHomepageCategories !== 'function') { hideSection(); return; }
+    var data = null;
+    try { data = await window.supaGetHomepageCategories(); } catch(e) { data = null; }
+    if (!data || !data.length) { hideSection(); return; }
+    renderCats(data);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadCats);
