@@ -580,26 +580,24 @@ const DEFAULT_PRODUCTS=[
 {name:'Папка-скоросшиватель 10 шт',sku:'KANC08',price:125,cat:'Канцелярия',img:'',emoji:'📎',desc:'Канцелярские товары для офиса и дома. Стандартное качество, удобная упаковка.'}
 ];
 
-// Загружаем товары: из localStorage (если есть) или дефолт
-let PRODUCTS;
-try {
-  const stored = localStorage.getItem('klever_products_v2');
-  const parsed = stored ? JSON.parse(stored) : null;
-  if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-    PRODUCTS = parsed;
-  } else {
-    PRODUCTS = DEFAULT_PRODUCTS;
-    localStorage.setItem('klever_products_v2', JSON.stringify(DEFAULT_PRODUCTS));
-  }
-} catch(e) {
-  PRODUCTS = DEFAULT_PRODUCTS;
+// Загружаем товары: сначала из Supabase, иначе localStorage, иначе дефолт
+let PRODUCTS = [];
+let product = null;
+
+function normalizeProd(p) {
+  return {
+    ...p,
+    categoryId: p.category_id || p.categoryId || '',
+    isHit: !!( p.is_hit || p.isHit ),
+    img: p.img || '',
+    badge: p.badge || undefined,
+    desc: p.description || p.desc || '',
+    emoji: p.emoji || '📦',
+  };
 }
 
-
-// Парсим SKU из URL
 const urlParams = new URLSearchParams(window.location.search);
-const sku = urlParams.get('sku') || PRODUCTS[0].sku;
-const product = PRODUCTS.find(p => p.sku === sku);
+const sku = urlParams.get('sku') || '';
 
 function badgeHtml(b) {
   if (b==='hit') return '<span class="badge badge-hit">🔥 ХИТ ПРОДАЖ</span>';
@@ -801,7 +799,36 @@ function productQtyDec(){
   syncCartQtyBlock();
 }
 
-renderProduct();
+async function loadAndInitProduct() {
+  const targetSku = sku || (DEFAULT_PRODUCTS[0] && DEFAULT_PRODUCTS[0].sku) || '';
+
+  // Try Supabase single-product fetch first
+  if (targetSku && typeof window.supaGetProductBySku === 'function') {
+    try {
+      const p = await window.supaGetProductBySku(targetSku);
+      if (p) {
+        product = normalizeProd(p);
+        renderProduct();
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Fallback: localStorage → DEFAULT_PRODUCTS
+  try {
+    const stored = localStorage.getItem('klever_products_v2');
+    const parsed = stored ? JSON.parse(stored) : null;
+    PRODUCTS = (parsed && parsed.length) ? parsed : DEFAULT_PRODUCTS;
+  } catch(e) { PRODUCTS = DEFAULT_PRODUCTS; }
+  product = PRODUCTS.find(p => p.sku === targetSku) || null;
+  renderProduct();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadAndInitProduct);
+} else {
+  loadAndInitProduct();
+}
 // Fav button state
 function _prodFavSet(){
   try {

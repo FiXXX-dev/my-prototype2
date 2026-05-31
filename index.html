@@ -939,26 +939,22 @@ setTimeout(function(){
   const PRODUCTS_KEY = 'klever_products_v2';
   const FALLBACK_HIT_SKUS = ['0070','0238','0756','0058'];
   const FALLBACK_PRODUCTS = [
-    {name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg',badge:'hit'},
+    {name:'Белизна 1 л',sku:'0070',price:35,img:'https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg',badge:'hit',isHit:true},
     {name:'Белизна гель 1 л',sku:'0238',price:80,img:'https://cloverspb.ru/thumb/2/gBwjiDr2MpLiwLGxdkNxGQ/200r190/d/photo1_0.jpg'},
     {name:'Тряпка для пола 50×80 см',sku:'0756',price:90,img:'https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg'},
-    {name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg',badge:'hit'},
+    {name:'Жироудалитель Unicum Gold 500 мл',sku:'0058',price:275,img:'https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg',badge:'hit',isHit:true},
   ];
-  function getProducts(){
+  function normalizeProd(p){
+    return Object.assign({}, p, { isHit: !!(p.is_hit || p.isHit) });
+  }
+  function getLocalProducts(){
     try{ const arr = JSON.parse(localStorage.getItem(PRODUCTS_KEY)); return Array.isArray(arr) ? arr : null; }catch(e){ return null; }
   }
   function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function getHits(){
-    const products = getProducts();
-    if (!products || !products.length) return FALLBACK_PRODUCTS;
+  function pickHits(products){
     let hits = products.filter(p => p.isHit === true);
-    if (!hits.length) {
-      // Fallback chain: items with badge:'hit', then the 4 default SKUs
-      hits = products.filter(p => p.badge === 'hit');
-      if (!hits.length) {
-        hits = FALLBACK_HIT_SKUS.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
-      }
-    }
+    if (!hits.length) hits = products.filter(p => p.badge === 'hit');
+    if (!hits.length) hits = FALLBACK_HIT_SKUS.map(sku => products.find(p => p.sku === sku)).filter(Boolean);
     return hits;
   }
   function badgeHtml(p){
@@ -967,10 +963,10 @@ setTimeout(function(){
     if (p.badge === 'sale') return '<div class="prod-badge" style="background:#FF6B35;color:white">СКИДКА</div>';
     return '';
   }
-  function renderHits(){
+  function renderHitsFromData(hitsData){
     const grid = document.getElementById('hitsGrid');
     if (!grid) return;
-    let hits = getHits().slice(0, 4);
+    let hits = hitsData.slice(0, 4);
     if (!hits.length) {
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#8aaa94;"><div style="font-size:56px;margin-bottom:16px;">⭐</div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;color:#1a2e22;margin-bottom:8px;">Хиты не выбраны</div><div>Отметьте товары как «хит продаж» в админке</div></div>';
       return;
@@ -988,14 +984,24 @@ setTimeout(function(){
         + '<button class="btn-add" onclick="event.preventDefault();event.stopPropagation();addToCart('+cartData+')">+</button>'
         + '</div></div></a>';
     }).join('');
-    // Placeholder if less than 4
     for (let i = hits.length; i < 4; i++) {
       html += '<div style="border:2px dashed #d0e8d8;border-radius:20px;display:flex;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:#8aaa94;min-height:280px;"><div><div style="font-size:36px;margin-bottom:10px;">⭐</div><div style="font-size:13px;line-height:1.5;">Выберите хиты<br>в админке</div></div></div>';
     }
     grid.innerHTML = html;
   }
-  document.addEventListener('DOMContentLoaded', renderHits);
-  window.addEventListener('storage', e => { if (e.key === PRODUCTS_KEY) renderHits(); });
+  async function loadAndRenderHits(){
+    if (typeof window.supaGetHits === 'function') {
+      try {
+        const data = await window.supaGetHits();
+        if (data && data.length) { renderHitsFromData(data.map(normalizeProd)); return; }
+      } catch(e) {}
+    }
+    const products = getLocalProducts();
+    if (products && products.length) { renderHitsFromData(pickHits(products)); return; }
+    renderHitsFromData(FALLBACK_PRODUCTS);
+  }
+  document.addEventListener('DOMContentLoaded', loadAndRenderHits);
+  window.addEventListener('storage', e => { if (e.key === PRODUCTS_KEY) loadAndRenderHits(); });
 })();
 </script>
 

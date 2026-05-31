@@ -1330,7 +1330,7 @@ function showTab(name, btn) {
   if (name === 'promotions') renderPromotions();
   if (name === 'news') renderNews();
   if (name === 'banners') loadBannersAdmin();
-  if (name === 'products') renderProducts();
+  if (name === 'products') loadProductsAdmin();
   if (name === 'dashboard') {
     if (typeof refreshOrdersFromSupabase === 'function') {
       refreshOrdersFromSupabase().then(() => { renderDashboard(); updateCounts(); });
@@ -1485,6 +1485,28 @@ let editingSku = null;
 let productsPage = 1;
 const PRODUCTS_PER_PAGE = 20;
 
+async function loadProductsAdmin() {
+  if (typeof window.supaGetProducts === 'function') {
+    try {
+      const data = await window.supaGetProducts();
+      if (data && data.length) {
+        const normalized = data.map(p => Object.assign({}, p, {
+          categoryId: p.category_id || p.categoryId || '',
+          isHit: !!(p.is_hit || p.isHit),
+          desc: p.description || p.desc || '',
+          emoji: p.emoji || '📦',
+        }));
+        try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
+        renderProducts();
+        updateCounts();
+        return;
+      }
+    } catch(e) {}
+  }
+  renderProducts();
+  updateCounts();
+}
+
 function renderProducts() {
   const q = (document.getElementById('searchProducts').value || '').toLowerCase().trim();
   const cat = document.getElementById('filterCat').value;
@@ -1558,6 +1580,9 @@ function toggleHit(sku) {
   renderProducts();
   const p = products.find(x => x.sku === sku);
   toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
+  if (p && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(p).catch(e => console.error('[admin] toggleHit supabase', e));
+  }
 }
 
 function badgeHtml(b) {
@@ -1640,6 +1665,10 @@ function saveProduct() {
   renderProducts();
   updateCounts();
   toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
+  const saved = products.find(p => p.sku === sku);
+  if (saved && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(saved).catch(e => console.error('[admin] saveProduct supabase', e));
+  }
 }
 
 function deleteProduct(sku) {
@@ -1648,11 +1677,23 @@ function deleteProduct(sku) {
   renderProducts();
   updateCounts();
   toast('Товар удалён');
+  if (typeof window.supaDeleteProduct === 'function') {
+    window.supaDeleteProduct(sku).catch(e => console.error('[admin] deleteProduct supabase', e));
+  }
 }
 
-function resetProducts() {
+async function resetProducts() {
   if (!confirm('Восстановить стандартный список товаров? Все ваши изменения будут потеряны.')) return;
   localStorage.removeItem(STORAGE_PRODUCTS);
+  if (typeof window.supaBulkUpsertProducts === 'function') {
+    toast('⏳ Загрузка товаров в Supabase...');
+    const res = await window.supaBulkUpsertProducts(DEFAULT_PRODUCTS);
+    if (!res.ok) {
+      toast('Ошибка загрузки в Supabase: ' + (res.error && res.error.message || 'неизвестна'));
+    } else {
+      toast('✓ Товары загружены в Supabase');
+    }
+  }
   location.reload();
 }
 

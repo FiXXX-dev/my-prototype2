@@ -689,19 +689,19 @@ const DEFAULT_PRODUCTS=[
 {name:'Папка-скоросшиватель 10 шт',sku:'KANC08',price:125,cat:'Канцелярия',img:''}
 ];
 
-// Загружаем товары: сначала из localStorage (если админ менял), иначе из дефолтного списка
-let ALL_PRODUCTS;
-try {
-  const stored = localStorage.getItem('klever_products_v2');
-  const parsed = stored ? JSON.parse(stored) : null;
-  if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-    ALL_PRODUCTS = parsed;
-  } else {
-    ALL_PRODUCTS = DEFAULT_PRODUCTS;
-    localStorage.setItem('klever_products_v2', JSON.stringify(DEFAULT_PRODUCTS));
-  }
-} catch(e) {
-  ALL_PRODUCTS = DEFAULT_PRODUCTS;
+// Загружаем товары: сначала из Supabase, иначе localStorage, иначе дефолт
+let ALL_PRODUCTS = [];
+
+function normalizeProd(p) {
+  return {
+    ...p,
+    categoryId: p.category_id || p.categoryId || '',
+    isHit: !!( p.is_hit || p.isHit ),
+    img: p.img || '',
+    badge: p.badge || undefined,
+    desc: p.description || p.desc || '',
+    emoji: p.emoji || '📦',
+  };
 }
 
 
@@ -709,7 +709,7 @@ const PER_PAGE = 9;
 let currentCat = 'все';
 let currentSub = null;
 let currentPage = 1;
-let filteredProducts = [...ALL_PRODUCTS];
+let filteredProducts = [];
 
 function img(url) {
   return url
@@ -1131,7 +1131,7 @@ function applyCatalogForCategory(catId, subId) {
   applyFilters();
 }
 
-(function initFromUrl() {
+function initFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const cat = params.get('cat');
   const sub = params.get('sub');
@@ -1177,7 +1177,36 @@ function applyCatalogForCategory(catId, subId) {
   // Fallback to Mode A
   hbrowseShow();
   renderCategoryTiles();
-})();
+}
+
+async function loadAndInitCatalog() {
+  if (typeof window.supaGetProducts === 'function') {
+    try {
+      const data = await window.supaGetProducts();
+      if (data && data.length) {
+        ALL_PRODUCTS = data.map(normalizeProd);
+        try { localStorage.setItem('klever_products_v2', JSON.stringify(ALL_PRODUCTS)); } catch(e) {}
+        filteredProducts = [...ALL_PRODUCTS];
+        initFromUrl();
+        return;
+      }
+    } catch(e) {}
+  }
+  // Fallback: localStorage → DEFAULT_PRODUCTS
+  try {
+    const stored = localStorage.getItem('klever_products_v2');
+    const parsed = stored ? JSON.parse(stored) : null;
+    ALL_PRODUCTS = (parsed && parsed.length) ? parsed : DEFAULT_PRODUCTS;
+  } catch(e) { ALL_PRODUCTS = DEFAULT_PRODUCTS; }
+  filteredProducts = [...ALL_PRODUCTS];
+  initFromUrl();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadAndInitCatalog);
+} else {
+  loadAndInitCatalog();
+}
 
 // Re-render dynamic catalog content when the language changes.
 // Sync favorites from Supabase on page load so hearts reflect the real state.
