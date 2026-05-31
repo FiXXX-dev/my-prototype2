@@ -260,6 +260,21 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .promo-validity{font-size:12px;color:#8aaa94;}
 .promo-actions{display:flex;gap:6px;}
 
+/* BANNERS ADMIN */
+.banner-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+.banner-admin-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;overflow:hidden;}
+.banner-admin-preview{height:140px;display:flex;align-items:center;padding:22px 28px;position:relative;background-size:cover;background-position:center;}
+.banner-admin-preview-overlay{position:absolute;inset:0;}
+.banner-admin-preview-inner{position:relative;z-index:1;max-width:280px;}
+.ban-preview-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;line-height:1.2;letter-spacing:-0.3px;margin-bottom:5px;}
+.ban-preview-sub{font-size:12px;opacity:0.82;line-height:1.4;}
+.banner-admin-footer{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.banner-admin-meta{display:flex;align-items:center;gap:8px;}
+.banner-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.banner-status.active{background:#e8faf0;color:#1aab58;}
+.banner-status.inactive{background:#f2f2f2;color:#8aaa94;}
+.banner-admin-actions{display:flex;gap:5px;flex-wrap:wrap;}
+
 /* RESPONSIVE */
 @media(max-width:900px){
   .admin-wrap.visible{grid-template-columns:1fr;}
@@ -351,6 +366,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <button class="side-link" onclick="showTab('orders', this)"><span class="icon icon-bag"></span> Заказы <span class="count" id="cntOrders">0</span></button>
       <button class="side-link" onclick="showTab('contacts', this)"><span class="icon icon-mail"></span> Заявки <span class="count" id="cntContacts">0</span></button>
       <button class="side-link" onclick="showTab('promotions', this)"><span class="icon icon-flame"></span> Акции <span class="count" id="cntPromos">0</span></button>
+      <button class="side-link" onclick="showTab('banners', this)"><span class="icon icon-image"></span> Баннеры <span class="count" id="cntBanners">0</span></button>
       <button class="side-link" onclick="showTab('news', this)"><span class="icon icon-megaphone"></span> Новости <span class="count" id="cntNews">0</span></button>
       <button class="side-link" onclick="showTab('settings', this)"><span class="icon icon-gear"></span> Настройки</button>
     </nav>
@@ -540,6 +556,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <button class="btn btn-primary" onclick="openPromoModal()">+ Создать акцию</button>
       </div>
       <div class="promo-grid" id="promotionsList"></div>
+    </section>
+
+    <!-- BANNERS -->
+    <section class="tab-content" id="tab-banners">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Баннеры</div>
+          <div class="page-sub">Карусель баннеров на главной странице</div>
+        </div>
+        <button class="btn btn-primary" onclick="openBannerModal()"><span class="icon icon-image"></span> Добавить баннер</button>
+      </div>
+      <div class="banner-admin-grid" id="bannersList"></div>
     </section>
 
     <!-- NEWS -->
@@ -886,6 +914,80 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
   </div>
 </div>
 
+<!-- BANNER MODAL -->
+<div class="modal-overlay" id="bannerModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeBannerModal()"><span class="icon icon-close"></span></button>
+    <div class="modal-title" id="bannerModalTitle">Новый баннер</div>
+    <div class="modal-sub">Баннер карусели на главной странице</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Заголовок</label>
+        <input type="text" id="bannerTitle" placeholder="Например: Бесплатная доставка" oninput="updateBannerPreview()">
+      </div>
+      <div class="form-grp full">
+        <label>Подзаголовок</label>
+        <input type="text" id="bannerSubtitle" placeholder="Например: При заказе до 18:00" oninput="updateBannerPreview()">
+      </div>
+      <div class="form-grp full">
+        <label>URL изображения <span style="color:#8aaa94;font-weight:400;">(опционально — если нет, используется цвет фона)</span></label>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <input type="url" id="bannerImageUrl" placeholder="https://example.com/banner.jpg" oninput="updateBannerPreview()" style="flex:1;">
+          <div class="img-preview" id="bannerImgPreview" style="width:80px;height:60px;flex-shrink:0;border-radius:8px;"><span class="icon icon-image" style="color:#8aaa94;"></span></div>
+        </div>
+      </div>
+      <div class="form-grp">
+        <label>Ссылка (URL куда ведёт клик)</label>
+        <input type="text" id="bannerLinkUrl" placeholder="catalog.html или delivery.html">
+      </div>
+      <div class="form-grp">
+        <label>Текст кнопки</label>
+        <input type="text" id="bannerLinkText" placeholder="Подробнее">
+      </div>
+      <div class="form-grp">
+        <label>Цвет фона</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="color" id="bannerBgColor" value="#2ECC71" oninput="updateBannerPreview()" style="width:40px;height:36px;border:1.5px solid #d0e8d8;border-radius:8px;padding:2px;cursor:pointer;">
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#2ECC71')" style="background:#2ECC71;color:#0f1a14;border:none;">Зелёный</button>
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#FF6B35')" style="background:#FF6B35;color:white;border:none;">Оранжевый</button>
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#0f1a14')" style="background:#0f1a14;color:white;border:none;">Тёмный</button>
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#1e6fb8')" style="background:#1e6fb8;color:white;border:none;">Синий</button>
+        </div>
+      </div>
+      <div class="form-grp">
+        <label>Цвет текста</label>
+        <select id="bannerTextColor" onchange="updateBannerPreview()">
+          <option value="#ffffff">Белый</option>
+          <option value="#0f1a14">Тёмный</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Порядок сортировки</label>
+        <input type="number" id="bannerSortOrder" value="0" min="0">
+      </div>
+      <div class="form-grp">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:400;">
+          <input type="checkbox" id="bannerIsActive" checked> Активен (показывать на главной)
+        </label>
+      </div>
+      <div class="form-grp full">
+        <label>Предпросмотр</label>
+        <div id="bannerPreviewCard" style="border-radius:14px;overflow:hidden;height:110px;display:flex;align-items:center;padding:20px 28px;position:relative;background:#2ECC71;transition:background .3s;">
+          <div id="bannerPreviewOverlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.08);pointer-events:none;"></div>
+          <div style="position:relative;z-index:1;" id="bannerPreviewInner">
+            <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;line-height:1.2;color:#fff;" id="bannerPreviewTitleEl">Заголовок</div>
+            <div style="font-size:12px;opacity:0.8;margin-top:4px;color:#fff;" id="bannerPreviewSubEl">Подзаголовок</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeBannerModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveBanner()"><span class="icon icon-save"></span> Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 // ===== ТОВАРЫ ПО УМОЛЧАНИЮ (должны быть в начале!) =====
@@ -1205,6 +1307,7 @@ function showTab(name, btn) {
   if (name === 'contacts') renderContacts();
   if (name === 'promotions') renderPromotions();
   if (name === 'news') renderNews();
+  if (name === 'banners') loadBannersAdmin();
   if (name === 'products') renderProducts();
   if (name === 'dashboard') {
     if (typeof refreshOrdersFromSupabase === 'function') {
@@ -1300,6 +1403,7 @@ function updateCounts() {
   const newsCount = getNews().filter(n => n.active).length;
   const cntNewsEl = document.getElementById('cntNews');
   if (cntNewsEl) cntNewsEl.textContent = newsCount;
+  // Banner count is updated asynchronously by loadBannersAdmin()
 }
 
 // ===== ДАШБОРД =====
@@ -2633,6 +2737,200 @@ function runCsvImport() {
     }
   }
   processChunk(1);
+}
+
+// ===== BANNERS ADMIN =====
+var adminBanners = [];
+var editingBannerId = null;
+
+async function loadBannersAdmin() {
+  if (typeof supaGetAllBanners === 'function') {
+    var data = await supaGetAllBanners();
+    if (data) adminBanners = data;
+  }
+  renderBannersAdmin();
+  var cntEl = document.getElementById('cntBanners');
+  if (cntEl) cntEl.textContent = adminBanners.filter(function(b){ return b.is_active; }).length;
+}
+
+function renderBannersAdmin() {
+  var c = document.getElementById('bannersList');
+  if (!c) return;
+  if (!adminBanners.length) {
+    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><span class="icon icon-image" style="color:#d0e8d8;font-size:56px;"></span></div><div class="empty-title">Баннеров пока нет</div><div>Добавьте первый баннер для карусели на главной</div></div>';
+    return;
+  }
+  c.innerHTML = adminBanners.map(function(b) {
+    var bgStyle = b.image_url
+      ? 'background-image:url(' + escH(b.image_url) + ');background-size:cover;background-position:center;'
+      : 'background:' + (b.bg_color || '#2ECC71') + ';';
+    var textColor = b.text_color || '#ffffff';
+    var overlayAlpha = b.image_url ? '0.4' : '0.1';
+    return '<div class="banner-admin-card" data-id="' + b.id + '">'
+      + '<div class="banner-admin-preview" style="' + bgStyle + '">'
+      + '<div class="banner-admin-preview-overlay" style="background:rgba(0,0,0,' + overlayAlpha + ');"></div>'
+      + '<div class="banner-admin-preview-inner" style="color:' + textColor + ';">'
+      + (b.title ? '<div class="ban-preview-title">' + escH(b.title) + '</div>' : '')
+      + (b.subtitle ? '<div class="ban-preview-sub">' + escH(b.subtitle) + '</div>' : '')
+      + '</div></div>'
+      + '<div class="banner-admin-footer">'
+      + '<div class="banner-admin-meta">'
+      + '<span class="banner-status ' + (b.is_active ? 'active' : 'inactive') + '">' + (b.is_active ? 'Активен' : 'Скрыт') + '</span>'
+      + '<span style="font-size:12px;color:#8aaa94;">№' + (b.sort_order != null ? b.sort_order : 0) + '</span>'
+      + '</div>'
+      + '<div class="banner-admin-actions">'
+      + '<button class="btn btn-secondary btn-sm" onclick="moveBannerOrder(' + b.id + ',-1)" title="Выше">↑</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="moveBannerOrder(' + b.id + ',1)" title="Ниже">↓</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="toggleBannerActive(' + b.id + ',' + (!b.is_active) + ')">' + (b.is_active ? 'Скрыть' : 'Показать') + '</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="editBannerAdmin(' + b.id + ')">Изм.</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="deleteBannerAdmin(' + b.id + ')"><span class="icon icon-trash"></span></button>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+function openBannerModal() {
+  editingBannerId = null;
+  document.getElementById('bannerModalTitle').textContent = 'Новый баннер';
+  document.getElementById('bannerTitle').value = '';
+  document.getElementById('bannerSubtitle').value = '';
+  document.getElementById('bannerImageUrl').value = '';
+  document.getElementById('bannerLinkUrl').value = '';
+  document.getElementById('bannerLinkText').value = 'Подробнее';
+  document.getElementById('bannerBgColor').value = '#2ECC71';
+  document.getElementById('bannerTextColor').value = '#ffffff';
+  document.getElementById('bannerSortOrder').value = adminBanners.length;
+  document.getElementById('bannerIsActive').checked = true;
+  updateBannerPreview();
+  document.getElementById('bannerModal').classList.add('open');
+}
+
+function editBannerAdmin(id) {
+  var b = adminBanners.find(function(x){ return x.id === id; });
+  if (!b) return;
+  editingBannerId = id;
+  document.getElementById('bannerModalTitle').textContent = 'Редактирование баннера';
+  document.getElementById('bannerTitle').value = b.title || '';
+  document.getElementById('bannerSubtitle').value = b.subtitle || '';
+  document.getElementById('bannerImageUrl').value = b.image_url || '';
+  document.getElementById('bannerLinkUrl').value = b.link_url || '';
+  document.getElementById('bannerLinkText').value = b.link_text || 'Подробнее';
+  document.getElementById('bannerBgColor').value = b.bg_color || '#2ECC71';
+  document.getElementById('bannerTextColor').value = b.text_color || '#ffffff';
+  document.getElementById('bannerSortOrder').value = b.sort_order != null ? b.sort_order : 0;
+  document.getElementById('bannerIsActive').checked = !!b.is_active;
+  updateBannerPreview();
+  document.getElementById('bannerModal').classList.add('open');
+}
+
+function closeBannerModal() {
+  document.getElementById('bannerModal').classList.remove('open');
+}
+
+function setBannerColor(hex) {
+  document.getElementById('bannerBgColor').value = hex;
+  updateBannerPreview();
+}
+
+function updateBannerPreview() {
+  var imgUrl = document.getElementById('bannerImageUrl').value.trim();
+  var bg = document.getElementById('bannerBgColor').value;
+  var textColor = document.getElementById('bannerTextColor').value;
+  var title = document.getElementById('bannerTitle').value || 'Заголовок';
+  var sub = document.getElementById('bannerSubtitle').value || 'Подзаголовок';
+  var card = document.getElementById('bannerPreviewCard');
+  var overlay = document.getElementById('bannerPreviewOverlay');
+  var inner = document.getElementById('bannerPreviewInner');
+  if (!card) return;
+  if (imgUrl) {
+    card.style.background = 'url(' + imgUrl + ') center/cover';
+    overlay.style.background = 'rgba(0,0,0,0.4)';
+  } else {
+    card.style.background = bg;
+    overlay.style.background = 'rgba(0,0,0,0.08)';
+  }
+  inner.style.color = textColor;
+  document.getElementById('bannerPreviewTitleEl').textContent = title;
+  document.getElementById('bannerPreviewTitleEl').style.color = textColor;
+  document.getElementById('bannerPreviewSubEl').textContent = sub;
+  document.getElementById('bannerPreviewSubEl').style.color = textColor;
+  var imgPreview = document.getElementById('bannerImgPreview');
+  if (imgPreview) {
+    imgPreview.innerHTML = imgUrl
+      ? '<img src="' + escH(imgUrl) + '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.outerHTML=\'<span class=\\\"icon icon-image\\\" style=\\\"color:#8aaa94;\\\"></span>\'">'
+      : '<span class="icon icon-image" style="color:#8aaa94;"></span>';
+  }
+}
+
+async function saveBanner() {
+  var title = document.getElementById('bannerTitle').value.trim();
+  var subtitle = document.getElementById('bannerSubtitle').value.trim();
+  var imageUrl = document.getElementById('bannerImageUrl').value.trim();
+  var linkUrl = document.getElementById('bannerLinkUrl').value.trim();
+  var linkText = document.getElementById('bannerLinkText').value.trim() || 'Подробнее';
+  var bgColor = document.getElementById('bannerBgColor').value;
+  var textColor = document.getElementById('bannerTextColor').value;
+  var sortOrder = parseInt(document.getElementById('bannerSortOrder').value) || 0;
+  var isActive = document.getElementById('bannerIsActive').checked;
+
+  if (!title && !imageUrl) {
+    alert('Добавьте заголовок или URL изображения');
+    return;
+  }
+
+  var banner = {
+    title: title || null,
+    subtitle: subtitle || null,
+    image_url: imageUrl || null,
+    link_url: linkUrl || null,
+    link_text: linkText,
+    bg_color: bgColor,
+    text_color: textColor,
+    sort_order: sortOrder,
+    is_active: isActive,
+  };
+  if (editingBannerId) banner.id = editingBannerId;
+
+  if (typeof supaUpsertBanner === 'function') {
+    var r = await supaUpsertBanner(banner);
+    if (!r.ok) { alert('Ошибка сохранения: ' + (r.error && r.error.message ? r.error.message : JSON.stringify(r.error))); return; }
+  }
+  closeBannerModal();
+  await loadBannersAdmin();
+  toast('✓ Баннер сохранён');
+}
+
+async function deleteBannerAdmin(id) {
+  if (!confirm('Удалить этот баннер?')) return;
+  if (typeof supaDeleteBanner === 'function') {
+    var r = await supaDeleteBanner(id);
+    if (!r.ok) { alert('Ошибка удаления'); return; }
+  }
+  await loadBannersAdmin();
+  toast('Баннер удалён');
+}
+
+async function toggleBannerActive(id, active) {
+  if (typeof supaUpsertBanner === 'function') {
+    await supaUpsertBanner({ id: id, is_active: active });
+  }
+  await loadBannersAdmin();
+}
+
+async function moveBannerOrder(id, dir) {
+  var idx = adminBanners.findIndex(function(b){ return b.id === id; });
+  if (idx < 0) return;
+  var newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= adminBanners.length) return;
+  var a = adminBanners[idx], b2 = adminBanners[newIdx];
+  var tmpOrder = a.sort_order != null ? a.sort_order : idx;
+  var b2Order = b2.sort_order != null ? b2.sort_order : newIdx;
+  if (typeof supaUpsertBanner === 'function') {
+    await Promise.all([
+      supaUpsertBanner({ id: a.id, sort_order: b2Order }),
+      supaUpsertBanner({ id: b2.id, sort_order: tmpOrder }),
+    ]);
+  }
+  await loadBannersAdmin();
 }
 </script>
 <div id="printSlip" style="display:none;"></div>
