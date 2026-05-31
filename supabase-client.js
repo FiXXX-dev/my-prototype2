@@ -577,5 +577,69 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     catch(e) { return null; }
   };
 
+  // ===== banners (table: public.banners) =====
+  window.supaGetBanners = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('banners').select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get banners', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get banners exception', e); return null; }
+  };
+
+  window.supaGetAllBanners = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('banners').select('*')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get all banners', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get all banners exception', e); return null; }
+  };
+
+  window.supaUpsertBanner = async function(banner){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      if (banner.id) {
+        const fields = Object.assign({}, banner);
+        delete fields.id; delete fields.created_at;
+        const { data, error } = await sb.from('banners').update(fields).eq('id', banner.id).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      } else {
+        const fields = Object.assign({}, banner);
+        delete fields.id; delete fields.created_at;
+        const { data, error } = await sb.from('banners').insert([fields]).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      }
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteBanner = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('banners').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaInsertDefaultBanners = async function(){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    const defaults = [
+      { title:'Бесплатная доставка по СПб', subtitle:'На следующий рабочий день при заказе до 18:00', bg_color:'#2ECC71', text_color:'#ffffff', link_url:'delivery.html', link_text:'Подробнее', is_active:true, sort_order:0 },
+      { title:'Скидки для постоянных клиентов', subtitle:'Индивидуальные условия для HoReCa', bg_color:'#FF6B35', text_color:'#ffffff', link_url:'wholesale.html', link_text:'Узнать условия', is_active:true, sort_order:1 },
+      { title:'Более 2000 наименований', subtitle:'Всё для ресторанов, кафе и отелей', bg_color:'#0f1a14', text_color:'#ffffff', link_url:'catalog.html', link_text:'Смотреть каталог', is_active:true, sort_order:2 },
+    ];
+    try {
+      const { error } = await sb.from('banners').insert(defaults);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
   window.kleverSupabase = { isConfigured, getClient };
 })();

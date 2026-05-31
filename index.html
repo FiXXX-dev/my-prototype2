@@ -638,6 +638,32 @@
     .cat-grid { grid-template-columns: 1fr; }
     .why-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── BANNER CAROUSEL ── */
+  .banner-section { padding: 32px 40px 0; }
+  .banner-carousel { position: relative; border-radius: 20px; overflow: hidden; }
+  .banner-track { display: flex; transition: transform 0.5s ease; will-change: transform; }
+  .banner-slide { min-width: 100%; height: 280px; display: flex; align-items: center; padding: 40px 60px; position: relative; flex-shrink: 0; }
+  .banner-slide-inner { position: relative; z-index: 1; max-width: 500px; }
+  .banner-title { font-family: 'Unbounded', sans-serif; font-size: 30px; font-weight: 900; margin-bottom: 10px; letter-spacing: -1px; line-height: 1.1; }
+  .banner-subtitle { font-size: 16px; margin-bottom: 24px; opacity: 0.85; line-height: 1.5; }
+  .banner-btn-link { display: inline-block; padding: 12px 28px; border-radius: 40px; font-weight: 700; font-size: 14px; text-decoration: none; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); transition: all .2s; }
+  .banner-btn-link:hover { background: white; color: var(--dark) !important; }
+  .banner-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,0.25); border: none; color: white; font-size: 26px; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; transition: background .2s; line-height: 1; }
+  .banner-arrow:hover { background: rgba(0,0,0,0.45); }
+  .banner-prev { left: 16px; }
+  .banner-next { right: 16px; }
+  .banner-dots { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .banner-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.45); border: none; cursor: pointer; transition: all .25s; padding: 0; }
+  .banner-dot.active { background: white; width: 24px; border-radius: 4px; }
+  @media (max-width: 900px) {
+    .banner-section { padding: 20px 16px 0; }
+    .banner-slide { height: 200px; padding: 24px 32px; }
+    .banner-title { font-size: 20px; }
+    .banner-subtitle { font-size: 13px; margin-bottom: 16px; }
+    .banner-btn-link { padding: 9px 18px; font-size: 12px; }
+    .banner-arrow { width: 36px; height: 36px; font-size: 20px; }
+  }
 </style>
 <style id="cart-inline-styles">
 .cart-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:background .2s,transform .15s;flex-shrink:0;padding:0;}
@@ -855,25 +881,106 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<!-- STATS -->
-<div class="stats">
-  <div class="stat">
-    <div class="stat-num">272</div>
-    <div class="stat-label" data-i18n="home.stat_products_label">Товаров в каталоге</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">7</div>
-    <div class="stat-label" data-i18n="home.stat_categories_label">Категорий товаров</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num" data-i18n="home.stat_days_value">1 день</div>
-    <div class="stat-label" data-i18n="home.stat_days_label">Срок доставки по СПб</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">100%</div>
-    <div class="stat-label" data-i18n="home.stat_returns_label">Гарантия обмена и возврата</div>
-  </div>
+<!-- BANNER CAROUSEL -->
+<div class="banner-section" id="bannerSection" style="display:none;">
+  <section class="banner-carousel" id="bannerCarousel"
+    onmouseenter="bannerStopAuto()" onmouseleave="bannerStartAuto()">
+    <div class="banner-track" id="bannerTrack"></div>
+    <button class="banner-arrow banner-prev" onclick="slideBanner(-1)" aria-label="Назад">&#8249;</button>
+    <button class="banner-arrow banner-next" onclick="slideBanner(1)" aria-label="Вперёд">&#8250;</button>
+    <div class="banner-dots" id="bannerDots"></div>
+  </section>
 </div>
+<script id="banner-carousel-script">
+(function(){
+  var banners = [], current = 0, autoTimer = null;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function lighten(hex){
+    try{var c=hex.replace('#','');var r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);return 'rgb('+Math.min(255,r+60)+','+Math.min(255,g+60)+','+Math.min(255,b+60)+')';}
+    catch(e){return hex;}
+  }
+  async function loadBanners(){
+    if (typeof window.supaGetBanners !== 'function') return;
+    var data = await window.supaGetBanners();
+    if (!data || !data.length) {
+      if (typeof window.supaInsertDefaultBanners === 'function') {
+        var r = await window.supaInsertDefaultBanners();
+        if (r && r.ok) {
+          var fresh = await window.supaGetBanners();
+          if (fresh && fresh.length) { banners = fresh; renderCarousel(); showSection(); bannerStartAuto(); }
+        }
+      }
+      return;
+    }
+    banners = data;
+    renderCarousel();
+    showSection();
+    bannerStartAuto();
+  }
+  function showSection(){
+    var s = document.getElementById('bannerSection');
+    if (s) s.style.display = '';
+  }
+  function renderCarousel(){
+    var track = document.getElementById('bannerTrack');
+    var dotsEl = document.getElementById('bannerDots');
+    if (!track || !dotsEl) return;
+    track.innerHTML = banners.map(function(b, i){
+      var bgStyle = '';
+      if (b.image_url) {
+        bgStyle = 'background-image:url('+esc(b.image_url)+');background-size:cover;background-position:center;';
+      } else {
+        var c1 = b.bg_color || '#2ECC71';
+        bgStyle = 'background:linear-gradient(135deg,'+c1+','+lighten(c1)+');';
+      }
+      var textColor = b.text_color || '#ffffff';
+      var overlay = b.image_url ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.08)';
+      return '<div class="banner-slide" style="'+bgStyle+'">'
+        +'<div style="position:absolute;inset:0;background:'+overlay+';border-radius:20px;pointer-events:none;"></div>'
+        +'<div class="banner-slide-inner" style="color:'+textColor+';">'
+        +(b.title ? '<div class="banner-title">'+esc(b.title)+'</div>' : '')
+        +(b.subtitle ? '<div class="banner-subtitle">'+esc(b.subtitle)+'</div>' : '')
+        +(b.link_url ? '<a href="'+esc(b.link_url)+'" class="banner-btn-link" style="color:'+textColor+';">'+esc(b.link_text||'Подробнее')+'</a>' : '')
+        +'</div></div>';
+    }).join('');
+    dotsEl.innerHTML = banners.map(function(_,i){
+      return '<button class="banner-dot'+(i===0?' active':'')+'" onclick="goToBanner('+i+')"></button>';
+    }).join('');
+    goToBanner(0);
+  }
+  window.goToBanner = function(i){
+    if (!banners.length) return;
+    current = (i + banners.length) % banners.length;
+    var track = document.getElementById('bannerTrack');
+    var dots = document.querySelectorAll('.banner-dot');
+    if (track) track.style.transform = 'translateX(-'+(current*100)+'%)';
+    dots.forEach(function(d,j){ d.classList.toggle('active', j===current); });
+  };
+  window.slideBanner = function(dir){ goToBanner(current+dir); bannerRestartAuto(); };
+  window.bannerStopAuto = function(){ clearInterval(autoTimer); };
+  window.bannerStartAuto = function(){
+    if (banners.length <= 1) return;
+    clearInterval(autoTimer);
+    autoTimer = setInterval(function(){ goToBanner(current+1); }, 5000);
+  };
+  function bannerRestartAuto(){ bannerStopAuto(); bannerStartAuto(); }
+  function setupSwipe(el){
+    var startX=0, moved=false;
+    el.addEventListener('touchstart', function(e){ startX=e.touches[0].clientX; moved=false; }, {passive:true});
+    el.addEventListener('touchmove', function(){ moved=true; }, {passive:true});
+    el.addEventListener('touchend', function(e){
+      if (!moved) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 40) slideBanner(dx>0 ? -1 : 1);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var carousel = document.getElementById('bannerCarousel');
+    if (carousel) setupSwipe(carousel);
+    loadBanners();
+  });
+})();
+</script>
 
 <!-- CATEGORIES -->
 <section class="categories">
