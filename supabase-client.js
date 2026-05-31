@@ -664,19 +664,47 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { console.error('[supabase] get all categories hp', e); return null; }
   };
 
-  window.supaUpdateCategoryHomepage = async function(id, showOnHomepage){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('categories').update({ show_on_homepage: showOnHomepage }).eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
   window.supaUpsertCategory = async function(cat){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
       const { data, error } = await sb.from('categories').upsert([cat], { onConflict: 'id' }).select();
       return error ? { ok:false, error } : { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaInsertContact = async function(contact){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const fields = { name: contact.name, phone: contact.phone, message: contact.message };
+      const { data, error } = await sb.from('contacts').insert([fields]).select();
+      if (error) { console.error('[supabase] insert contact', error); return { ok:false, error }; }
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaGetContacts = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('contacts').select('*')
+        .order('created_at', { ascending: false });
+      if (error) { console.error('[supabase] get contacts', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  window.supaDeleteContact = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('contacts').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteAllContacts = async function(){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('contacts').delete().neq('id', 0);
+      return error ? { ok:false, error } : { ok:true };
     } catch(e) { return { ok:false, error:e }; }
   };
 
