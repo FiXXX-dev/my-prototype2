@@ -2346,8 +2346,9 @@ async function toggleCatHomepage(id){
     show_on_homepage: newVal
   });
   if (!r.ok) {
-    toast('Ошибка сохранения в Supabase');
-    console.error('[admin] toggleCatHomepage', r.error);
+    const msg = (r.error && (r.error.message || r.error.hint || r.error.code)) || r.reason || 'неизвестная ошибка';
+    toast('Ошибка Supabase: ' + msg);
+    console.error('[admin] toggleCatHomepage', r.error || r.reason, r.error);
     return;
   }
   _catHomeState[id] = newVal;
