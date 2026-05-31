@@ -332,7 +332,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <button class="login-btn" onclick="doLogin()">Войти →</button>
     </div>
     <div class="login-hint">
-      💡 Демо-пароль: <strong>klever2025</strong>
+      <span class="icon icon-lightbulb" style="color:var(--accent);margin-right:4px;"></span>Демо-пароль: <strong>klever2025</strong>
     </div>
     <a href="index.html" style="display:block;text-align:center;margin-top:20px;color:#8aaa94;font-size:13px;text-decoration:none;">← Вернуться на сайт</a>
   </div>
@@ -345,17 +345,17 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
   <aside class="sidebar">
     <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span><span class="badge">админ</span></a>
     <nav class="side-nav">
-      <button class="side-link active" onclick="showTab('dashboard', this)">📊 Дашборд</button>
-      <button class="side-link" onclick="showTab('products', this)">📦 Товары <span class="count" id="cntProducts">0</span></button>
-      <button class="side-link" onclick="showTab('categories', this)">📁 Категории <span class="count" id="cntCategories">0</span></button>
-      <button class="side-link" onclick="showTab('orders', this)">🛍️ Заказы <span class="count" id="cntOrders">0</span></button>
-      <button class="side-link" onclick="showTab('contacts', this)">✉️ Заявки <span class="count" id="cntContacts">0</span></button>
-      <button class="side-link" onclick="showTab('promotions', this)">🔥 Акции <span class="count" id="cntPromos">0</span></button>
-      <button class="side-link" onclick="showTab('news', this)">📢 Новости <span class="count" id="cntNews">0</span></button>
-      <button class="side-link" onclick="showTab('settings', this)">⚙️ Настройки</button>
+      <button class="side-link active" onclick="showTab('dashboard', this)"><span class="icon icon-chart"></span> Дашборд</button>
+      <button class="side-link" onclick="showTab('products', this)"><span class="icon icon-package"></span> Товары <span class="count" id="cntProducts">0</span></button>
+      <button class="side-link" onclick="showTab('categories', this)"><span class="icon icon-folder"></span> Категории <span class="count" id="cntCategories">0</span></button>
+      <button class="side-link" onclick="showTab('orders', this)"><span class="icon icon-bag"></span> Заказы <span class="count" id="cntOrders">0</span></button>
+      <button class="side-link" onclick="showTab('contacts', this)"><span class="icon icon-mail"></span> Заявки <span class="count" id="cntContacts">0</span></button>
+      <button class="side-link" onclick="showTab('promotions', this)"><span class="icon icon-flame"></span> Акции <span class="count" id="cntPromos">0</span></button>
+      <button class="side-link" onclick="showTab('news', this)"><span class="icon icon-megaphone"></span> Новости <span class="count" id="cntNews">0</span></button>
+      <button class="side-link" onclick="showTab('settings', this)"><span class="icon icon-gear"></span> Настройки</button>
     </nav>
     <div class="side-bottom">
-      <div class="side-user">👤 Администратор</div>
+      <div class="side-user"><span class="icon icon-user"></span> Администратор</div>
       <button class="side-logout" onclick="doLogout()">Выйти</button>
     </div>
   </aside>
@@ -402,7 +402,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
       <!-- Статистика выполненных заказов -->
       <div style="margin-top:20px;">
-        <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:14px;">📊 Выполнено заказов за период</div>
+        <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:14px;"><span class="icon icon-chart"></span> Выполнено заказов за период</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
           <div class="stat-card" style="padding:18px;">
             <div class="stat-label">Сегодня</div>
@@ -443,9 +443,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-sub">Управление товарами в каталоге</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary" onclick="exportProductsCsv()">📤 Экспорт CSV</button>
-          <button class="btn btn-secondary" onclick="openImportModal()">📥 Импорт CSV</button>
-          <button class="btn btn-secondary" onclick="resetProducts()" title="Восстановить товары из стандартного списка">🔄 Сбросить</button>
+          <button class="btn btn-secondary" onclick="exportProductsCsv()"><span class="icon icon-upload"></span> Экспорт CSV</button>
+          <button class="btn btn-secondary" onclick="openImportModal()"><span class="icon icon-download"></span> Импорт CSV</button>
+          <button class="btn btn-secondary" onclick="resetProducts()" title="Восстановить товары из стандартного списка"><span class="icon icon-refresh"></span> Сбросить</button>
           <button class="btn btn-primary" onclick="openProductModal()">+ Добавить товар</button>
         </div>
       </div>
@@ -508,7 +508,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Заказы</div>
           <div class="page-sub">Все заказы клиентов</div>
         </div>
-        <button class="btn btn-secondary" onclick="clearOrders()">🗑️ Очистить все</button>
+        <button class="btn btn-secondary" onclick="clearOrders()"><span class="icon icon-trash"></span> Очистить все</button>
       </div>
       <div class="order-filter-tabs">
         <button class="order-filter-tab active" data-filter="active" onclick="setOrdersFilter('active', this)">Активные <span class="count" id="cntFilterActive">0</span></button>
@@ -525,7 +525,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Заявки с формы</div>
           <div class="page-sub">Сообщения от посетителей сайта</div>
         </div>
-        <button class="btn btn-secondary" onclick="clearContacts()">🗑️ Очистить все</button>
+        <button class="btn btn-secondary" onclick="clearContacts()"><span class="icon icon-trash"></span> Очистить все</button>
       </div>
       <div id="contactsList"></div>
     </section>
@@ -596,7 +596,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
 
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8f4ec;">
-          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;">📱 Мессенджеры для связи</div>
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;"><span class="icon icon-mobile"></span> Мессенджеры для связи</div>
           <div style="font-size:13px;color:#8aaa94;margin-bottom:18px;">Ссылки будут использоваться плавающими кнопками на всех страницах. Пустое поле — кнопка не показывается.</div>
           <div class="settings-msg-grid">
             <div class="settings-msg-row">
@@ -628,10 +628,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
 
         <div style="margin-top:24px;display:flex;gap:10px;">
-          <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button>
+          <button class="btn btn-primary" onclick="saveSettings()"><span class="icon icon-save"></span> Сохранить</button>
         </div>
         <div style="margin-top:20px;padding:14px 18px;background:#fff3ee;border:1.5px solid #ffc4a8;border-radius:12px;font-size:13px;color:#cf7a00;">
-          ⚠️ В демо-версии настройки сохраняются только в этом браузере. Для полной интеграции нужен сервер.
+          <span class="icon icon-alert"></span> В демо-версии настройки сохраняются только в этом браузере. Для полной интеграции нужен сервер.
         </div>
       </div>
     </section>
@@ -642,7 +642,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- МОДАЛКА ТОВАРА -->
 <div class="modal-overlay" id="productModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeProductModal()">✕</button>
+    <button class="modal-close" onclick="closeProductModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="prodModalTitle">Новый товар</div>
     <div class="modal-sub">Заполните данные о товаре</div>
     <div class="modal-form">
@@ -680,9 +680,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <label>Метка</label>
         <select id="prodBadge">
           <option value="">Без метки</option>
-          <option value="hit">🔥 Хит</option>
-          <option value="new">✨ Новинка</option>
-          <option value="sale">🏷️ Скидка</option>
+          <option value="hit">★ Хит</option>
+          <option value="new">Новинка</option>
+          <option value="sale">% Скидка</option>
         </select>
       </div>
       <div class="form-grp full">
@@ -697,7 +697,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeProductModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveProduct()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveProduct()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -705,7 +705,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- МОДАЛКА АКЦИИ -->
 <div class="modal-overlay" id="promoModal">
   <div class="modal">
-    <button class="modal-close" onclick="closePromoModal()">✕</button>
+    <button class="modal-close" onclick="closePromoModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="promoModalTitle">Новая акция</div>
     <div class="modal-sub">Заполните данные об акции</div>
     <div class="modal-form">
@@ -720,9 +720,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <div class="form-grp">
         <label>Цвет</label>
         <select id="promoColor">
-          <option value="green">🟢 Зелёный</option>
-          <option value="accent">🟠 Оранжевый</option>
-          <option value="lime">🟡 Лаймовый</option>
+          <option value="green">● Зелёный</option>
+          <option value="accent">● Оранжевый</option>
+          <option value="lime">● Лаймовый</option>
         </select>
       </div>
       <div class="form-grp full">
@@ -740,7 +740,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closePromoModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="savePromo()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="savePromo()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -748,7 +748,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- NEWS MODAL -->
 <div class="modal-overlay" id="newsModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeNewsModal()">✕</button>
+    <button class="modal-close" onclick="closeNewsModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="newsModalTitle">Новая новость</div>
     <div class="modal-sub">Появится во всплывающей модалке у клиентов</div>
     <div class="modal-form">
@@ -763,9 +763,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <div class="form-grp">
         <label>Цвет плашки</label>
         <select id="newsColor">
-          <option value="green">🟢 Зелёный</option>
-          <option value="orange">🟠 Оранжевый</option>
-          <option value="blue">🔵 Синий</option>
+          <option value="green">● Зелёный</option>
+          <option value="orange">● Оранжевый</option>
+          <option value="blue">● Синий</option>
         </select>
       </div>
       <div class="form-grp">
@@ -778,7 +778,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeNewsModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveNews()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveNews()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -786,7 +786,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- CATEGORY MODAL -->
 <div class="modal-overlay" id="categoryModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeCategoryModal()">✕</button>
+    <button class="modal-close" onclick="closeCategoryModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="catModalTitle">Новая категория</div>
     <div class="modal-sub">Параметры верхнеуровневой категории каталога</div>
     <div class="modal-form">
@@ -817,7 +817,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeCategoryModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveCategory()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveCategory()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -825,7 +825,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- SUBCATEGORY MODAL -->
 <div class="modal-overlay" id="subcategoryModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeSubcategoryModal()">✕</button>
+    <button class="modal-close" onclick="closeSubcategoryModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="subModalTitle">Новая подкатегория</div>
     <div class="modal-sub" id="subModalSub">—</div>
     <div class="modal-form">
@@ -851,7 +851,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeSubcategoryModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveSubcategory()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveSubcategory()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -859,8 +859,8 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- CSV IMPORT MODAL -->
 <div class="modal-overlay" id="importModal">
   <div class="modal" style="max-width:780px;">
-    <button class="modal-close" onclick="closeImportModal()">✕</button>
-    <div class="modal-title">📥 Импорт товаров из CSV</div>
+    <button class="modal-close" onclick="closeImportModal()"><span class="icon icon-close"></span></button>
+    <div class="modal-title"><span class="icon icon-download"></span> Импорт товаров из CSV</div>
     <div class="modal-sub">Формат: <code>name;sku;price;category;subcategory;img;description</code> (разделитель «;»)</div>
     <div style="margin-top:18px;">
       <div id="csvDropZone" class="csv-dropzone">
@@ -881,7 +881,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </label>
       </div>
       <button class="btn btn-secondary" onclick="closeImportModal()">Отмена</button>
-      <button class="btn btn-primary" id="csvImportBtn" onclick="runCsvImport()" disabled>📥 Импортировать</button>
+      <button class="btn btn-primary" id="csvImportBtn" onclick="runCsvImport()" disabled><span class="icon icon-download"></span> Импортировать</button>
     </div>
   </div>
 </div>
@@ -1348,7 +1348,7 @@ function renderDashboard() {
   const recent = sortOrdersDesc(allOrders).slice(0, 10);
   const last = document.getElementById('dashLastOrders');
   if (recent.length === 0) {
-    last.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
+    last.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
   } else {
     last.innerHTML = recent.map(o => orderCardHtml(o)).join('');
   }
@@ -1378,7 +1378,7 @@ function renderProducts() {
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
   if (pageItems.length === 0) {
-    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
     document.getElementById('productsBody').innerHTML = pageItems.map(p => `
       <tr>
@@ -1394,7 +1394,7 @@ function renderProducts() {
         <td>
           <div class="actions">
             <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.sku}')">Изм.</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.sku}')">🗑️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.sku}')"><span class="icon icon-trash"></span></button>
           </div>
         </td>
       </tr>
@@ -1435,9 +1435,9 @@ function toggleHit(sku) {
 }
 
 function badgeHtml(b) {
-  if (b==='hit') return '<span class="col-badge b-hit">🔥 Хит</span>';
-  if (b==='new') return '<span class="col-badge b-new">✨ Новинка</span>';
-  if (b==='sale') return '<span class="col-badge b-sale">🏷️ Скидка</span>';
+  if (b==='hit') return '<span class="col-badge b-hit"><span class="icon icon-flame"></span> Хит</span>';
+  if (b==='new') return '<span class="col-badge b-new">Новинка</span>';
+  if (b==='sale') return '<span class="col-badge b-sale"><span class="icon icon-tag"></span> Скидка</span>';
   return '<span style="color:#c0d0c5;">—</span>';
 }
 
@@ -1521,7 +1521,7 @@ function deleteProduct(sku) {
   setProducts(getProducts().filter(p => p.sku !== sku));
   renderProducts();
   updateCounts();
-  toast('🗑️ Товар удалён');
+  toast('Товар удалён');
 }
 
 function resetProducts() {
@@ -1589,7 +1589,7 @@ function renderOrders() {
   updateOrderFilterCounts();
   if (orders.length === 0) {
     const msg = ordersFilter === 'done' ? 'Выполненных заказов пока нет' : ordersFilter === 'active' ? 'Активных заказов нет' : 'Заказов пока нет';
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">'+msg+'</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
+    list.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-bag" style="color:#d0e8d8;"></span></div><div class="empty-title">'+msg+'</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
   } else {
     list.innerHTML = orders.map(o => orderCardHtml(o)).join('');
   }
@@ -1599,7 +1599,7 @@ function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
   const STATUS_CLASS = {assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'};
-  const STATUS_LABEL = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'❌ Отменён'};
+  const STATUS_LABEL = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'✕ Отменён'};
   const sClass = STATUS_CLASS[o.status] || 'new';
   const sLabel = STATUS_LABEL[o.status] || 'Новый';
   const isCur = s => ((!o.status || o.status==='new') && s==='new') || o.status===s;
@@ -1622,24 +1622,24 @@ function orderCardHtml(o) {
             <div class="order-label">Клиент</div>
             <div class="order-value">
               <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
-              📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+              <span class="icon icon-phone"></span> ${o.phone}${o.email ? '<br><span class="icon icon-mail"></span> ' + o.email : ''}
             </div>
           </div>
           <div class="order-section">
             <div class="order-label">Доставка</div>
             <div class="order-value">
-              ${o.method === 'pickup' ? '🏪 Самовывоз' : '🚚 Курьер'}<br>
-              ${o.address || '—'}${o.deliveryDate ? '<br>📅 ' + o.deliveryDate : ''}${o.deliveryTime ? ' ⏰ ' + o.deliveryTime : ''}
+              ${o.method === 'pickup' ? '<span class="icon icon-store"></span> Самовывоз' : '<span class="icon icon-truck"></span> Курьер'}<br>
+              ${o.address || '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + o.deliveryDate : ''}${o.deliveryTime ? ' ' + o.deliveryTime : ''}
             </div>
           </div>
         </div>
         ${o.payment ? `<div class="order-section" style="margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;">
           <div class="order-label">Оплата</div>
-          <div class="order-value">${({cash: o.method==='pickup'?'💵 Наличными или картой при получении':'💵 Наличными или картой курьеру', invoice:'🏦 Безналичный расчёт (счёт)', transfer:'💳 Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
+          <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
         </div>` : ''}
         ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
         ${o.comment && String(o.comment).trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
-          <div class="order-label" style="margin-bottom:6px;">💬 Комментарий клиента</div>
+          <div class="order-label" style="margin-bottom:6px;"><span class="icon icon-chat"></span> Комментарий клиента</div>
           <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${String(o.comment).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;')}</div>
         </div>` : ''}
         <div class="order-actions">
@@ -1648,15 +1648,15 @@ function orderCardHtml(o) {
               ${sLabel} <span class="sa">▼</span>
             </button>
             <div class="status-drop-menu">
-              <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus(this,'${o.num}','new')">📋 В обработке</button>
-              <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus(this,'${o.num}','assembling')">📦 В сборке</button>
-              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus(this,'${o.num}','courier')">🚚 Передан курьеру</button>
-              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus(this,'${o.num}','done')">✅ Доставлен</button>
-              <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus(this,'${o.num}','cancelled')">❌ Отменён</button>
+              <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus(this,'${o.num}','new')"><span class="icon icon-clipboard"></span> В обработке</button>
+              <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus(this,'${o.num}','assembling')"><span class="icon icon-package"></span> В сборке</button>
+              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus(this,'${o.num}','courier')"><span class="icon icon-truck"></span> Передан курьеру</button>
+              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus(this,'${o.num}','done')"><span class="icon icon-check-circle"></span> Доставлен</button>
+              <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus(this,'${o.num}','cancelled')"><span class="icon icon-close"></span> Отменён</button>
             </div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="printOrder('${o.num}')">🖨️ Накладная</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.num}')">🗑️ Удалить</button>
+          <button class="btn btn-secondary btn-sm" onclick="printOrder('${o.num}')"><span class="icon icon-printer"></span> Накладная</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.num}')"><span class="icon icon-trash"></span> Удалить</button>
         </div>
       </div></div>
     </div>
@@ -1775,7 +1775,7 @@ function buildPrintSlip(o) {
       </div>
       <div class="pi-section">
         <div class="pi-label">Доставка</div>
-        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}${o.deliveryDate?'<br>📅 '+o.deliveryDate:''}${o.deliveryTime?' ⏰ '+o.deliveryTime:''}</div>
+        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}${o.deliveryDate?'<br>'+o.deliveryDate:''}${o.deliveryTime?' '+o.deliveryTime:''}</div>
       </div>
       ${o.payment?`<div class="pi-section">
         <div class="pi-label">Оплата</div>
@@ -1828,7 +1828,7 @@ function renderContacts() {
   const list = getContacts().slice().reverse();
   const c = document.getElementById('contactsList');
   if (list.length === 0) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">✉️</div><div class="empty-title">Заявок пока нет</div><div>Сообщения с формы обратной связи появятся здесь</div></div>';
+    c.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-mail" style="color:#d0e8d8;"></span></div><div class="empty-title">Заявок пока нет</div><div>Сообщения с формы обратной связи появятся здесь</div></div>';
   } else {
     c.innerHTML = list.map((m, idx) => `
       <div class="order-card">
@@ -1837,12 +1837,12 @@ function renderContacts() {
             <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:16px;">${m.name}</div>
             <div class="order-date">${m.date}</div>
           </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteContact(${list.length - 1 - idx})">🗑️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteContact(${list.length - 1 - idx})"><span class="icon icon-trash"></span></button>
         </div>
         <div class="order-body">
           <div class="order-section">
             <div class="order-label">Контакты</div>
-            <div class="order-value">📞 <a href="tel:${m.phone}" style="color:var(--green-dark);">${m.phone}</a></div>
+            <div class="order-value"><span class="icon icon-phone"></span> <a href="tel:${m.phone}" style="color:var(--green-dark);">${m.phone}</a></div>
           </div>
           <div class="order-section">
             <div class="order-label">Сообщение</div>
@@ -1877,7 +1877,7 @@ function renderPromotions() {
   const promos = getPromos();
   const c = document.getElementById('promotionsList');
   if (promos.length === 0) {
-    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">🔥</div><div class="empty-title">Акций пока нет</div><div>Создайте первую акцию для привлечения клиентов</div></div>';
+    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><span class="icon icon-flame" style="color:#d0e8d8;"></span></div><div class="empty-title">Акций пока нет</div><div>Создайте первую акцию для привлечения клиентов</div></div>';
   } else {
     c.innerHTML = promos.map((p, i) => `
       <div class="promo-card">
@@ -1891,7 +1891,7 @@ function renderPromotions() {
           <span class="promo-validity">${p.valid || 'Бессрочно'}</span>
           <div class="promo-actions">
             <button class="btn btn-secondary btn-sm" onclick="editPromo(${i})">Изм.</button>
-            <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})">🗑️</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})"><span class="icon icon-trash"></span></button>
           </div>
         </div>
       </div>
@@ -1972,7 +1972,7 @@ const NEWS_COLOR_GRADIENT = {
   orange: 'linear-gradient(135deg,#FF6B35,#ff9a70)',
   blue: 'linear-gradient(135deg,#1e6fb8,#4a9ce0)'
 };
-const NEWS_COLOR_LABEL = { green: '🟢 Зелёный', orange: '🟠 Оранжевый', blue: '🔵 Синий' };
+const NEWS_COLOR_LABEL = { green: '● Зелёный', orange: '● Оранжевый', blue: '● Синий' };
 
 function escNews(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1981,7 +1981,7 @@ function renderNews() {
   const c = document.getElementById('newsList');
   if (!c) return;
   if (list.length === 0) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">Новостей пока нет</div><div>Создайте первое уведомление для клиентов</div></div>';
+    c.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-megaphone" style="color:#d0e8d8;"></span></div><div class="empty-title">Новостей пока нет</div><div>Создайте первое уведомление для клиентов</div></div>';
     return;
   }
   c.innerHTML = list.map(n => {
@@ -2000,7 +2000,7 @@ function renderNews() {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn ${n.active ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="toggleNewsActive(${n.id})">${n.active ? '⏸ Деактивировать' : '✓ Активировать'}</button>
           <button class="btn btn-secondary btn-sm" onclick="editNews(${n.id})">Изм.</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteNews(${n.id})">🗑️ Удалить</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteNews(${n.id})"><span class="icon icon-trash"></span> Удалить</button>
         </div>
       </div>
     </div>`;
@@ -2148,7 +2148,7 @@ function renderCategoriesAdmin(){
   document.getElementById('cntCategories').textContent = cats.length;
   const host = document.getElementById('categoriesList');
   if (!cats.length) {
-    host.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">Нет категорий</div><div>Создайте первую категорию</div></div>';
+    host.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-folder" style="color:#d0e8d8;"></span></div><div class="empty-title">Нет категорий</div><div>Создайте первую категорию</div></div>';
     return;
   }
   host.innerHTML = cats.map((c, idx) => {

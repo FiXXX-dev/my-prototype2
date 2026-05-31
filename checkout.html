@@ -247,7 +247,7 @@ setTimeout(function(){
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
     <a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a></div>
+  <div style="display:flex;gap:12px;align-items:center;"><a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a><a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a></div>
 </header>
 
 <div class="breadcrumb">
@@ -287,16 +287,16 @@ setTimeout(function(){
       <div class="delivery-options">
         <div class="delivery-option selected" id="optCourier" onclick="selectDelivery('courier')">
           <input type="radio" name="delivery" value="courier" checked>
-          <span class="delivery-option-icon">🚚</span>
+          <span class="delivery-option-icon"><span class="icon icon-truck" style="color:var(--green-dark);"></span></span>
           <div class="delivery-option-title" data-i18n="checkout.option_courier">Курьером</div>
           <div class="delivery-option-desc" data-i18n="checkout.option_courier_desc">По Санкт-Петербургу, на следующий рабочий день. Бесплатно при заказе до 18:00.</div>
           <div class="delivery-option-price" id="courierPriceLabel">Бесплатно</div>
-          <div style="font-size:11px;color:#1aab58;font-weight:700;margin-top:4px;">🎉 Всегда бесплатно</div>
+          <div style="font-size:11px;color:#1aab58;font-weight:700;margin-top:4px;"><span class="icon icon-gift" style="color:#1aab58;margin-right:4px;vertical-align:-0.1em;"></span>Всегда бесплатно</div>
           <div class="check-mark"></div>
         </div>
         <div class="delivery-option" id="optPickup" onclick="selectDelivery('pickup')">
           <input type="radio" name="delivery" value="pickup">
-          <span class="delivery-option-icon">🏪</span>
+          <span class="delivery-option-icon"><span class="icon icon-store" style="color:var(--green-dark);"></span></span>
           <div class="delivery-option-title" data-i18n="checkout.option_pickup">Самовывоз</div>
           <div class="delivery-option-desc"><span data-i18n="checkout.option_pickup_desc">ул. Софийская 4 к 3, пав. 29/8</span><br><span data-i18n="checkout.option_pickup_hours">Пн–Пт 9:00–18:00, Сб 10:00–16:00, Вс 10:00–17:00</span></div>
           <div class="delivery-option-price">Бесплатно</div>
@@ -307,7 +307,7 @@ setTimeout(function(){
       <!-- ФОРМА АДРЕСА (только для курьера) -->
       <div class="address-form visible" id="addressForm">
         <hr class="section-divider">
-        <div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text);">📍 Адрес доставки</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text);"><span class="icon icon-pin" style="margin-right:6px;vertical-align:-0.1em;"></span>Адрес доставки</div>
         <div class="form-group" id="savedAddrGroup" style="display:none;">
           <label><span data-i18n="checkout.saved_addr">Сохранённые адреса</span></label>
           <select id="savedAddrSelect" onchange="useSavedAddress(this.value)">
@@ -385,21 +385,21 @@ setTimeout(function(){
       <div class="payment-options">
         <label class="delivery-option payment-option selected" data-pay="cash">
           <input type="radio" name="paymentMethod" value="cash" checked>
-          <span class="delivery-option-icon">💵</span>
+          <span class="delivery-option-icon"><span class="icon icon-coin" style="color:var(--green-dark);"></span></span>
           <div class="delivery-option-title" data-i18n="checkout.pay_cash_title">Наличными или картой курьеру</div>
           <div class="delivery-option-desc" data-i18n="checkout.pay_cash_desc">Оплата при получении заказа. Принимаем наличные и банковские карты.</div>
           <span class="check-mark"></span>
         </label>
         <label class="delivery-option payment-option" data-pay="invoice">
           <input type="radio" name="paymentMethod" value="invoice">
-          <span class="delivery-option-icon">🏦</span>
+          <span class="delivery-option-icon"><span class="icon icon-bank" style="color:var(--green-dark);"></span></span>
           <div class="delivery-option-title" data-i18n="checkout.pay_invoice_title">По безналичному расчёту</div>
           <div class="delivery-option-desc" data-i18n="checkout.pay_invoice_desc">Для ИП и юр.лиц. Выставим счёт на оплату. Оплата по реквизитам в течение 3 рабочих дней.</div>
           <span class="check-mark"></span>
         </label>
         <label class="delivery-option payment-option" data-pay="transfer">
           <input type="radio" name="paymentMethod" value="transfer">
-          <span class="delivery-option-icon">💳</span>
+          <span class="delivery-option-icon"><span class="icon icon-credit-card" style="color:var(--green-dark);"></span></span>
           <div class="delivery-option-title" data-i18n="checkout.pay_transfer_title">Перевод на карту</div>
           <div class="delivery-option-desc" data-i18n="checkout.pay_transfer_desc">Перевод на карту Сбербанк. Реквизиты отправим после подтверждения заказа.</div>
           <span class="check-mark"></span>
@@ -408,7 +408,7 @@ setTimeout(function(){
 
       <!-- Реквизиты для безналичной оплаты -->
       <div class="invoice-form" id="invoiceForm">
-        <div class="invoice-note" data-i18n="checkout.invoice_note">📋 Реквизиты для счёта</div>
+        <div class="invoice-note" data-i18n="checkout.invoice_note"><span class="icon icon-clipboard" style="margin-right:6px;vertical-align:-0.1em;"></span>Реквизиты для счёта</div>
         <div class="form-row">
           <div class="form-group">
             <label><span data-i18n="checkout.invoice_company_label">Название компании</span> <span class="req">*</span></label>
@@ -421,7 +421,7 @@ setTimeout(function(){
             <div class="error-hint" id="invoiceInnErr" data-i18n="checkout.invoice_inn_err">Укажите корректный ИНН (10 или 12 цифр)</div>
           </div>
         </div>
-        <div class="invoice-hint" id="invoiceUserHint" style="display:none;" data-i18n="checkout.invoice_hint">✓ Данные подставлены из профиля. Проверьте и при необходимости измените.</div>
+        <div class="invoice-hint" id="invoiceUserHint" style="display:none;" data-i18n="checkout.invoice_hint"><span class="icon icon-check" style="color:var(--green-dark);margin-right:4px;vertical-align:-0.1em;"></span>Данные подставлены из профиля. Проверьте и при необходимости измените.</div>
       </div>
     </div>
   </div>
@@ -431,7 +431,7 @@ setTimeout(function(){
 
     <!-- ПРЕДУПРЕЖДЕНИЕ О МИНИМАЛКЕ -->
     <div class="min-order-warning" id="minOrderWarning">
-      <span class="icon">⚠️</span>
+      <span class="icon icon-alert"></span>
       <div class="text">
         <strong>Минимальная сумма заказа — 5 000 ₽</strong>
         Добавьте товаров ещё на <span id="needMore"></span> ₽, чтобы оформить заказ.
@@ -474,7 +474,7 @@ setTimeout(function(){
 
 <!-- ЭКРАН УСПЕХА -->
 <div class="success-wrap" id="successWrap">
-  <div class="success-icon">✅</div>
+  <div class="success-icon"><span class="icon icon-check-circle" style="color:#2ECC71;"></span></div>
   <div class="success-title" data-i18n="checkout.success_title">Заказ оформлен!</div>
   <div class="success-sub">Мы получили ваш заказ и свяжемся<br>с вами в течение 30 минут для подтверждения.</div>
   <div class="success-order-num" id="successOrderNum">#000000</div>
@@ -670,7 +670,7 @@ function updateSummary() {
           <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', -1)">−</button>
           <span class="qty-val-sm">${i.qty}</span>
           <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', 1)">+</button>
-          <button class="remove-btn-sm" onclick="removeItem('${i.sku}')" title="Удалить">✕</button>
+          <button class="remove-btn-sm" onclick="removeItem('${i.sku}')" title="Удалить"><span class="icon icon-close"></span></button>
         </div>
       </div>
       <div class="summary-item-price-col">
@@ -683,7 +683,7 @@ function updateSummary() {
   document.getElementById('summaryCount').textContent = count + ' шт.';
   document.getElementById('summarySubtotal').textContent = subtotal + ' ₽';
   document.getElementById('summaryDelivery').textContent =
-    delivCost === 0 ? (deliveryMethod === 'pickup' ? 'Самовывоз' : '🎉 Бесплатно') : delivCost + ' ₽';
+    delivCost === 0 ? (deliveryMethod === 'pickup' ? 'Самовывоз' : 'Бесплатно') : delivCost + ' ₽';
   document.getElementById('summaryTotal').textContent = total + ' ₽';
 }
 
@@ -824,13 +824,13 @@ async function submitOrder() {
   document.getElementById('successOrderNum').textContent = '#' + finalNum;
 
   const methodText = effectiveDelivery === 'courier'
-    ? `Доставим по адресу: ${addressClean}${deliveryDateClean ? '<br>📅 ' + deliveryDateClean : ''}${deliveryTimeClean ? ' ⏰ ' + deliveryTimeClean : ''}`
+    ? `Доставим по адресу: ${addressClean}${deliveryDateClean ? '<br><span class="icon icon-calendar" style="font-size:12px;vertical-align:-0.1em;"></span> ' + deliveryDateClean : ''}${deliveryTimeClean ? ' ⏰ ' + deliveryTimeClean : ''}`
     : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
   const cashLabel = effectiveDelivery === 'pickup' ? 'при получении' : 'курьеру';
   const paymentLabel = {
-    cash: `💵 Наличными или картой ${cashLabel}`,
-    invoice: '🏦 Безналичный расчёт — выставим счёт',
-    transfer: '💳 Перевод на карту — пришлём реквизиты'
+    cash: `<span class="icon icon-coin"></span> Наличными или картой ${cashLabel}`,
+    invoice: '<span class="icon icon-bank"></span> Безналичный расчёт — выставим счёт',
+    transfer: '<span class="icon icon-credit-card"></span> Перевод на карту — пришлём реквизиты'
   }[effectivePayment] || '';
   document.getElementById('successDetails').innerHTML =
     `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${phoneClean}</strong>`;
