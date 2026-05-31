@@ -222,7 +222,8 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .cat-admin-order{display:flex;flex-direction:column;gap:2px;}
 .cat-admin-order button{background:#f2f7f4;border:1px solid #d0e8d8;width:24px;height:20px;font-size:10px;cursor:pointer;color:#6b8a74;border-radius:4px;line-height:1;padding:0;}
 .cat-admin-order button:hover{background:var(--green);color:var(--dark);}
-.cat-admin-actions{display:flex;gap:6px;flex-shrink:0;}
+.cat-admin-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:center;}
+.cat-hp-btn:disabled{opacity:.4;cursor:not-allowed;}
 .cat-admin-toggle{background:none;border:none;color:#6b8a74;font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:6px;transition:transform .2s,background .15s;display:flex;align-items:center;justify-content:center;}
 .cat-admin-toggle:hover{background:#f2f7f4;}
 .cat-admin-card[data-open="true"] .cat-admin-toggle{transform:rotate(180deg);}
@@ -340,7 +341,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- ЭКРАН ВХОДА -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-box">
-    <div class="login-logo"><svg class="logo-icon" width="48" height="48" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg> <span>Clever</span></div>
+    <div class="login-logo"><svg class="logo-icon" width="48" height="48" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg> <span>Клевер</span></div>
     <div class="login-sub">Панель управления магазином</div>
     <div class="login-form">
       <input type="password" class="login-input" id="passInput" placeholder="Введите пароль" onkeypress="if(event.key==='Enter') doLogin()">
@@ -359,7 +360,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span><span class="badge">админ</span></a>
+    <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span><span class="badge">админ</span></a>
     <nav class="side-nav">
       <button class="side-link active" onclick="showTab('dashboard', this)"><span class="icon icon-chart"></span> Дашборд</button>
       <button class="side-link" onclick="showTab('products', this)"><span class="icon icon-package"></span> Товары <span class="count" id="cntProducts">0</span></button>
@@ -1317,7 +1318,7 @@ function showTab(name, btn) {
     renderDashboard();
   }
   if (name === 'settings') loadSettings();
-  if (name === 'categories') renderCategoriesAdmin();
+  if (name === 'categories') loadCatHomeStateAndRender();
 }
 
 // On admin login, prime orders from Supabase and subscribe to live changes
@@ -1869,7 +1870,7 @@ function buildPrintSlip(o) {
         <div class="pi-meta">${o.date} · ${statusLabel}</div>
       </div>
       <div style="text-align:right;font-size:11px;color:#888;">
-        <div>Clever HoReCa</div>
+        <div>Клевер HoReCa</div>
         <div>Печать: ${new Date().toLocaleDateString('ru-RU')}</div>
       </div>
     </div>
@@ -1896,7 +1897,7 @@ function buildPrintSlip(o) {
       <tbody>${rows||'<tr><td colspan="5" style="text-align:center;color:#999;">Позиции не указаны</td></tr>'}</tbody>
     </table>
     <div class="pi-total">Итого: ${(o.total||0).toLocaleString('ru-RU')} ₽</div>
-    <div class="pi-footer">Накладная сформирована автоматически · Clever HoReCa</div>
+    <div class="pi-footer">Накладная сформирована автоматически · Клевер HoReCa</div>
   `;
 }
 
@@ -2237,6 +2238,7 @@ const _openCats = new Set();
 let editingCategoryId = null;
 let editingSubcategoryParent = null;
 let editingSubcategoryId = null;
+const _catHomeState = {}; // id → boolean (show_on_homepage)
 
 function escH(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -2256,8 +2258,10 @@ function renderCategoriesAdmin(){
     host.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-folder" style="color:#d0e8d8;"></span></div><div class="empty-title">Нет категорий</div><div>Создайте первую категорию</div></div>';
     return;
   }
-  host.innerHTML = cats.map((c, idx) => {
+  const homeCount = Object.values(_catHomeState).filter(Boolean).length;
+  host.innerHTML = cats.map((c) => {
     const open = _openCats.has(c.id);
+    const onHome = !!_catHomeState[c.id];
     const subCounts = productCountBySubcategory(c.id);
     const subsHtml = (c.subcategories || []).map((s) => {
       const n = subCounts[s.id] || 0;
@@ -2279,6 +2283,11 @@ function renderCategoriesAdmin(){
     const headerThumb = c.img
       ? `<img src="${escH(c.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
       : (c.icon ? `<span class="icon icon-${escH(c.icon)}"></span>` : '<span class="icon icon-box"></span>');
+    const homeBtnLabel = onHome ? 'На главной ✓' : 'На главную';
+    const homeBtnStyle = onHome
+      ? 'background:var(--green);color:var(--dark);border-color:var(--green);'
+      : '';
+    const homeBtnDisabled = (!onHome && homeCount >= 8) ? 'disabled title="Максимум 8 категорий на главной"' : `title="${onHome ? 'Убрать с главной' : 'Показывать на главной'}"`;
     return `<div class="cat-admin-card" data-cat-id="${escH(c.id)}" data-open="${open}">
       <div class="cat-admin-head">
         <div class="cat-admin-order">
@@ -2291,6 +2300,7 @@ function renderCategoriesAdmin(){
           <div class="cat-admin-meta">id: ${escH(c.id)} · ${(c.subcategories||[]).length} подкат. · ${counts[c.id]||0} ${plural(counts[c.id]||0,['товар','товара','товаров'])}</div>
         </div>
         <div class="cat-admin-actions">
+          <button class="btn btn-secondary btn-sm" style="${homeBtnStyle}" ${homeBtnDisabled} onclick="event.stopPropagation();toggleCatHomepage('${escH(c.id)}')">${homeBtnLabel}</button>
           <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openSubcategoryModal('${escH(c.id)}')">+ Подкат.</button>
           <button class="btn-icon" onclick="event.stopPropagation();editCategory('${escH(c.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
           <button class="btn-icon danger" onclick="event.stopPropagation();deleteCategory('${escH(c.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
@@ -2300,6 +2310,37 @@ function renderCategoriesAdmin(){
       <div class="cat-admin-body"><div class="cat-admin-body-inner">${subsHtml}</div></div>
     </div>`;
   }).join('');
+}
+
+async function loadCatHomeStateAndRender(){
+  if (typeof window.supaGetAllCategoriesHP === 'function') {
+    try {
+      const data = await window.supaGetAllCategoriesHP();
+      if (data && data.length) {
+        data.forEach(r => { _catHomeState[r.id] = !!r.show_on_homepage; });
+      }
+    } catch(e) {}
+  }
+  renderCategoriesAdmin();
+}
+
+async function toggleCatHomepage(id){
+  const current = !!_catHomeState[id];
+  const newVal = !current;
+  if (newVal) {
+    const count = Object.values(_catHomeState).filter(Boolean).length;
+    if (count >= 8) { toast('Максимум 8 категорий на главной'); return; }
+  }
+  if (typeof window.supaUpdateCategoryHomepage === 'function') {
+    const r = await window.supaUpdateCategoryHomepage(id, newVal);
+    if (!r.ok) {
+      toast('Ошибка сохранения в Supabase');
+      console.error(r.error);
+    }
+  }
+  _catHomeState[id] = newVal;
+  renderCategoriesAdmin();
+  toast(newVal ? '✓ Добавлено на главную' : '✓ Убрано с главной');
 }
 
 function toggleCatOpen(id){
