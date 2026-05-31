@@ -641,5 +641,43 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
+  window.supaGetHomepageCategories = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('categories').select('*')
+        .eq('show_on_homepage', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get homepage categories', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get homepage categories', e); return null; }
+  };
+
+  window.supaGetAllCategoriesHP = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('categories').select('id,name,show_on_homepage,sort_order,image_url,color,product_count')
+        .order('sort_order', { ascending: true }).order('id', { ascending: true });
+      if (error) { console.error('[supabase] get all categories hp', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get all categories hp', e); return null; }
+  };
+
+  window.supaUpdateCategoryHomepage = async function(id, showOnHomepage){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('categories').update({ show_on_homepage: showOnHomepage }).eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaUpsertCategory = async function(cat){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { data, error } = await sb.from('categories').upsert([cat], { onConflict: 'id' }).select();
+      return error ? { ok:false, error } : { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
   window.kleverSupabase = { isConfigured, getClient };
 })();

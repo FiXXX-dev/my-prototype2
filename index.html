@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title data-i18n="home.title">Clever — Хозтовары и Бытовая химия</title>
+<title data-i18n="home.title">Клевер — Хозтовары и Бытовая химия</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="icons.css">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -92,9 +92,6 @@
   .hero {
     background: var(--dark);
     padding: 80px 40px 90px;
-    display: grid; grid-template-columns: 1fr 480px;
-    gap: 60px; align-items: center;
-    min-height: 520px;
     position: relative; overflow: hidden;
   }
 
@@ -164,60 +161,6 @@
     display: inline-block;
   }
   .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,0.07); }
-
-  /* hero visual */
-  .hero-visual {
-    position: relative; height: 360px;
-    animation: fadeUp .8s .15s ease both;
-  }
-
-  .hero-card {
-    background: var(--dark2);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    padding: 28px;
-    position: absolute;
-  }
-
-  .hero-card.main-card {
-    width: 100%; height: 100%;
-    display: flex; flex-direction: column; justify-content: space-between;
-    background: linear-gradient(135deg, #162119, #0d1a10);
-  }
-
-  .card-emoji { font-size: 48px; }
-  .card-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px; }
-  .card-sub { color: rgba(255,255,255,0.45); font-size: 13px; }
-  .card-price {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 28px; font-weight: 900;
-    color: var(--lime);
-  }
-  .card-badge {
-    background: var(--green);
-    color: var(--dark);
-    padding: 5px 12px; border-radius: 20px;
-    font-size: 11px; font-weight: 700;
-    display: inline-block; margin-top: 8px;
-  }
-
-  .float-chip {
-    position: absolute;
-    background: var(--lime);
-    color: var(--dark);
-    border-radius: 12px;
-    padding: 10px 16px;
-    font-weight: 700; font-size: 13px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-    animation: float 3s ease-in-out infinite;
-  }
-  .float-chip.c1 { top: -14px; right: 20px; animation-delay: 0s; }
-  .float-chip.c2 { bottom: 20px; left: -20px; animation-delay: 1.2s; background: var(--accent); color: white; }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
 
   /* ── TICKER ── */
   .ticker {
@@ -297,53 +240,39 @@
   }
   .see-all:hover { gap: 10px; }
 
-  .cat-grid {
+  /* ── HOME CATEGORIES (photo cards) ── */
+  .cat-grid-home {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
   }
-
-  .cat-card {
-    border-radius: 20px;
-    padding: 32px 24px;
-    cursor: pointer;
+  .cat-tile-home {
+    display: block; border-radius: 20px; overflow: hidden;
+    text-decoration: none; position: relative;
+    min-height: 200px; background: #f2f7f4;
     transition: transform .2s, box-shadow .2s;
-    position: relative; overflow: hidden;
-    text-decoration: none;
-    display: block;
-    min-height: 200px;
   }
-  .cat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
-
-  .cat-card.c1 { background: linear-gradient(135deg, #e8faf0, #c8f5dc); }
-  .cat-card.c2 { background: linear-gradient(135deg, #fff8e6, #ffe9a8); }
-  .cat-card.c3 { background: linear-gradient(135deg, #e8f4ff, #b8d8ff); }
-  .cat-card.c4 { background: linear-gradient(135deg, #fff0f0, #ffd0d0); }
-  .cat-card.c5 { background: linear-gradient(135deg, #f5e8ff, #ddb8ff); }
-  .cat-card.c6 { background: linear-gradient(135deg, #e8fff8, #b8f0e4); }
-  .cat-card.c7 { background: linear-gradient(135deg, #fff5e8, #ffd8a8); }
-
-  .cat-icon { font-size: 44px; margin-bottom: 16px; display: block; }
-  .cat-name {
+  .cat-tile-home:hover { transform: translateY(-4px); box-shadow: 0 16px 50px rgba(0,0,0,0.12); }
+  .cat-tile-home-bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+  }
+  .cat-tile-home-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 22px; color: white;
+  }
+  .cat-tile-home.tinted .cat-tile-home-overlay {
+    background: linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.55) 100%);
+  }
+  .cat-tile-home.no-photo .cat-tile-home-overlay { color: var(--text); }
+  .cat-tile-home-name {
     font-family: 'Unbounded', sans-serif;
-    font-size: 15px; font-weight: 700;
-    color: var(--text);
-    line-height: 1.3; margin-bottom: 8px;
+    font-size: 15px; font-weight: 700; line-height: 1.3;
   }
-  .cat-count {
-    font-size: 13px; color: #6b8a74; font-weight: 500;
-  }
-
-  .cat-arrow {
-    position: absolute; bottom: 24px; right: 24px;
-    width: 36px; height: 36px;
-    background: rgba(0,0,0,0.08);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    transition: background .2s, transform .2s;
-  }
-  .cat-card:hover .cat-arrow { background: var(--green); transform: rotate(-45deg); }
+  .cat-tile-home.no-photo .cat-tile-home-name { color: var(--text); }
+  .cat-tile-home-count { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+  .cat-tile-home.no-photo .cat-tile-home-count { color: #6b8a74; }
 
   /* ── FEATURED PRODUCTS ── */
   .products { padding: 0 40px 80px; }
@@ -559,37 +488,8 @@
   }
   .social-link:hover { background: var(--green); }
 
-  /* ── HERO PRODUCT CARDS ── */
-  .hero-prod-card {
-    display: flex; align-items: center; gap: 14px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 16px; padding: 14px 16px;
-    text-decoration: none; color: white;
-    transition: background .2s, border-color .2s, transform .2s;
-    margin-bottom: 12px;
-  }
-  .hero-prod-card:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(46,204,113,0.4);
-    transform: translateX(4px);
-  }
-  .hero-prod-img {
-    width: 52px; height: 52px; flex-shrink: 0;
-    background: white; border-radius: 10px;
-    overflow: hidden; display: flex; align-items: center; justify-content: center;
-  }
-  .hero-prod-img img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
-  .hero-prod-info { flex: 1; min-width: 0; }
-  .hero-prod-name { font-weight: 600; font-size: 14px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hero-prod-cat { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
-  .hero-prod-price {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 16px; font-weight: 900;
-    color: var(--lime); flex-shrink: 0;
-  }
 
-  
+
 
   /* animations */
   @keyframes fadeUp {
@@ -601,10 +501,9 @@
   @media (max-width: 900px) {
     header { padding: 0 20px; }
     nav { display: none; }
-    .hero { grid-template-columns: 1fr; padding: 50px 20px; }
-    .hero-visual { display: none; }
+    .hero { padding: 50px 20px; }
     .stats { grid-template-columns: repeat(2, 1fr); padding: 24px 20px; }
-    .cat-grid { grid-template-columns: repeat(2, 1fr); padding: 0 20px; }
+    .cat-grid-home { grid-template-columns: repeat(2, 1fr); padding: 0; }
     .categories { padding: 50px 20px; }
     .prod-grid { grid-template-columns: repeat(2, 1fr); padding: 0; }
     .products { padding: 0 20px 50px; }
@@ -630,13 +529,16 @@
     .stat { padding: 22px 14px; }
     .stat-num { font-size: 32px; }
     .stat-label { font-size: 13px; }
-    .hero h1 { font-size: clamp(28px, 8vw, 38px); }
-    .hero { padding: 40px 16px 50px; }
+    .hero h1 { font-size: 24px; letter-spacing: -1px; }
+    .hero { padding: 40px 12px 50px; }
+    .cat-tile-home { min-height: 140px; }
+    .cat-tile-home-name { font-size: 13px; }
+    .cat-grid-home { gap: 10px; }
     .section-title { font-size: 24px; }
   }
   @media (max-width: 360px) {
     .prod-grid { grid-template-columns: 1fr; }
-    .cat-grid { grid-template-columns: 1fr; }
+    .cat-grid-home { grid-template-columns: repeat(2, 1fr); }
     .why-grid { grid-template-columns: 1fr; }
   }
 
@@ -767,7 +669,7 @@
 @keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
 </style>
 <div id="klever-preloader">
-  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Clever</span></div>
+  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Клевер</span></div>
   <div class="pre-bar"></div>
 </div>
 <script id="preloader-script">
@@ -789,7 +691,7 @@ setTimeout(function(){
 
 <!-- HEADER -->
 <header>
-  <a href="index.html" class="logo" style="text-decoration:none;"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></a>
+  <a href="index.html" class="logo" style="text-decoration:none;"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></a>
   <nav>
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a>
     <a href="sales.html" data-i18n="nav.sales">Акции</a>
@@ -815,69 +717,12 @@ setTimeout(function(){
 
   <div class="hero-content">
     <div class="hero-tag" data-i18n="home.hero_tag"><span class="icon icon-bolt" style="margin-right:4px;vertical-align:-0.12em;"></span>Быстрая доставка по СПб</div>
-    <h1><span data-i18n="home.hero_brand">Clever —</span> <em data-i18n="home.hero_subtitle">товары для HoReCa</em></h1>
+    <h1><span data-i18n="home.hero_brand">Клевер —</span> <em data-i18n="home.hero_subtitle">товары для HoReCa</em></h1>
     <div class="hero-btns">
       <a href="catalog.html" class="btn-primary" data-i18n="home.hero_cta">Смотреть каталог →</a>
     </div>
   </div>
-
-  <div class="hero-visual">
-    <a href="product.html?sku=0070" class="hero-prod-card" style="animation: fadeUp .7s .1s ease both;">
-      <div class="hero-prod-img" data-emoji="🫙">
-        <img src="https://cloverspb.ru/thumb/2/SYcyQf6N1m-UmIOGxxy12w/200r190/d/original-400x400-fit.jpg" alt="Белизна">
-      </div>
-      <div class="hero-prod-info">
-        <div class="hero-prod-name">Белизна 1 л</div>
-        <div class="hero-prod-cat">Бытовая химия · Арт. 0070</div>
-      </div>
-      <div class="hero-prod-price">35 ₽</div>
-    </a>
-
-    <a href="product.html?sku=0058" class="hero-prod-card" style="animation: fadeUp .7s .2s ease both;">
-      <div class="hero-prod-img" data-emoji="💧">
-        <img src="https://cloverspb.ru/thumb/2/M53PUXWPCPsQn26S5Z9y2Q/200r190/d/zhiroudalitel_unicum_gold_dlya_plit_dukhovok_kastryul_500ml_600gr_sprey_241102_1.jpg" alt="Unicum">
-      </div>
-      <div class="hero-prod-info">
-        <div class="hero-prod-name">Жироудалитель Unicum Gold 500 мл</div>
-        <div class="hero-prod-cat">Бытовая химия · Арт. 0058</div>
-      </div>
-      <div class="hero-prod-price">275 ₽</div>
-    </a>
-
-    <a href="product.html?sku=0756" class="hero-prod-card" style="animation: fadeUp .7s .3s ease both;">
-      <div class="hero-prod-img" data-emoji="🧹">
-        <img src="https://cloverspb.ru/thumb/2/_zyL739NGGqpHlr5__r06Q/200r190/d/ce6b1813-d65e-4367-9c49-1242d29fba40.jpg" alt="Тряпка">
-      </div>
-      <div class="hero-prod-info">
-        <div class="hero-prod-name">Тряпка для пола 50×80 см</div>
-        <div class="hero-prod-cat">Хозтовары · Арт. 0756</div>
-      </div>
-      <div class="hero-prod-price">90 ₽</div>
-    </a>
-
-    <div class="float-chip c1" data-i18n="home.chip_delivery"><span class="icon icon-truck" style="margin-right:5px;vertical-align:-0.12em;"></span>Доставка за 1 день</div>
-    <div class="float-chip c2" data-i18n="home.chip_sales"><span class="icon icon-flame" style="margin-right:5px;vertical-align:-0.12em;"></span>Акции каждую неделю</div>
-  </div>
 </section>
-<script id="hero-sync-script">
-document.addEventListener('DOMContentLoaded', function(){
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem('klever_products_v2')) || []; } catch(e) {}
-  if (!products.length) return;
-  document.querySelectorAll('.hero-prod-card').forEach(card => {
-    const m = (card.getAttribute('href') || '').match(/sku=([^&]+)/);
-    if (!m) return;
-    const p = products.find(x => x.sku === m[1]);
-    if (!p) return;
-    const img = card.querySelector('img');
-    if (img && p.img) img.src = p.img;
-    const nameEl = card.querySelector('.hero-prod-name');
-    if (nameEl) nameEl.textContent = p.name;
-    const priceEl = card.querySelector('.hero-prod-price');
-    if (priceEl) priceEl.textContent = p.price + ' ₽';
-  });
-});
-</script>
 
 
 
@@ -1011,51 +856,70 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
     <a href="catalog.html" class="see-all" data-i18n="home.section_catalog_link">Все категории →</a>
   </div>
-  <div class="cat-grid">
-    <a href="catalog.html?cat=бумажная" class="cat-card c1">
-      <span class="cat-icon icon icon-paper-roll" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.paper">Бумажная продукция</div>
-      <div class="cat-count">26 товаров</div>
-      <div class="cat-arrow">→</div>
-    </a>
-    <a href="catalog.html?cat=одноразовая" class="cat-card c2">
-      <span class="cat-icon icon icon-takeaway" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.disposable">Одноразовая посуда</div>
-      <div class="cat-count">125 товаров</div>
-      <div class="cat-arrow">→</div>
-    </a>
-    <a href="catalog.html?cat=бытовая" class="cat-card c3">
-      <span class="cat-icon icon icon-spray" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.chemistry">Бытовая химия</div>
-      <div class="cat-count">33 товара</div>
-      <div class="cat-arrow">→</div>
-    </a>
-    <a href="catalog.html?cat=защита" class="cat-card c4">
-      <span class="cat-icon icon icon-shield" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.protection">Средства защиты</div>
-      <div class="cat-count">27 товаров</div>
-      <div class="cat-arrow">→</div>
-    </a>
-    <a href="catalog.html?cat=упаковка" class="cat-card c5">
-      <span class="cat-icon icon icon-box" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.packaging">Упаковка</div>
-      <div class="cat-count">27 товаров</div>
-      <div class="cat-arrow">→</div>
-    </a>
-    <a href="catalog.html?cat=хозтовары" class="cat-card c6">
-      <span class="cat-icon icon icon-broom" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.household">Хозтовары</div>
-      <div class="cat-count">26 товаров</div>
-      <div class="cat-arrow">→</div>
-    </a>
-    <a href="catalog.html?cat=канцелярия" class="cat-card c7">
-      <span class="cat-icon icon icon-paperclip" style="color:var(--green-dark);"></span>
-      <div class="cat-name" data-i18n="cat.stationery">Канцелярия</div>
-      <div class="cat-count">8 товаров</div>
-      <div class="cat-arrow">→</div>
-    </a>
-  </div>
+  <div class="cat-grid-home" id="homeCatGrid"></div>
 </section>
+<script id="home-cats-script">
+(function(){
+  var GRADIENTS = {
+    'disposable':'linear-gradient(135deg,#fff8e6,#ffe9a8)',
+    'chemistry':'linear-gradient(135deg,#e8f4ff,#b8d8ff)',
+    'paper':'linear-gradient(135deg,#e8faf0,#c8f5dc)',
+    'protection':'linear-gradient(135deg,#fff0f0,#ffd0d0)',
+    'packaging':'linear-gradient(135deg,#f5e8ff,#ddb8ff)',
+    'household':'linear-gradient(135deg,#e8fff8,#b8f0e4)',
+    'stationery':'linear-gradient(135deg,#fff5e8,#ffd8a8)'
+  };
+  var FALLBACK_CATS = [
+    {id:'paper',name:'Бумажная продукция'},
+    {id:'disposable',name:'Одноразовая посуда'},
+    {id:'chemistry',name:'Бытовая химия'},
+    {id:'protection',name:'Средства защиты'},
+    {id:'packaging',name:'Упаковка'},
+    {id:'household',name:'Хозтовары'},
+    {id:'stationery',name:'Канцелярия'}
+  ];
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function plural(n,w){var v=Math.abs(n)%100,v1=v%10;if(v>10&&v<20)return w[2];if(v1>1&&v1<5)return w[1];if(v1===1)return w[0];return w[2];}
+  function renderCats(cats, fromSupabase){
+    var grid = document.getElementById('homeCatGrid');
+    if (!grid || !cats.length) return;
+    grid.innerHTML = cats.slice(0,8).map(function(c){
+      var id = fromSupabase ? (c.id||c.slug||'') : (c.id||'');
+      var name = c.name||'';
+      var img = fromSupabase ? (c.image_url||'') : (c.img||'');
+      var count = fromSupabase ? (c.product_count||0) : 0;
+      var hasPhoto = !!img;
+      var bgStyle = hasPhoto
+        ? 'background-image:url('+esc(img)+')'
+        : ('background:' + (GRADIENTS[id]||'#f2f7f4'));
+      var countStr = (count>0) ? (count+' '+plural(count,['товар','товара','товаров'])) : '';
+      return '<a href="catalog.html?cat='+esc(id)+'" class="cat-tile-home '+(hasPhoto?'tinted':'no-photo')+'">'
+        +'<div class="cat-tile-home-bg" style="'+bgStyle+'"></div>'
+        +'<div class="cat-tile-home-overlay">'
+        +'<div class="cat-tile-home-name">'+esc(name)+'</div>'
+        +(countStr?'<div class="cat-tile-home-count">'+esc(countStr)+'</div>':'')
+        +'</div></a>';
+    }).join('');
+  }
+  async function loadCats(){
+    if (typeof window.supaGetHomepageCategories === 'function') {
+      try {
+        var data = await window.supaGetHomepageCategories();
+        if (data && data.length) { renderCats(data, true); return; }
+      } catch(e) {}
+    }
+    var localCats = (typeof window.sortedCategories === 'function')
+      ? window.sortedCategories()
+      : FALLBACK_CATS;
+    renderCats(localCats.length ? localCats : FALLBACK_CATS, false);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadCats);
+  } else {
+    loadCats();
+  }
+})();
+</script>
 
 <!-- PRODUCTS -->
 <section class="products">
@@ -1251,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <footer>
   <div class="footer-grid">
     <div>
-      <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></div>
+      <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></div>
       <div class="footer-desc">Производство, продажа и доставка хозяйственных товаров и бытовой химии в Санкт-Петербурге.</div>
       <div class="footer-contact">
         <a href="tel:+78129228677">8 (812) 922-86-77</a>
