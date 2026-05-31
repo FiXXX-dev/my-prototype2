@@ -248,7 +248,7 @@ setTimeout(function(){
     <a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
   <div class="header-actions">
-    <a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+    <a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
     <button class="cart-btn" onclick="openCart()">
       <span class="icon icon-cart"></span>
       <span class="cart-badge" id="cartBadge" style="display:none;"></span>
@@ -272,8 +272,8 @@ setTimeout(function(){
 
     <div id="loginForm" class="auth-form">
       <div class="field-toggle">
-        <button id="loginByEmailBtn" class="active" onclick="setLoginMethod('email')" data-i18n="account.login_email_tab">📧 По Email</button>
-        <button id="loginByPhoneBtn" onclick="setLoginMethod('phone')" data-i18n="account.login_phone_tab">📱 По телефону</button>
+        <button id="loginByEmailBtn" class="active" onclick="setLoginMethod('email')" data-i18n="account.login_email_tab"><span class="icon icon-mail"></span> По Email</button>
+        <button id="loginByPhoneBtn" onclick="setLoginMethod('phone')" data-i18n="account.login_phone_tab"><span class="icon icon-mobile"></span> По телефону</button>
       </div>
       <div class="form-grp">
         <label id="loginIdLabel">Email <span class="req">*</span></label>
@@ -293,11 +293,11 @@ setTimeout(function(){
         <label>Я регистрируюсь как: <span class="req">*</span></label>
         <div class="user-type">
           <div class="user-type-opt active" id="typeIndividualBtn" onclick="setUserType('individual')">
-            <div class="user-type-opt-icon">👤</div>
+            <div class="user-type-opt-icon"><span class="icon icon-user" style="font-size:24px;"></span></div>
             <div class="user-type-opt-name">Физ. лицо</div>
           </div>
           <div class="user-type-opt" id="typeCompanyBtn" onclick="setUserType('company')">
-            <div class="user-type-opt-icon">🏢</div>
+            <div class="user-type-opt-icon"><span class="icon icon-building" style="font-size:24px;"></span></div>
             <div class="user-type-opt-name">ИП / Компания</div>
           </div>
         </div>
@@ -342,8 +342,8 @@ setTimeout(function(){
       </div>
 
       <div class="field-toggle">
-        <button id="regByEmailBtn" class="active" onclick="setRegMethod('email')">📧 Регистрация по Email</button>
-        <button id="regByPhoneBtn" onclick="setRegMethod('phone')">📱 По телефону</button>
+        <button id="regByEmailBtn" class="active" onclick="setRegMethod('email')"><span class="icon icon-mail"></span> Регистрация по Email</button>
+        <button id="regByPhoneBtn" onclick="setRegMethod('phone')"><span class="icon icon-mobile"></span> По телефону</button>
       </div>
 
       <div class="form-grp" id="regEmailGrp">
@@ -384,11 +384,11 @@ setTimeout(function(){
       <div class="user-contact" id="userContact">—</div>
     </div>
     <nav class="acc-nav">
-      <button class="acc-link active" onclick="showAccTab('profile', this)" data-i18n="account.nav_profile">👤 Профиль</button>
-      <button class="acc-link" onclick="showAccTab('orders', this)"><span data-i18n="account.nav_orders">🛍️ Заказы</span> <span class="badge" id="cntMyOrders">0</span></button>
-      <button class="acc-link" onclick="showAccTab('favorites', this)"><span data-i18n="account.nav_favorites">❤️ Избранное</span> <span class="badge" id="cntMyFav">0</span></button>
-      <button class="acc-link" onclick="showAccTab('addresses', this)"><span data-i18n="account.nav_addresses">📍 Адреса</span> <span class="badge" id="cntMyAddr">0</span></button>
-      <button class="acc-link" onclick="showAccTab('security', this)" data-i18n="account.nav_security">🔒 Безопасность</button>
+      <button class="acc-link active" onclick="showAccTab('profile', this)" data-i18n="account.nav_profile"><span class="icon icon-user"></span> Профиль</button>
+      <button class="acc-link" onclick="showAccTab('orders', this)"><span data-i18n="account.nav_orders"><span class="icon icon-bag"></span> Заказы</span> <span class="badge" id="cntMyOrders">0</span></button>
+      <button class="acc-link" onclick="showAccTab('favorites', this)"><span data-i18n="account.nav_favorites"><span class="icon icon-heart"></span> Избранное</span> <span class="badge" id="cntMyFav">0</span></button>
+      <button class="acc-link" onclick="showAccTab('addresses', this)"><span data-i18n="account.nav_addresses"><span class="icon icon-pin"></span> Адреса</span> <span class="badge" id="cntMyAddr">0</span></button>
+      <button class="acc-link" onclick="showAccTab('security', this)" data-i18n="account.nav_security"><span class="icon icon-lock"></span> Безопасность</button>
     </nav>
     <button class="acc-logout" onclick="doLogout()" data-i18n="account.logout">Выйти из аккаунта</button>
   </aside>
@@ -453,7 +453,7 @@ setTimeout(function(){
 
 <div class="modal-bg" id="addrModal">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeAddrModal()">✕</button>
+    <button class="modal-close" onclick="closeAddrModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="addrModalTitle">Новый адрес</div>
     <div class="modal-sub">Добавьте адрес для быстрого оформления заказов</div>
     <div class="profile-form">
@@ -478,7 +478,7 @@ setTimeout(function(){
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeAddrModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveAddress()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveAddress()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -487,7 +487,7 @@ setTimeout(function(){
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-panel" id="cartPanel">
   <div class="cart-header">
-    <h3 data-i18n="cart.title">🛒 Корзина</h3>
+    <h3 data-i18n="cart.title"><span class="icon icon-cart"></span> Корзина</h3>
     <button class="cart-close" onclick="closeCart()" aria-label="Close"><span class="icon icon-close"></span></button>
   </div>
   <div class="cart-items" id="cartItems"></div>
@@ -891,11 +891,11 @@ function renderProfile(){
   const displayName = u.type === 'company' ? u.company : u.name;
   document.getElementById('userAvatar').textContent = (displayName || '?')[0].toUpperCase();
   document.getElementById('userName').textContent = displayName || '—';
-  document.getElementById('userTypeBadge').textContent = u.type === 'company' ? '🏢 ИП / Компания' : '👤 Физ. лицо';
+  document.getElementById('userTypeBadge').innerHTML = u.type === 'company' ? '<span class="icon icon-building" style="vertical-align:-0.15em;margin-right:4px;"></span>ИП / Компания' : '<span class="icon icon-user" style="vertical-align:-0.15em;margin-right:4px;"></span>Физ. лицо';
 
   const contacts = [];
-  if (u.email) contacts.push('📧 ' + u.email);
-  if (u.phone) contacts.push('📱 ' + u.phone);
+  if (u.email) contacts.push('<span class="icon icon-mail"></span> ' + u.email);
+  if (u.phone) contacts.push('<span class="icon icon-mobile"></span> ' + u.phone);
   document.getElementById('userContact').innerHTML = contacts.join('<br>') || '—';
 
   const html = u.type === 'individual' ? `
@@ -982,7 +982,7 @@ function renderMyOrders(){
 
   if (myOrders.length === 0){
     list.innerHTML = `<div class="empty">
-      <div class="empty-icon">🛍️</div>
+      <div class="empty-icon"><span class="icon icon-bag" style="color:#d0e8d8;"></span></div>
       <div class="empty-title">Заказов пока нет</div>
       <div>Когда оформите первый заказ, он появится здесь</div>
       <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">Перейти в каталог →</a>
@@ -997,7 +997,7 @@ function renderMyOrders(){
           <div class="order-num">Заказ #${o.num}</div>
           <div class="order-date">${o.date}</div>
         </div>
-        <span class="order-status status-${({assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'}[o.status]||'new')}">${{new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'❌ Отменён'}[o.status]||'В обработке'}</span>
+        <span class="order-status status-${({assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'}[o.status]||'new')}">${{new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'✕ Отменён'}[o.status]||'В обработке'}</span>
         <div class="order-total">${(o.total || 0).toLocaleString('ru-RU')} ₽</div>
       </div>
       <div class="order-items">
@@ -1042,7 +1042,7 @@ function renderMyFavorites(){
   // Renders from the in-memory store only — never fetches.
   if (myFavorites.length === 0){
     list.innerHTML = `<div class="empty">
-      <div class="empty-icon">❤️</div>
+      <div class="empty-icon"><span class="icon icon-heart" style="color:#ffd0d8;"></span></div>
       <div class="empty-title">Список избранного пуст</div>
       <div>Нажимайте ♡ на товарах в каталоге чтобы добавить их сюда</div>
       <a href="catalog.html" class="btn btn-primary" style="margin-top:16px;">Перейти в каталог →</a>
@@ -1060,7 +1060,7 @@ function renderMyFavorites(){
         <div class="fav-price">${f.product_price != null ? f.product_price + ' ₽' : ''}</div>
         <div class="fav-actions">
           <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addFavToCart('${f.product_sku}')">+ В корзину</button>
-          <button class="btn btn-danger btn-sm" onclick="removeFav('${f.product_sku}')">✕</button>
+          <button class="btn btn-danger btn-sm" onclick="removeFav('${f.product_sku}')"><span class="icon icon-close"></span></button>
         </div>
       </div>
     </div>
@@ -1096,7 +1096,7 @@ function renderMyAddresses(){
   // Renders from the in-memory store only — never fetches.
   if (myAddresses.length === 0){
     list.innerHTML = `<div class="empty">
-      <div class="empty-icon">📍</div>
+      <div class="empty-icon"><span class="icon icon-pin" style="color:#d0e8d8;"></span></div>
       <div class="empty-title">Адресов пока нет</div>
       <div>Добавьте адрес чтобы быстрее оформлять заказы</div>
     </div>`;
@@ -1111,7 +1111,7 @@ function renderMyAddresses(){
       </div>
       <div class="addr-actions">
         <button class="btn btn-secondary btn-sm" onclick="editAddress(${idx})">Изм.</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteAddress(${idx})">🗑️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteAddress(${idx})"><span class="icon icon-trash"></span></button>
       </div>
     </div>
   `).join('');
@@ -1274,7 +1274,7 @@ function closeCart(){document.getElementById('cartOverlay').classList.remove('op
 function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
 function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';if(total)total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');if(total)total.textContent=getCartTotal().toLocaleString('ru-RU')+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
-function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span class="icon icon-check" style="color:#2ECC71;font-size:18px;"></span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded', updateCartBadge);
 </script>
 <style id="news-modal-styles">

@@ -152,7 +152,7 @@ setTimeout(function(){
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="sales.html" data-i18n="nav.sales">Акции</a><a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a>
     <a href="delivery.html" data-i18n="nav.delivery">Доставка</a><a href="about.html" class="active" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
     <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a>
     <button class="cart-btn" onclick="openCart()">
       <span class="icon icon-cart"></span>
@@ -180,10 +180,10 @@ setTimeout(function(){
     Наш ассортимент включает более 300 позиций: от бумажной продукции и одноразовой посуды до средств защиты и профессиональной бытовой химии. Мы обслуживаем как частных покупателей, так и крупных оптовых клиентов — рестораны, кафе, клининговые компании, магазины.
   </div>
   <div class="values-grid">
-    <div class="value-card"><div class="value-icon">💰</div><div class="value-title" data-i18n="about.adv_prices_title">Низкие цены</div><div class="value-text" data-i18n="about.adv_prices_text">Работаем напрямую с производителями — никаких лишних посредников и наценок.</div></div>
-    <div class="value-card"><div class="value-icon">✅</div><div class="value-title" data-i18n="about.adv_quality_title">Качество товара</div><div class="value-text" data-i18n="about.adv_quality_text">Каждая позиция проверяется перед поступлением на склад. Только проверенные поставщики.</div></div>
-    <div class="value-card"><div class="value-icon">🚚</div><div class="value-title" data-i18n="about.adv_delivery_title">Быстрая доставка</div><div class="value-text" data-i18n="about.adv_delivery_text">Доставляем по Санкт-Петербургу в день заказа или на следующий рабочий день.</div></div>
-    <div class="value-card"><div class="value-icon">🤝</div><div class="value-title" data-i18n="about.adv_personal_title">Индивидуальный подход</div><div class="value-text" data-i18n="about.adv_personal_text">Для оптовых клиентов — персональный менеджер, отдельные условия и скидки.</div></div>
+    <div class="value-card"><div class="value-icon"><span class="icon icon-coin" style="color:var(--green-dark);"></span></div><div class="value-title" data-i18n="about.adv_prices_title">Низкие цены</div><div class="value-text" data-i18n="about.adv_prices_text">Работаем напрямую с производителями — никаких лишних посредников и наценок.</div></div>
+    <div class="value-card"><div class="value-icon"><span class="icon icon-check-circle" style="color:var(--green-dark);"></span></div><div class="value-title" data-i18n="about.adv_quality_title">Качество товара</div><div class="value-text" data-i18n="about.adv_quality_text">Каждая позиция проверяется перед поступлением на склад. Только проверенные поставщики.</div></div>
+    <div class="value-card"><div class="value-icon"><span class="icon icon-truck" style="color:var(--green-dark);"></span></div><div class="value-title" data-i18n="about.adv_delivery_title">Быстрая доставка</div><div class="value-text" data-i18n="about.adv_delivery_text">Доставляем по Санкт-Петербургу в день заказа или на следующий рабочий день.</div></div>
+    <div class="value-card"><div class="value-icon"><span class="icon icon-users" style="color:var(--green-dark);"></span></div><div class="value-title" data-i18n="about.adv_personal_title">Индивидуальный подход</div><div class="value-text" data-i18n="about.adv_personal_text">Для оптовых клиентов — персональный менеджер, отдельные условия и скидки.</div></div>
   </div>
 
   <!-- CTA -->
@@ -198,14 +198,14 @@ setTimeout(function(){
 </div>
 <footer>
   <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></div>
-  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" data-i18n="footer.admin" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;">⚙️ Админка</a></p>
+  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" data-i18n="footer.admin" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;"><span class="icon icon-gear"></span> Админка</a></p>
   <div class="footer-links"><a href="index.html" data-i18n="footer.home_link">Главная</a><a href="catalog.html" data-i18n="footer.catalog">Каталог</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a></div>
 </footer>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-panel" id="cartPanel">
   <div class="cart-header">
-    <h3 data-i18n="cart.title">🛒 Корзина</h3>
+    <h3 data-i18n="cart.title"><span class="icon icon-cart"></span> Корзина</h3>
     <button class="cart-close" onclick="closeCart()" aria-label="Close" data-i18n-aria="nav.menu_close"><span class="icon icon-close"></span></button>
   </div>
   <div class="cart-items" id="cartItems"></div>
@@ -233,7 +233,7 @@ function closeCart(){document.getElementById('cartOverlay').classList.remove('op
 function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
 function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');total.textContent=getCartTotal()+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
-function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span class="icon icon-check" style="color:#2ECC71;font-size:18px;"></span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded',updateCartBadge);
 </script>
 
