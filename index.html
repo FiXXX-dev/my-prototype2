@@ -904,10 +904,6 @@ setTimeout(function(){
   };
   function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function plural(n,w){var v=Math.abs(n)%100,v1=v%10;if(v>10&&v<20)return w[2];if(v1>1&&v1<5)return w[1];if(v1===1)return w[0];return w[2];}
-  function hideSection(){
-    var s = document.getElementById('homeCategoriesSection');
-    if (s) s.style.display = 'none';
-  }
   function renderCats(cats){
     var grid = document.getElementById('homeCatGrid');
     if (!grid) return;
@@ -929,34 +925,35 @@ setTimeout(function(){
         +'</div></a>';
     }).join('');
   }
-  // Категории на главной берутся из Supabase (show_on_homepage=true).
-  // Для скорости результат кэшируется в localStorage (klever_home_cats):
-  // на повторных заходах секция рисуется мгновенно из кэша, затем тихо обновляется.
+  // Категории: встроенный список показывается мгновенно.
+  // Supabase обновляет его в фоне (добавляет фото, актуальное кол-во товаров,
+  // и меняет набор если admin изменил «На главную»).
+  var DEFAULT_HOME_CATS = [
+    {id:'disposable', name:'Одноразовая посуда', product_count:125},
+    {id:'chemistry',  name:'Бытовая химия',      product_count:33},
+    {id:'paper',      name:'Бумажная продукция',  product_count:26},
+    {id:'protection', name:'Средства защиты',     product_count:27},
+    {id:'packaging',  name:'Упаковка',            product_count:27},
+    {id:'household',  name:'Хозтовары',           product_count:26},
+    {id:'stationery', name:'Канцелярия',          product_count:8},
+  ];
   var CATS_CACHE_KEY = 'klever_home_cats';
   function getCachedCats(){
     try { var a = JSON.parse(localStorage.getItem(CATS_CACHE_KEY)); return Array.isArray(a) ? a : null; }
     catch(e){ return null; }
   }
   function loadCats(){
-    // 1) Мгновенный рендер из кэша, если он есть.
+    // 1) Мгновенный рендер: кэш → встроенные дефолты.
     var cached = getCachedCats();
-    if (cached && cached.length) renderCats(cached);
+    renderCats(cached && cached.length ? cached : DEFAULT_HOME_CATS);
 
-    // 2) Обновление из Supabase.
-    if (typeof window.supaGetHomepageCategories !== 'function') {
-      if (!cached || !cached.length) hideSection();
-      return;
-    }
+    // 2) Тихое обновление из Supabase (фото, актуальные счётчики, admin-настройки).
+    if (typeof window.supaGetHomepageCategories !== 'function') return;
     window.supaGetHomepageCategories().then(function(data){
-      if (!data || !data.length) {
-        if (!cached || !cached.length) hideSection();
-        return;
-      }
+      if (!data || !data.length) return;
       try { localStorage.setItem(CATS_CACHE_KEY, JSON.stringify(data)); } catch(e){}
       renderCats(data);
-    }).catch(function(){
-      if (!cached || !cached.length) hideSection();
-    });
+    }).catch(function(){});
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadCats);
