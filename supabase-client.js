@@ -790,7 +790,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         emoji: p.emoji || '📦',
         is_active: true,
       }));
-      const CHUNK = 200;
+      const CHUNK = 50;
       for (let i = 0; i < rows.length; i += CHUNK) {
         const { error } = await sb.from('products').upsert(rows.slice(i, i + CHUNK), { onConflict: 'sku' });
         if (error) { console.error('[supabase] bulk upsert products', error); return { ok:false, error }; }
