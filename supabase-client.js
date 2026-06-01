@@ -664,19 +664,138 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { console.error('[supabase] get all categories hp', e); return null; }
   };
 
-  window.supaUpdateCategoryHomepage = async function(id, showOnHomepage){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('categories').update({ show_on_homepage: showOnHomepage }).eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
   window.supaUpsertCategory = async function(cat){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
       const { data, error } = await sb.from('categories').upsert([cat], { onConflict: 'id' }).select();
       return error ? { ok:false, error } : { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaInsertContact = async function(contact){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const fields = { name: contact.name, phone: contact.phone, message: contact.message };
+      const { data, error } = await sb.from('contacts').insert([fields]).select();
+      if (error) { console.error('[supabase] insert contact', error); return { ok:false, error }; }
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaGetContacts = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('contacts').select('*')
+        .order('created_at', { ascending: false });
+      if (error) { console.error('[supabase] get contacts', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  window.supaDeleteContact = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('contacts').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteAllContacts = async function(){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('contacts').delete().neq('id', 0);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== products (table: public.products) =====
+  window.supaGetProducts = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('products').select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get products', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get products exception', e); return null; }
+  };
+
+  window.supaGetProductBySku = async function(sku){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('products').select('*').eq('sku', String(sku)).maybeSingle();
+      if (error) { console.error('[supabase] get product by sku', error); return null; }
+      return data || null;
+    } catch(e) { return null; }
+  };
+
+  window.supaGetHits = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('products').select('*')
+        .eq('is_active', true).eq('is_hit', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get hits', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  window.supaUpsertProduct = async function(p){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const row = {
+        sku: p.sku,
+        name: p.name,
+        price: Number(p.price) || 0,
+        img: p.img || '',
+        cat: p.cat || '',
+        category_id: p.categoryId || '',
+        subcategory: p.subcategory || '',
+        badge: p.badge || '',
+        is_hit: !!p.isHit,
+        description: p.desc || '',
+        emoji: p.emoji || '📦',
+        is_active: true,
+      };
+      const { data, error } = await sb.from('products').upsert([row], { onConflict: 'sku' }).select();
+      if (error) { console.error('[supabase] upsert product', error); return { ok:false, error }; }
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteProduct = async function(sku){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('products').delete().eq('sku', String(sku));
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaBulkUpsertProducts = async function(products){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const rows = products.map(p => ({
+        sku: p.sku,
+        name: p.name,
+        price: Number(p.price) || 0,
+        img: p.img || '',
+        cat: p.cat || '',
+        category_id: p.categoryId || '',
+        subcategory: p.subcategory || '',
+        badge: p.badge || '',
+        is_hit: !!p.isHit,
+        description: p.desc || '',
+        emoji: p.emoji || '📦',
+        is_active: true,
+      }));
+      const CHUNK = 200;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const { error } = await sb.from('products').upsert(rows.slice(i, i + CHUNK), { onConflict: 'sku' });
+        if (error) { console.error('[supabase] bulk upsert products', error); return { ok:false, error }; }
+      }
+      return { ok:true };
     } catch(e) { return { ok:false, error:e }; }
   };
 

@@ -3,6 +3,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Контакты магазина Клевер в Санкт-Петербурге. Адрес, телефон, форма обратной связи.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cloverspb.ru/contacts.html">
+<meta property="og:title" content="Контакты — Клевер">
+<meta property="og:description" content="Контакты магазина Клевер в Санкт-Петербурге. Адрес, телефон, форма обратной связи.">
+<meta property="og:image" content="https://cloverspb.ru/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Контакты — Клевер">
+<meta name="twitter:description" content="Контакты магазина Клевер в Санкт-Петербурге. Адрес, телефон, форма обратной связи.">
 <title data-i18n="contacts.title">Контакты — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="icons.css">
@@ -99,6 +108,7 @@
 </style>
 
 <script src="categories.js"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -239,7 +249,8 @@ setTimeout(function(){
 </div>
 
 <script>
-function sendContactForm() {
+async function sendContactForm() {
+  const btn = document.querySelector('.btn-submit');
   const name = document.getElementById('contactName').value.trim();
   const phone = document.getElementById('contactPhone').value.trim();
   const msg = document.getElementById('contactMessage').value.trim();
@@ -248,17 +259,16 @@ function sendContactForm() {
   if (!phone || phone.replace(/\D/g,'').length < 10) { alert('Пожалуйста, укажите корректный телефон'); document.getElementById('contactPhone').focus(); return; }
   if (!msg) { alert('Пожалуйста, напишите сообщение'); document.getElementById('contactMessage').focus(); return; }
 
-  // Сохраняем заявку в localStorage чтобы админ её увидел
-  try {
-    const submissions = JSON.parse(localStorage.getItem('klever_contacts') || '[]');
-    submissions.push({
-      name: name,
-      phone: phone,
-      message: msg,
-      date: new Date().toLocaleString('ru-RU')
-    });
-    localStorage.setItem('klever_contacts', JSON.stringify(submissions));
-  } catch(e) { console.error(e); }
+  if (btn) { btn.disabled = true; btn.textContent = 'Отправляем...'; }
+
+  let saved = false;
+  if (typeof window.supaInsertContact === 'function') {
+    const r = await window.supaInsertContact({ name, phone, message: msg });
+    if (r.ok) saved = true;
+    else console.error('[contacts] Supabase insert failed', r.error);
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Отправить сообщение →'; }
 
   alert('Спасибо, ' + name + '!\nВаше сообщение отправлено. Мы перезвоним вам на номер ' + phone + ' в течение 30 минут.');
 

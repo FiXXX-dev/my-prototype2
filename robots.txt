@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /manage-x33355.html
+
+Sitemap: https://cloverspb.ru/sitemap.xml

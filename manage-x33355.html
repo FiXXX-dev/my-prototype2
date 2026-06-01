@@ -305,6 +305,29 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
   .order-filter-tabs{overflow-x:auto;}
   .order-filter-tab{white-space:nowrap;font-size:13px;padding:9px 14px;}
 }
+@media(max-width:600px){
+  .sidebar{padding:10px 12px;gap:8px;}
+  .side-link{padding:8px 10px;font-size:12px;}
+  .side-link .count{font-size:10px;padding:1px 5px;}
+  .main{padding:12px 10px;}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .stat-card{padding:16px 12px;}
+  .stat-num{font-size:26px;}
+  .stat-label{font-size:11px;}
+  .page-title{font-size:20px;}
+  .page-sub{font-size:12px;}
+  .btn{padding:9px 14px;font-size:13px;}
+  .tbl{min-width:560px;}
+  .modal-overlay .modal{padding:20px 14px;margin:8px;}
+  .modal-title{font-size:18px;}
+  .cat-admin-head{flex-wrap:wrap;gap:8px;}
+  .cat-admin-actions{flex-wrap:wrap;}
+  .banner-admin-grid{grid-template-columns:1fr;}
+  .order-card{padding:14px 12px;}
+  .order-num{font-size:14px;}
+  .order-total{font-size:16px;}
+  .promo-grid{gap:10px;}
+}
 </style>
 <script src="categories.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1303,11 +1326,11 @@ function showTab(name, btn) {
     }
     renderOrders();
   }
-  if (name === 'contacts') renderContacts();
+  if (name === 'contacts') loadContactsAdmin();
   if (name === 'promotions') renderPromotions();
   if (name === 'news') renderNews();
   if (name === 'banners') loadBannersAdmin();
-  if (name === 'products') renderProducts();
+  if (name === 'products') loadProductsAdmin();
   if (name === 'dashboard') {
     if (typeof refreshOrdersFromSupabase === 'function') {
       refreshOrdersFromSupabase().then(() => { renderDashboard(); updateCounts(); });
@@ -1397,7 +1420,7 @@ function updateCounts() {
   if (cntCatsEl && typeof getCategories === 'function') cntCatsEl.textContent = getCategories().length;
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
-  document.getElementById('cntContacts').textContent = getContacts().length;
+  document.getElementById('cntContacts').textContent = _contactsCache.length || getContacts().length;
   document.getElementById('cntPromos').textContent = getPromos().length;
   const newsCount = getNews().filter(n => n.active).length;
   const cntNewsEl = document.getElementById('cntNews');
@@ -1461,6 +1484,28 @@ function renderDashboard() {
 let editingSku = null;
 let productsPage = 1;
 const PRODUCTS_PER_PAGE = 20;
+
+async function loadProductsAdmin() {
+  if (typeof window.supaGetProducts === 'function') {
+    try {
+      const data = await window.supaGetProducts();
+      if (data && data.length) {
+        const normalized = data.map(p => Object.assign({}, p, {
+          categoryId: p.category_id || p.categoryId || '',
+          isHit: !!(p.is_hit || p.isHit),
+          desc: p.description || p.desc || '',
+          emoji: p.emoji || '📦',
+        }));
+        try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
+        renderProducts();
+        updateCounts();
+        return;
+      }
+    } catch(e) {}
+  }
+  renderProducts();
+  updateCounts();
+}
 
 function renderProducts() {
   const q = (document.getElementById('searchProducts').value || '').toLowerCase().trim();
@@ -1535,6 +1580,9 @@ function toggleHit(sku) {
   renderProducts();
   const p = products.find(x => x.sku === sku);
   toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
+  if (p && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(p).catch(e => console.error('[admin] toggleHit supabase', e));
+  }
 }
 
 function badgeHtml(b) {
@@ -1617,6 +1665,10 @@ function saveProduct() {
   renderProducts();
   updateCounts();
   toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
+  const saved = products.find(p => p.sku === sku);
+  if (saved && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(saved).catch(e => console.error('[admin] saveProduct supabase', e));
+  }
 }
 
 function deleteProduct(sku) {
@@ -1625,11 +1677,23 @@ function deleteProduct(sku) {
   renderProducts();
   updateCounts();
   toast('Товар удалён');
+  if (typeof window.supaDeleteProduct === 'function') {
+    window.supaDeleteProduct(sku).catch(e => console.error('[admin] deleteProduct supabase', e));
+  }
 }
 
-function resetProducts() {
+async function resetProducts() {
   if (!confirm('Восстановить стандартный список товаров? Все ваши изменения будут потеряны.')) return;
   localStorage.removeItem(STORAGE_PRODUCTS);
+  if (typeof window.supaBulkUpsertProducts === 'function') {
+    toast('⏳ Загрузка товаров в Supabase...');
+    const res = await window.supaBulkUpsertProducts(DEFAULT_PRODUCTS);
+    if (!res.ok) {
+      toast('Ошибка загрузки в Supabase: ' + (res.error && res.error.message || 'неизвестна'));
+    } else {
+      toast('✓ Товары загружены в Supabase');
+    }
+  }
   location.reload();
 }
 
@@ -1927,50 +1991,89 @@ function clearOrders() {
 }
 
 // ===== ЗАЯВКИ =====
-function renderContacts() {
-  const list = getContacts().slice().reverse();
+let _contactsCache = [];
+
+async function loadContactsAdmin() {
   const c = document.getElementById('contactsList');
+  c.innerHTML = '<div style="padding:40px;text-align:center;color:#8aaa94;">Загрузка...</div>';
+  if (typeof window.supaGetContacts === 'function') {
+    const data = await window.supaGetContacts();
+    if (data !== null) {
+      _contactsCache = data;
+      document.getElementById('cntContacts').textContent = data.length;
+      renderContacts();
+      return;
+    }
+  }
+  // Fallback: localStorage (если Supabase не настроен)
+  _contactsCache = getContacts().slice().reverse().map((m, i) => ({ _localIdx: i, ...m }));
+  renderContacts();
+}
+
+function renderContacts() {
+  const list = _contactsCache;
+  const c = document.getElementById('contactsList');
+  document.getElementById('cntContacts').textContent = list.length;
   if (list.length === 0) {
     c.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-mail" style="color:#d0e8d8;"></span></div><div class="empty-title">Заявок пока нет</div><div>Сообщения с формы обратной связи появятся здесь</div></div>';
-  } else {
-    c.innerHTML = list.map((m, idx) => `
-      <div class="order-card">
-        <div class="order-head">
-          <div>
-            <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:16px;">${m.name}</div>
-            <div class="order-date">${m.date}</div>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteContact(${list.length - 1 - idx})"><span class="icon icon-trash"></span></button>
+    return;
+  }
+  c.innerHTML = list.map((m) => {
+    const dateStr = m.created_at
+      ? new Date(m.created_at).toLocaleString('ru-RU')
+      : (m.date || '');
+    const deleteArg = m.id ? `'${escH(String(m.id))}'` : (m._localIdx !== undefined ? m._localIdx : '');
+    return `<div class="order-card">
+      <div class="order-head">
+        <div>
+          <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:16px;">${escH(m.name)}</div>
+          <div class="order-date">${escH(dateStr)}</div>
         </div>
-        <div class="order-body">
-          <div class="order-section">
-            <div class="order-label">Контакты</div>
-            <div class="order-value"><span class="icon icon-phone"></span> <a href="tel:${m.phone}" style="color:var(--green-dark);">${m.phone}</a></div>
-          </div>
-          <div class="order-section">
-            <div class="order-label">Сообщение</div>
-            <div class="order-value">${m.message}</div>
-          </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteContact(${deleteArg})"><span class="icon icon-trash"></span></button>
+      </div>
+      <div class="order-body">
+        <div class="order-section">
+          <div class="order-label">Контакты</div>
+          <div class="order-value"><span class="icon icon-phone"></span> <a href="tel:${escH(m.phone)}" style="color:var(--green-dark);">${escH(m.phone)}</a></div>
+        </div>
+        <div class="order-section">
+          <div class="order-label">Сообщение</div>
+          <div class="order-value" style="white-space:pre-wrap;">${escH(m.message)}</div>
         </div>
       </div>
-    `).join('');
-  }
+    </div>`;
+  }).join('');
 }
 
-function deleteContact(idx) {
+async function deleteContact(idOrIdx) {
   if (!confirm('Удалить заявку?')) return;
-  const all = getContacts();
-  all.splice(idx, 1);
-  localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(all));
+  if (typeof idOrIdx === 'string' && typeof window.supaDeleteContact === 'function') {
+    const r = await window.supaDeleteContact(idOrIdx);
+    if (!r.ok) { toast('Ошибка удаления'); return; }
+    _contactsCache = _contactsCache.filter(m => String(m.id) !== idOrIdx);
+  } else {
+    // localStorage fallback
+    const all = getContacts();
+    all.splice(idOrIdx, 1);
+    localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(all));
+    _contactsCache = all.slice().reverse().map((m, i) => ({ _localIdx: i, ...m }));
+  }
   renderContacts();
   updateCounts();
+  toast('✓ Заявка удалена');
 }
 
-function clearContacts() {
+async function clearContacts() {
   if (!confirm('Удалить ВСЕ заявки?')) return;
+  if (typeof window.supaDeleteAllContacts === 'function') {
+    const r = await window.supaDeleteAllContacts();
+    if (!r.ok) { toast('Ошибка очистки'); return; }
+  }
   localStorage.removeItem(STORAGE_CONTACTS);
+  _contactsCache = [];
   renderContacts();
   updateCounts();
+  toast('✓ Все заявки удалены');
 }
 
 // ===== АКЦИИ =====
@@ -1984,14 +2087,14 @@ function renderPromotions() {
   } else {
     c.innerHTML = promos.map((p, i) => `
       <div class="promo-card">
-        <div class="promo-top ${p.color}">
-          ${p.disc ? `<div class="promo-disc" style="color:${p.color==='green'?'#1aab58':p.color==='accent'?'#FF6B35':'#8ab800'}">${p.disc}</div>` : ''}
-          ${p.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">${p.badge}</div>` : ''}
-          <div class="promo-name">${p.name}</div>
-          <div class="promo-desc">${p.desc}</div>
+        <div class="promo-top ${escH(p.color||'')}">
+          ${p.disc ? `<div class="promo-disc" style="color:${p.color==='green'?'#1aab58':p.color==='accent'?'#FF6B35':'#8ab800'}">${escH(p.disc)}</div>` : ''}
+          ${p.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">${escH(p.badge)}</div>` : ''}
+          <div class="promo-name">${escH(p.name)}</div>
+          <div class="promo-desc">${escH(p.desc)}</div>
         </div>
         <div class="promo-bottom">
-          <span class="promo-validity">${p.valid || 'Бессрочно'}</span>
+          <span class="promo-validity">${escH(p.valid || 'Бессрочно')}</span>
           <div class="promo-actions">
             <button class="btn btn-secondary btn-sm" onclick="editPromo(${i})">Изм.</button>
             <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})"><span class="icon icon-trash"></span></button>
