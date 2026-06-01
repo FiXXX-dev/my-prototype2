@@ -173,7 +173,7 @@ const TRANSLATIONS = {
     // ===== INDEX / HOME =====
     'home.title': 'Clever — Хозтовары и Бытовая химия',
     'home.hero_tag': '⚡ Быстрая доставка по СПб',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'товары для HoReCa',
     'home.hero_cta': 'Смотреть каталог →',
     'home.chip_delivery': '🚚 Доставка за 1 день',
@@ -713,7 +713,7 @@ const TRANSLATIONS = {
 
     'home.title': 'Clever — Household goods & cleaning supplies',
     'home.hero_tag': '⚡ Fast delivery in Saint Petersburg',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'HoReCa supplies',
     'home.hero_cta': 'Browse catalog →',
     'home.chip_delivery': '🚚 Delivery in 1 day',
@@ -1241,7 +1241,7 @@ const TRANSLATIONS = {
 
     'home.title': 'Clever — 日用百货与家庭清洁用品',
     'home.hero_tag': '⚡ 圣彼得堡快速配送',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'HoReCa 酒店餐饮用品',
     'home.hero_cta': '浏览目录 →',
     'home.chip_delivery': '🚚 一天送达',
@@ -1769,7 +1769,7 @@ const TRANSLATIONS = {
 
     'home.title': 'Clever — 생활용품 및 세제',
     'home.hero_tag': '⚡ 상트페테르부르크 빠른 배송',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'HoReCa 호텔·레스토랑 용품',
     'home.hero_cta': '카탈로그 보기 →',
     'home.chip_delivery': '🚚 1일 배송',

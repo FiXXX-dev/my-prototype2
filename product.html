@@ -16,6 +16,8 @@
 <title>Товар — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="icons.css">
+<link rel="preconnect" href="https://fquhoxxcucgesxrexsjn.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
 
@@ -799,22 +801,10 @@ function productQtyDec(){
   syncCartQtyBlock();
 }
 
-async function loadAndInitProduct() {
+function loadAndInitProduct() {
   const targetSku = sku || (DEFAULT_PRODUCTS[0] && DEFAULT_PRODUCTS[0].sku) || '';
 
-  // Try Supabase single-product fetch first
-  if (targetSku && typeof window.supaGetProductBySku === 'function') {
-    try {
-      const p = await window.supaGetProductBySku(targetSku);
-      if (p) {
-        product = normalizeProd(p);
-        renderProduct();
-        return;
-      }
-    } catch(e) {}
-  }
-
-  // Fallback: localStorage → DEFAULT_PRODUCTS
+  // 1) Instant render from cache (localStorage) or bundled defaults — no network wait.
   try {
     const stored = localStorage.getItem('klever_products_v2');
     const parsed = stored ? JSON.parse(stored) : null;
@@ -822,6 +812,18 @@ async function loadAndInitProduct() {
   } catch(e) { PRODUCTS = DEFAULT_PRODUCTS; }
   product = PRODUCTS.find(p => p.sku === targetSku) || null;
   renderProduct();
+
+  // 2) Refresh this product from Supabase in the background; re-render if it changed.
+  if (targetSku && typeof window.supaGetProductBySku === 'function') {
+    window.supaGetProductBySku(targetSku).then(function(p) {
+      if (!p) return;
+      const fresh = normalizeProd(p);
+      if (JSON.stringify(fresh) !== JSON.stringify(product)) {
+        product = fresh;
+        renderProduct();
+      }
+    }).catch(function(){});
+  }
 }
 
 if (document.readyState === 'loading') {

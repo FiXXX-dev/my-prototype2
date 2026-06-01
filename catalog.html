@@ -16,6 +16,8 @@
 <title>Каталог — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="icons.css">
+<link rel="preconnect" href="https://fquhoxxcucgesxrexsjn.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
 
@@ -1179,27 +1181,36 @@ function initFromUrl() {
   renderCategoryTiles();
 }
 
-async function loadAndInitCatalog() {
-  if (typeof window.supaGetProducts === 'function') {
-    try {
-      const data = await window.supaGetProducts();
-      if (data && data.length) {
-        ALL_PRODUCTS = data.map(normalizeProd);
-        try { localStorage.setItem('klever_products_v2', JSON.stringify(ALL_PRODUCTS)); } catch(e) {}
-        filteredProducts = [...ALL_PRODUCTS];
-        initFromUrl();
-        return;
-      }
-    } catch(e) {}
-  }
-  // Fallback: localStorage → DEFAULT_PRODUCTS
+function _applyCatalogProducts(arr) {
+  ALL_PRODUCTS = arr;
+  filteredProducts = [...ALL_PRODUCTS];
+  initFromUrl();
+}
+
+// Pull fresh products from Supabase and cache them for the NEXT load.
+// We don't re-render here (to avoid resetting the user's filters/scroll);
+// the freshest data is shown on the next visit/navigation.
+function _refreshCatalogInBackground() {
+  if (typeof window.supaGetProducts !== 'function') return;
+  window.supaGetProducts().then(function(data) {
+    if (data && data.length) {
+      try { localStorage.setItem('klever_products_v2', JSON.stringify(data.map(normalizeProd))); } catch(e) {}
+    }
+  }).catch(function(){});
+}
+
+function loadAndInitCatalog() {
+  // Instant render: cached products if present, otherwise the bundled defaults.
+  // No network wait — the catalog appears immediately on every visit.
+  let cached = null;
   try {
     const stored = localStorage.getItem('klever_products_v2');
     const parsed = stored ? JSON.parse(stored) : null;
-    ALL_PRODUCTS = (parsed && parsed.length) ? parsed : DEFAULT_PRODUCTS;
-  } catch(e) { ALL_PRODUCTS = DEFAULT_PRODUCTS; }
-  filteredProducts = [...ALL_PRODUCTS];
-  initFromUrl();
+    cached = (parsed && parsed.length) ? parsed : null;
+  } catch(e) {}
+  _applyCatalogProducts(cached || DEFAULT_PRODUCTS);
+  // Quietly sync the latest data from Supabase for the next load.
+  _refreshCatalogInBackground();
 }
 
 if (document.readyState === 'loading') {
