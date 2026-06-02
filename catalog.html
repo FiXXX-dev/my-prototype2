@@ -1197,11 +1197,9 @@ function _refreshCatalogInBackground() {
   window.supaGetProducts().then(function(data) {
     if (!data || !data.length) return;
     const fresh = data.map(normalizeProd);
-    try { localStorage.setItem('klever_products_v2', JSON.stringify(fresh)); } catch(e) {}
-    // Re-render if: count differs, or current products have no subcategory data but fresh ones do.
-    const needsUpdate = fresh.length !== ALL_PRODUCTS.length
-      || (ALL_PRODUCTS.length && !ALL_PRODUCTS[0].subcategory && fresh.some(p => p.subcategory));
-    if (needsUpdate) _applyCatalogProducts(fresh);
+    // Always apply fresh data: updates images, prices, names.
+    // initFromUrl() inside _applyCatalogProducts restores the active URL filter.
+    _applyCatalogProducts(fresh);
   }).catch(function(){});
 }
 

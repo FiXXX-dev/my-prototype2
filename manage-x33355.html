@@ -2508,7 +2508,6 @@ function saveCategory(){
   let cats = getCategories();
   if (editingCategoryId) {
     cats = cats.map(c => c.id === editingCategoryId ? { ...c, name, id, icon, img, order } : c);
-    // If id changed — also update existing products referring to old id
     if (editingCategoryId !== id) {
       let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
       let touched = 0;
@@ -2523,6 +2522,20 @@ function saveCategory(){
   closeCategoryModal();
   renderCategoriesAdmin();
   toast(editingCategoryId ? '✓ Категория обновлена' : '✓ Категория создана');
+
+  // Sync to Supabase so all visitors see the updated name/image/order
+  if (typeof window.supaUpsertCategory === 'function') {
+    const productCount = cats.find(c => c.id === id)?.subcategories?.reduce((s, sc) => s + (sc.count || 0), 0) || 0;
+    window.supaUpsertCategory({
+      id: id,
+      name: name,
+      image_url: img || null,
+      sort_order: order,
+      product_count: productCount,
+      show_on_homepage: !!_catHomeState[id],
+      color: '#2ECC71',
+    }).catch(e => console.error('[admin] saveCategory supabase', e));
+  }
 }
 function deleteCategory(id){
   const c = getCategoryById(id); if (!c) return;
