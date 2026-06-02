@@ -1,5 +1,5 @@
 // Clever — i18n dictionary (ru / en / zh / ko)
-// Used by all client pages (admin.html stays in Russian).
+// Used by all client pages (the management panel stays in Russian).
 const TRANSLATIONS = {
   ru: {
     // ===== HEADER NAV =====
@@ -48,7 +48,6 @@ const TRANSLATIONS = {
     'footer.account': 'Личный кабинет',
     'footer.copyright': '© 2025 ООО «Клевер». Все права защищены.',
     'footer.copyright_short': '© 2025 ООО «Клевер»',
-    'footer.admin': '⚙️ Админка',
     'footer.home_link': 'Главная',
     'footer.contacts_link': 'Контакты',
 
@@ -174,7 +173,7 @@ const TRANSLATIONS = {
     // ===== INDEX / HOME =====
     'home.title': 'Clever — Хозтовары и Бытовая химия',
     'home.hero_tag': '⚡ Быстрая доставка по СПб',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'товары для HoReCa',
     'home.hero_cta': 'Смотреть каталог →',
     'home.chip_delivery': '🚚 Доставка за 1 день',
@@ -598,7 +597,6 @@ const TRANSLATIONS = {
     'footer.account': 'My Account',
     'footer.copyright': '© 2025 Klever LLC. All rights reserved.',
     'footer.copyright_short': '© 2025 Klever LLC',
-    'footer.admin': '⚙️ Admin',
     'footer.home_link': 'Home',
     'footer.contacts_link': 'Contacts',
 
@@ -715,7 +713,7 @@ const TRANSLATIONS = {
 
     'home.title': 'Clever — Household goods & cleaning supplies',
     'home.hero_tag': '⚡ Fast delivery in Saint Petersburg',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'HoReCa supplies',
     'home.hero_cta': 'Browse catalog →',
     'home.chip_delivery': '🚚 Delivery in 1 day',
@@ -1127,7 +1125,6 @@ const TRANSLATIONS = {
     'footer.account': '个人中心',
     'footer.copyright': '© 2025 Klever 有限公司。版权所有。',
     'footer.copyright_short': '© 2025 Klever 有限公司',
-    'footer.admin': '⚙️ 管理后台',
     'footer.home_link': '首页',
     'footer.contacts_link': '联系方式',
 
@@ -1244,7 +1241,7 @@ const TRANSLATIONS = {
 
     'home.title': 'Clever — 日用百货与家庭清洁用品',
     'home.hero_tag': '⚡ 圣彼得堡快速配送',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'HoReCa 酒店餐饮用品',
     'home.hero_cta': '浏览目录 →',
     'home.chip_delivery': '🚚 一天送达',
@@ -1656,7 +1653,6 @@ const TRANSLATIONS = {
     'footer.account': '마이페이지',
     'footer.copyright': '© 2025 Klever LLC. 모든 권리 보유.',
     'footer.copyright_short': '© 2025 Klever LLC',
-    'footer.admin': '⚙️ 관리자',
     'footer.home_link': '홈',
     'footer.contacts_link': '연락처',
 
@@ -1773,7 +1769,7 @@ const TRANSLATIONS = {
 
     'home.title': 'Clever — 생활용품 및 세제',
     'home.hero_tag': '⚡ 상트페테르부르크 빠른 배송',
-    'home.hero_brand': 'Clever —',
+    'home.hero_brand': 'Клевер —',
     'home.hero_subtitle': 'HoReCa 호텔·레스토랑 용품',
     'home.hero_cta': '카탈로그 보기 →',
     'home.chip_delivery': '🚚 1일 배송',

@@ -24,7 +24,8 @@
 //     invoice_inn     text,
 //     comment         text,
 //     status          text default 'new',
-//     language        text default 'ru'
+//     language        text default 'ru',
+//     user_id         uuid references auth.users(id) on delete set null
 //   );
 //   alter table public.orders enable row level security;
 //   -- (RLS policies — adjust to your auth model; for demo: full access)
@@ -71,16 +72,35 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
 
-    const minimal = {
+    // Columns that must always be present — never stripped.
+    const REQUIRED = new Set(['customer_name','customer_phone','items','total_price']);
+
+    function isMissingColumnError(error){
+      const msg = (error?.message || '') + ' ' + (error?.details || '');
+      return /column .* does not exist/i.test(msg)
+          || /Could not find/i.test(msg)
+          || error?.code === '42703'
+          || error?.code === 'PGRST204';
+    }
+
+    // Extract the offending column name from a missing-column error so we can
+    // strip only THAT column and retry — this preserves delivery_method,
+    // payment_method, delivery_address, etc. as long as they exist in the schema.
+    function missingColName(error){
+      const msg = error?.message || '';
+      const m = msg.match(/column ["'`]?(\w+)["'`]? (?:of relation|does not exist)/i)
+             || msg.match(/Could not find .*?["'`](\w+)["'`]/i)
+             || msg.match(/["'`](\w+)["'`] is not present in the table/i);
+      return m ? m[1] : null;
+    }
+
+    const fullRow = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
       items: order.items || [],
       total_price: order.total != null ? Number(order.total) : 0,
       language: language,
       comment: order.comment || '',
-    };
-    // Optional fields — if your table has these columns they'll be filled.
-    const optional = {
       num: order.num,
       status: order.status || 'new',
       customer_email: order.email || '',
@@ -89,45 +109,35 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       delivery_cost: order.delivery != null ? Number(order.delivery) : null,
       delivery_method: order.method || 'courier',
       delivery_address: order.address || '',
+      delivery_date: order.deliveryDate || null,
+      delivery_time: order.deliveryTime || null,
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
+      user_id: order.userId || null,
     };
-    async function insert(row){
-      return await sb.from('orders').insert([row]).select();
-    }
-    function isMissingColumnError(error){
-      const msg = (error?.message || '') + ' ' + (error?.details || '');
-      return /column .* does not exist/i.test(msg)
-          || /Could not find/i.test(msg)
-          || error?.code === '42703'
-          || error?.code === 'PGRST204';
-    }
-    try {
-      // Phase 1: rich payload
-      let { data, error } = await insert({ ...minimal, ...optional });
+
+    // Recursively retry, removing the offending column on each missing-column error.
+    async function tryInsert(row) {
+      let { data, error } = await sb.from('orders').insert([row]).select();
       if (!error) return { ok: true, data: data && data[0] };
       if (!isMissingColumnError(error)) {
         console.error('[supabase] insert error', error);
         return { ok: false, error };
       }
-      // Phase 2: minimal (includes comment so it lands when the column exists)
-      console.warn('[supabase] retrying without optional columns:', error.message);
-      let r2 = await insert(minimal);
-      if (!r2.error) return { ok: true, data: r2.data && r2.data[0], retried: 'minimal' };
-      if (!isMissingColumnError(r2.error)) {
-        console.error('[supabase] minimal insert error', r2.error);
-        return { ok: false, error: r2.error };
+      const col = missingColName(error);
+      if (!col || REQUIRED.has(col)) {
+        console.error('[supabase] cannot strip required column or unknown col', error);
+        return { ok: false, error };
       }
-      // Phase 3: minimal without comment (bare-bones schema)
-      console.warn('[supabase] retrying without comment column:', r2.error.message);
-      const { comment, ...minimalNoComment } = minimal;
-      const r3 = await insert(minimalNoComment);
-      if (r3.error) {
-        console.error('[supabase] bare insert also failed', r3.error);
-        return { ok: false, error: r3.error };
-      }
-      return { ok: true, data: r3.data && r3.data[0], retried: 'bare' };
+      const stripped = { ...row };
+      delete stripped[col];
+      console.warn(`[supabase] column "${col}" missing — retrying without it`);
+      return tryInsert(stripped);
+    }
+
+    try {
+      return await tryInsert(fullRow);
     } catch (e) {
       console.error('[supabase] insert exception', e);
       return { ok: false, error: e };
@@ -155,6 +165,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         total: r.total_price != null ? Number(r.total_price) : 0,
         method: r.delivery_method,
         address: r.delivery_address || '',
+        deliveryDate: r.delivery_date || '',
+        deliveryTime: r.delivery_time || '',
         phone: r.customer_phone || '',
         name: r.customer_name || '',
         company: r.company || '',
@@ -173,6 +185,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // Update by num if the column exists; otherwise retry by id (PK).
+  // Also retries by id when num exists but no row matched (e.g. the order
+  // was inserted without a num value and the admin is holding the UUID).
   window.supaUpdateOrder = async function(numOrId, fields){
     const sb = getClient();
     if (!sb) return { ok: false, reason: 'unconfigured' };
@@ -183,7 +197,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
     try {
       let { data, error } = await sb.from('orders').update(fields).eq('num', numOrId).select();
-      if (error && missing(error)) {
+      // Retry by id when: num column missing (error) OR num matched 0 rows (data empty).
+      if ((error && missing(error)) || (!error && (!data || data.length === 0))) {
         ({ data, error } = await sb.from('orders').update(fields).eq('id', numOrId).select());
       }
       if (error) { console.error('[supabase] update error', error); return { ok: false, error }; }
@@ -203,15 +218,108 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           || error?.code === '42703' || error?.code === 'PGRST204';
     }
     try {
-      let { error } = await sb.from('orders').delete().eq('num', numOrId);
-      if (error && missing(error)) {
-        ({ error } = await sb.from('orders').delete().eq('id', numOrId));
+      // Use .select() so we know whether any row was actually deleted.
+      let { data, error } = await sb.from('orders').delete().eq('num', numOrId).select();
+      // Retry by id when: num column missing (error) OR num matched 0 rows.
+      if ((error && missing(error)) || (!error && (!data || data.length === 0))) {
+        ({ data, error } = await sb.from('orders').delete().eq('id', numOrId).select());
       }
       if (error) { console.error('[supabase] delete error', error); return { ok: false, error }; }
       return { ok: true };
     } catch (e) {
       console.error('[supabase] delete exception', e);
       return { ok: false, error: e };
+    }
+  };
+
+  window.supaDeleteAllOrders = async function(){
+    const sb = getClient();
+    if (!sb) return { ok: false, reason: 'unconfigured' };
+    try {
+      // Delete all orders — neq on a column that's always set ensures no-WHERE-clause error.
+      const { error } = await sb.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) { console.error('[supabase] delete-all error', error); return { ok: false, error }; }
+      return { ok: true };
+    } catch (e) {
+      console.error('[supabase] delete-all exception', e);
+      return { ok: false, error: e };
+    }
+  };
+
+  // Returns orders for a specific user (for account history page).
+  // opts = { phone, email } — matched alongside user_id in a single OR query.
+  // Phone is matched with ilike+% so +7/8/no-code formats all hit.
+  window.supaListOrdersByUser = async function(userId, opts){
+    const sb = getClient();
+    if (!sb) return null;
+    const isMissingCol = e => e && (
+      /column .* does not exist/i.test((e.message||'') + ' ' + (e.details||'')) ||
+      e.code === '42703' || e.code === 'PGRST204'
+    );
+    const mapRow = r => ({
+      num: r.num != null ? r.num : r.id,
+      id: r.id,
+      date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+      status: r.status || 'new',
+      items: Array.isArray(r.items) ? r.items : [],
+      subtotal: r.subtotal,
+      delivery: r.delivery_cost,
+      total: r.total_price != null ? Number(r.total_price) : 0,
+      method: r.delivery_method,
+      address: r.delivery_address || '',
+      deliveryDate: r.delivery_date || '',
+      deliveryTime: r.delivery_time || '',
+      phone: r.customer_phone || '',
+      name: r.customer_name || '',
+      company: r.company || '',
+      email: r.customer_email || '',
+      comment: r.comment || '',
+      payment: r.payment_method,
+      invoiceCompany: r.invoice_company || '',
+      invoiceInn: r.invoice_inn || '',
+      language: r.language,
+      _supaId: r.id,
+    });
+    try {
+      // Normalize phone to last 10 digits so +7/8/no-code all match via ilike
+      const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
+      const email = ((opts && opts.email) || '').toLowerCase().trim();
+
+      // Build a single OR filter covering all identifiers at once.
+      // This fixes the bug where the old code stopped at user_id if ≥1 row was found,
+      // missing orders stored with only phone/email.
+      const filters = [];
+      if (userId) filters.push(`user_id.eq.${userId}`);
+      if (phone)  filters.push(`customer_phone.ilike.%${phone}%`);
+      if (email)  filters.push(`customer_email.ilike.%${email}%`);
+
+      if (filters.length === 0) return [];
+
+      let { data, error } = await sb.from('orders').select('*')
+        .or(filters.join(','))
+        .order('created_at', { ascending: false });
+
+      // If user_id column is absent in old schema, retry without it
+      if (error && isMissingCol(error)) {
+        const fallback = filters.filter(f => !f.startsWith('user_id'));
+        if (fallback.length === 0) return [];
+        ({ data, error } = await sb.from('orders').select('*')
+          .or(fallback.join(','))
+          .order('created_at', { ascending: false }));
+      }
+
+      if (error) { console.error('[supabase] list orders by user', error); return null; }
+
+      // Deduplicate (OR can theoretically return duplicates if multiple filters hit one row)
+      const seen = new Set();
+      const rows = [];
+      for (const r of (data || [])) {
+        if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); }
+      }
+      return rows.map(mapRow);
+    } catch (e) {
+      console.error('[supabase] list orders by user exception', e);
+      return null;
     }
   };
 
@@ -232,27 +340,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== Auth =====
-  // Required SQL for profile data (optional, see customer_addresses below):
-  //   create table public.customer_addresses (
-  //     id uuid primary key default gen_random_uuid(),
-  //     user_id uuid references auth.users(id) on delete cascade,
-  //     name text, address text, is_default boolean default false,
-  //     created_at timestamptz default now()
-  //   );
-  //   alter table public.customer_addresses enable row level security;
-  //   create policy "own_addresses" on public.customer_addresses for all
-  //     using (auth.uid() = user_id) with check (auth.uid() = user_id);
-  //
-  //   create table public.customer_favorites (
-  //     user_id uuid references auth.users(id) on delete cascade,
-  //     product_id text,
-  //     created_at timestamptz default now(),
-  //     primary key (user_id, product_id)
-  //   );
-  //   alter table public.customer_favorites enable row level security;
-  //   create policy "own_favs" on public.customer_favorites for all
-  //     using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
   window.supaSignUp = async function(email, password, meta){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
@@ -286,75 +373,200 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return null; }
   };
 
-  // ===== customer_addresses =====
-  window.supaListAddresses = async function(){
+  // ===== Cross-browser sync: email-keyed identity =====
+  // The app has a hybrid auth model (Supabase-auth users AND local-only users),
+  // so favorites/addresses/profile are keyed by a stable identifier derived from
+  // the current user in localStorage rather than auth.uid(). This lets the same
+  // account sync across browsers/devices as long as we know its email (or phone).
+  //
+  // Returns { id, email, phone10, key } or null.
+  //   key = email (lowercased) if present, else 'tel:<last10digits>', else null.
+  function currentUserIdentity(){
+    try {
+      const id = localStorage.getItem('klever_current_user');
+      if (!id) return null;
+      const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+      const me = users.find(u => u.id === id) || {};
+      const email = (me.email || '').toLowerCase().trim();
+      const phone10 = (me.phone || '').replace(/\D/g, '').slice(-10);
+      let key = '';
+      if (email) key = email;
+      else if (phone10.length === 10) key = 'tel:' + phone10;
+      return { id, email, phone10, key };
+    } catch(e) { return null; }
+  }
+  // Resolve a user_email key from an explicit value or the current identity.
+  function resolveUserKey(explicit){
+    if (explicit) {
+      const e = String(explicit).toLowerCase().trim();
+      return e;
+    }
+    const idn = currentUserIdentity();
+    return idn ? idn.key : '';
+  }
+  window.kleverCurrentUserKey = function(){ return resolveUserKey(); };
+
+  // ===== favorites (email-keyed, table: public.favorites) =====
+  // Rows cache product_name/product_price/product_img so the account page can
+  // render the favorites grid WITHOUT depending on localStorage (klever_products_v2),
+  // which is empty in a fresh browser.
+  //
+  // supaGetFavorites([email])      → string[] of product_sku  (for catalog/product hearts)
+  // supaGetFavoritesFull([email])  → full rows               (for account favorites grid)
+  // supaListFavorites([email])     → alias of supaGetFavorites
+  // supaAddFavorite(sku | {sku,name,price,img})
+  // supaRemoveFavorite(sku)
+  function _isMissingColErr(e){
+    const m = (e && (e.message||'')) + ' ' + (e && (e.details||''));
+    return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
+        || (e && (e.code === '42703' || e.code === 'PGRST204'));
+  }
+
+  window.supaGetFavorites = async function(email){
     const sb = getClient(); if (!sb) return null;
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return [];
-      const { data, error } = await sb.from('customer_addresses').select('*').eq('user_id', u.id).order('is_default', { ascending: false });
-      if (error) { console.error('[supabase] list addresses', error); return null; }
+      const key = resolveUserKey(email);
+      if (!key) return [];
+      const { data, error } = await sb.from('favorites').select('product_sku').eq('user_email', key);
+      if (error) { console.error('[supabase] get favorites', error); return null; }
+      return (data || []).map(r => r.product_sku);
+    } catch(e) { console.error('[supabase] get favorites exception', e); return null; }
+  };
+  window.supaListFavorites = window.supaGetFavorites;
+
+  window.supaGetFavoritesFull = async function(email){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const key = resolveUserKey(email);
+      if (!key) return [];
+      const { data, error } = await sb.from('favorites').select('*').eq('user_email', key).order('id', { ascending: false });
+      if (error) { console.error('[supabase] get favorites full', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get favorites full exception', e); return null; }
+  };
+
+  // Accepts a bare sku string OR a product object { sku, name, price, img }.
+  window.supaAddFavorite = async function(skuOrObj){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const key = resolveUserKey();
+      if (!key) return { ok:false, reason:'no_identity' };
+      const idn = currentUserIdentity();
+      const isObj = skuOrObj && typeof skuOrObj === 'object';
+      const sku = String(isObj ? skuOrObj.sku : skuOrObj);
+      if (!sku) return { ok:false, reason:'no_sku' };
+      const full = {
+        user_email: key,
+        user_phone: (idn && idn.phone10) || null,
+        product_sku: sku,
+        product_name: isObj ? (skuOrObj.name || null) : null,
+        product_price: isObj && skuOrObj.price != null ? Number(skuOrObj.price) : null,
+        product_img: isObj ? (skuOrObj.img || null) : null,
+      };
+      let { error } = await sb.from('favorites').upsert(full, { onConflict: 'user_email,product_sku' });
+      // If the cache columns don't exist yet (SQL not run), retry with the minimal row.
+      if (error && _isMissingColErr(error)) {
+        ({ error } = await sb.from('favorites').upsert(
+          { user_email: key, user_phone: full.user_phone, product_sku: sku },
+          { onConflict: 'user_email,product_sku' }));
+      }
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaRemoveFavorite = async function(sku){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const key = resolveUserKey();
+      if (!key || sku == null) return { ok:false, reason:'no_identity' };
+      const { error } = await sb.from('favorites').delete().match({ user_email: key, product_sku: String(sku) });
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== addresses (email-keyed, table: public.user_addresses) =====
+  window.supaListAddressesByEmail = async function(email){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const key = resolveUserKey(email);
+      if (!key) return [];
+      const { data, error } = await sb.from('user_addresses').select('*')
+        .eq('user_email', key).order('is_default', { ascending: false }).order('id', { ascending: true });
+      if (error) { console.error('[supabase] list addresses by email', error); return null; }
       return data || [];
     } catch(e) { return null; }
   };
 
-  window.supaInsertAddress = async function(row){
+  // addr = { label, address, is_default, email? }
+  window.supaSaveAddress = async function(addr){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      if (row.is_default) {
-        // Clear previous defaults
-        await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
+      const key = resolveUserKey(addr && addr.email);
+      if (!key) return { ok:false, reason:'no_identity' };
+      if (addr.is_default) {
+        await sb.from('user_addresses').update({ is_default: false }).eq('user_email', key);
       }
-      const { data, error } = await sb.from('customer_addresses').insert([{ ...row, user_id: u.id }]).select();
+      const { data, error } = await sb.from('user_addresses')
+        .insert([{ user_email: key, label: addr.label, address: addr.address, is_default: !!addr.is_default }])
+        .select();
       if (error) return { ok:false, error };
       return { ok:true, data: data && data[0] };
     } catch(e) { return { ok:false, error:e }; }
   };
 
-  window.supaDeleteAddress = async function(id){
+  window.supaUpdateAddressById = async function(id, addr){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const { error } = await sb.from('customer_addresses').delete().eq('id', id);
+      const key = resolveUserKey(addr && addr.email);
+      if (addr.is_default && key) {
+        await sb.from('user_addresses').update({ is_default: false }).eq('user_email', key);
+      }
+      const { data, error } = await sb.from('user_addresses')
+        .update({ label: addr.label, address: addr.address, is_default: !!addr.is_default })
+        .eq('id', id).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteAddressById = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('user_addresses').delete().eq('id', id);
       return error ? { ok:false, error } : { ok:true };
     } catch(e) { return { ok:false, error:e }; }
   };
 
-  window.supaSetDefaultAddress = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      await sb.from('customer_addresses').update({ is_default: false }).eq('user_id', u.id);
-      const { error } = await sb.from('customer_addresses').update({ is_default: true }).eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
-  // ===== customer_favorites =====
-  window.supaListFavorites = async function(){
+  // ===== profile (table: public.user_profiles, keyed by user_id text) =====
+  window.supaGetProfile = async function(userId){
     const sb = getClient(); if (!sb) return null;
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return [];
-      const { data, error } = await sb.from('customer_favorites').select('product_id').eq('user_id', u.id);
-      if (error) { console.error('[supabase] list favorites', error); return null; }
-      return (data || []).map(r => r.product_id);
+      const { data, error } = await sb.from('user_profiles').select('*').eq('user_id', String(userId)).maybeSingle();
+      if (error) { console.error('[supabase] get profile', error); return null; }
+      return data || null;
     } catch(e) { return null; }
   };
 
-  window.supaAddFavorite = async function(productSku){
+  // p = { user_id, email, phone, first_name, last_name, middle_name, user_type, company, inn }
+  window.supaUpsertProfile = async function(p){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      const { error } = await sb.from('customer_favorites').upsert({ user_id: u.id, product_id: productSku });
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
-  };
-
-  window.supaRemoveFavorite = async function(productSku){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const u = await window.supaGetCurrentUser(); if (!u) return { ok:false, reason:'not_signed_in' };
-      const { error } = await sb.from('customer_favorites').delete().match({ user_id: u.id, product_id: productSku });
-      return error ? { ok:false, error } : { ok:true };
+      if (!p || !p.user_id) return { ok:false, reason:'no_user_id' };
+      const row = {
+        user_id: String(p.user_id),
+        email: p.email || null,
+        phone: p.phone || null,
+        first_name: p.first_name || null,
+        last_name: p.last_name || null,
+        middle_name: p.middle_name || null,
+        user_type: p.user_type || 'individual',
+        company: p.company || null,
+        inn: p.inn || null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await sb.from('user_profiles').upsert(row, { onConflict: 'user_id' }).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
     } catch(e) { return { ok:false, error:e }; }
   };
 
@@ -363,6 +575,228 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const sb = getClient(); if (!sb) return null;
     try { return sb.auth.onAuthStateChange((event, session) => cb && cb(event, session)); }
     catch(e) { return null; }
+  };
+
+  // ===== banners (table: public.banners) =====
+  window.supaGetBanners = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('banners').select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get banners', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get banners exception', e); return null; }
+  };
+
+  window.supaGetAllBanners = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('banners').select('*')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get all banners', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get all banners exception', e); return null; }
+  };
+
+  window.supaUpsertBanner = async function(banner){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      if (banner.id) {
+        const fields = Object.assign({}, banner);
+        delete fields.id; delete fields.created_at;
+        const { data, error } = await sb.from('banners').update(fields).eq('id', banner.id).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      } else {
+        const fields = Object.assign({}, banner);
+        delete fields.id; delete fields.created_at;
+        const { data, error } = await sb.from('banners').insert([fields]).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      }
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteBanner = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('banners').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaInsertDefaultBanners = async function(){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    const defaults = [
+      { title:'Бесплатная доставка по СПб', subtitle:'На следующий рабочий день при заказе до 18:00', bg_color:'#2ECC71', text_color:'#ffffff', link_url:'delivery.html', link_text:'Подробнее', is_active:true, sort_order:0 },
+      { title:'Скидки для постоянных клиентов', subtitle:'Индивидуальные условия для HoReCa', bg_color:'#FF6B35', text_color:'#ffffff', link_url:'wholesale.html', link_text:'Узнать условия', is_active:true, sort_order:1 },
+      { title:'Более 2000 наименований', subtitle:'Всё для ресторанов, кафе и отелей', bg_color:'#0f1a14', text_color:'#ffffff', link_url:'catalog.html', link_text:'Смотреть каталог', is_active:true, sort_order:2 },
+    ];
+    try {
+      const { error } = await sb.from('banners').insert(defaults);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaGetHomepageCategories = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('categories').select('*')
+        .eq('show_on_homepage', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true })
+        .limit(8);
+      if (error) { console.error('[supabase] get homepage categories', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get homepage categories', e); return null; }
+  };
+
+  window.supaGetAllCategoriesHP = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('categories').select('id,name,show_on_homepage,sort_order,image_url,color,product_count')
+        .order('sort_order', { ascending: true }).order('id', { ascending: true });
+      if (error) { console.error('[supabase] get all categories hp', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get all categories hp', e); return null; }
+  };
+
+  window.supaUpsertCategory = async function(cat){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { data, error } = await sb.from('categories').upsert([cat], { onConflict: 'id' }).select();
+      return error ? { ok:false, error } : { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaInsertContact = async function(contact){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const fields = { name: contact.name, phone: contact.phone, message: contact.message };
+      const { data, error } = await sb.from('contacts').insert([fields]).select();
+      if (error) { console.error('[supabase] insert contact', error); return { ok:false, error }; }
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaGetContacts = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('contacts').select('*')
+        .order('created_at', { ascending: false });
+      if (error) { console.error('[supabase] get contacts', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  window.supaDeleteContact = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('contacts').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteAllContacts = async function(){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('contacts').delete().neq('id', 0);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== products (table: public.products) =====
+  window.supaGetProducts = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('products').select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get products', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get products exception', e); return null; }
+  };
+
+  window.supaGetProductBySku = async function(sku){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('products').select('*').eq('sku', String(sku)).maybeSingle();
+      if (error) { console.error('[supabase] get product by sku', error); return null; }
+      return data || null;
+    } catch(e) { return null; }
+  };
+
+  window.supaGetHits = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('products').select('*')
+        .eq('is_active', true).eq('is_hit', true)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get hits', error); return null; }
+      return data || [];
+    } catch(e) { return null; }
+  };
+
+  window.supaUpsertProduct = async function(p){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const row = {
+        sku: p.sku,
+        name: p.name,
+        price: Number(p.price) || 0,
+        img: p.img || '',
+        cat: p.cat || '',
+        category_id: p.categoryId || '',
+        subcategory: p.subcategory || '',
+        badge: p.badge || '',
+        is_hit: !!p.isHit,
+        description: p.desc || '',
+        emoji: p.emoji || '📦',
+        is_active: true,
+      };
+      const { data, error } = await sb.from('products').upsert([row], { onConflict: 'sku' }).select();
+      if (error) { console.error('[supabase] upsert product', error); return { ok:false, error }; }
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteProduct = async function(sku){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('products').delete().eq('sku', String(sku));
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaBulkUpsertProducts = async function(products){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const rows = products.map(p => ({
+        sku: p.sku,
+        name: p.name,
+        price: Number(p.price) || 0,
+        img: p.img || '',
+        cat: p.cat || '',
+        category_id: p.categoryId || '',
+        subcategory: p.subcategory || '',
+        badge: p.badge || '',
+        is_hit: !!p.isHit,
+        description: p.desc || '',
+        emoji: p.emoji || '📦',
+        is_active: true,
+      }));
+      const CHUNK = 50;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const { error } = await sb.from('products').upsert(rows.slice(i, i + CHUNK), { onConflict: 'sku' });
+        if (error) { console.error('[supabase] bulk upsert products', error); return { ok:false, error }; }
+      }
+      return { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
   };
 
   window.kleverSupabase = { isConfigured, getClient };

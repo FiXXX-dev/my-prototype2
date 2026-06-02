@@ -1,7 +1,17 @@
 <!DOCTYPE html>
+<!-- MOBILE: Все новые элементы ОБЯЗАНЫ иметь @media (max-width: 600px) стили -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Контакты магазина Клевер в Санкт-Петербурге. Адрес, телефон, форма обратной связи.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cloverspb.ru/contacts.html">
+<meta property="og:title" content="Контакты — Клевер">
+<meta property="og:description" content="Контакты магазина Клевер в Санкт-Петербурге. Адрес, телефон, форма обратной связи.">
+<meta property="og:image" content="https://cloverspb.ru/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Контакты — Клевер">
+<meta name="twitter:description" content="Контакты магазина Клевер в Санкт-Петербурге. Адрес, телефон, форма обратной связи.">
 <title data-i18n="contacts.title">Контакты — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="icons.css">
@@ -98,6 +108,7 @@
 </style>
 
 <script src="categories.js"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -138,7 +149,7 @@
 @keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
 </style>
 <div id="klever-preloader">
-  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Clever</span></div>
+  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Клевер</span></div>
   <div class="pre-bar"></div>
 </div>
 <script id="preloader-script">
@@ -158,12 +169,12 @@ setTimeout(function(){
 }, 5000);
 </script>
 <header>
-  <a href="index.html" class="logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></a>
+  <a href="index.html" class="logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></a>
   <nav>
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="sales.html" data-i18n="nav.sales">Акции</a><a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a>
     <a href="delivery.html" data-i18n="nav.delivery">Доставка</a><a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" class="active" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
     <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a>
     <button class="cart-btn" onclick="openCart()">
       <span class="icon icon-cart"></span>
@@ -180,26 +191,26 @@ setTimeout(function(){
 <div class="page-content">
   <div class="contacts-grid">
     <div class="contact-card">
-      <div class="contact-icon">📞</div>
+      <div class="contact-icon"><span class="icon icon-phone" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.phones_title">Телефоны</div>
       <div class="contact-value"><a href="tel:+78129228677">8 (812) 922-86-77</a></div>
       <div class="contact-value"><a href="tel:+79112368277">+7 911 236-82-77</a></div>
       <div class="contact-sub">Пн–Пт: 9:00–18:00, Сб: 10:00–16:00, Вс: 10:00–17:00</div>
     </div>
     <div class="contact-card">
-      <div class="contact-icon">✉️</div>
+      <div class="contact-icon"><span class="icon icon-mail" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.email_title">Email</div>
       <div class="contact-value"><a href="mailto:9112368277@mail.ru">9112368277@mail.ru</a></div>
       <div class="contact-sub">Ответим в течение рабочего дня</div>
     </div>
     <div class="contact-card">
-      <div class="contact-icon">📍</div>
+      <div class="contact-icon"><span class="icon icon-pin" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.addr_title">Адрес</div>
       <div class="contact-value" style="font-size:16px;">Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8</div>
       <div class="contact-sub">Самовывоз — бесплатно</div>
     </div>
     <div class="contact-card">
-      <div class="contact-icon">💬</div>
+      <div class="contact-icon"><span class="icon icon-chat" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.messengers_title">Мессенджеры</div>
       <div class="contact-value" style="font-size:16px;display:flex;gap:12px;margin-top:4px;">
         <a href="https://vk.com" target="_blank" style="background:var(--green);color:var(--dark);padding:8px 16px;border-radius:30px;font-size:14px;font-weight:700;text-decoration:none;">VK</a>
@@ -223,7 +234,7 @@ setTimeout(function(){
     </noscript>
   </div>
   <div style="text-align:center;margin-bottom:48px;">
-    <a href="https://yandex.ru/maps/?text=Санкт-Петербург+Софийская+4+к+3" target="_blank" style="color:var(--green-dark);font-weight:600;font-size:14px;text-decoration:none;">📍 Открыть на Яндекс.Картах →</a>
+    <a href="https://yandex.ru/maps/?text=Санкт-Петербург+Софийская+4+к+3" target="_blank" style="color:var(--green-dark);font-weight:600;font-size:14px;text-decoration:none;"><span class="icon icon-map" style="margin-right:4px;vertical-align:-0.12em;"></span>Открыть на Яндекс.Картах →</a>
   </div>
   <div class="form-block">
     <div class="form-title" data-i18n="contacts.form_title">Напишите нам</div>
@@ -238,7 +249,8 @@ setTimeout(function(){
 </div>
 
 <script>
-function sendContactForm() {
+async function sendContactForm() {
+  const btn = document.querySelector('.btn-submit');
   const name = document.getElementById('contactName').value.trim();
   const phone = document.getElementById('contactPhone').value.trim();
   const msg = document.getElementById('contactMessage').value.trim();
@@ -247,17 +259,16 @@ function sendContactForm() {
   if (!phone || phone.replace(/\D/g,'').length < 10) { alert('Пожалуйста, укажите корректный телефон'); document.getElementById('contactPhone').focus(); return; }
   if (!msg) { alert('Пожалуйста, напишите сообщение'); document.getElementById('contactMessage').focus(); return; }
 
-  // Сохраняем заявку в localStorage чтобы админ её увидел
-  try {
-    const submissions = JSON.parse(localStorage.getItem('klever_contacts') || '[]');
-    submissions.push({
-      name: name,
-      phone: phone,
-      message: msg,
-      date: new Date().toLocaleString('ru-RU')
-    });
-    localStorage.setItem('klever_contacts', JSON.stringify(submissions));
-  } catch(e) { console.error(e); }
+  if (btn) { btn.disabled = true; btn.textContent = 'Отправляем...'; }
+
+  let saved = false;
+  if (typeof window.supaInsertContact === 'function') {
+    const r = await window.supaInsertContact({ name, phone, message: msg });
+    if (r.ok) saved = true;
+    else console.error('[contacts] Supabase insert failed', r.error);
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Отправить сообщение →'; }
 
   alert('Спасибо, ' + name + '!\nВаше сообщение отправлено. Мы перезвоним вам на номер ' + phone + ' в течение 30 минут.');
 
@@ -267,15 +278,15 @@ function sendContactForm() {
 }
 </script>
 <footer>
-  <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></div>
-  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" data-i18n="footer.admin" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;">⚙️ Админка</a></p>
+  <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></div>
+  <p>© 2025 ООО «Клевер». Все права защищены.</p>
   <div class="footer-links"><a href="index.html" data-i18n="footer.home_link">Главная</a><a href="catalog.html" data-i18n="footer.catalog">Каталог</a><a href="delivery.html" data-i18n="nav.delivery">Доставка</a></div>
 </footer>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-panel" id="cartPanel">
   <div class="cart-header">
-    <h3 data-i18n="cart.title">🛒 Корзина</h3>
+    <h3 data-i18n="cart.title"><span class="icon icon-cart"></span> Корзина</h3>
     <button class="cart-close" onclick="closeCart()" aria-label="Close" data-i18n-aria="nav.menu_close"><span class="icon icon-close"></span></button>
   </div>
   <div class="cart-items" id="cartItems"></div>
@@ -303,7 +314,7 @@ function closeCart(){document.getElementById('cartOverlay').classList.remove('op
 function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
 function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');total.textContent=getCartTotal()+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
-function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span class="icon icon-check" style="color:#2ECC71;font-size:18px;"></span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded',updateCartBadge);
 </script>
 

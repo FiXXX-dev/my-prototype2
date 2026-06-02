@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- MOBILE: Все новые элементы ОБЯЗАНЫ иметь @media (max-width: 600px) стили -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -164,7 +165,37 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .order-value{font-size:14px;line-height:1.6;}
 .order-items{margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;}
 .order-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
-.order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;}
+.order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;flex-wrap:wrap;align-items:center;}
+.status-assembling{background:#fffbe8;color:#a07800;}
+.status-courier{background:#e8f0ff;color:#3b5bdb;}
+.status-cancelled{background:#ffe8ee;color:#FF3B6B;}
+/* Status dropdown widget */
+.status-select-wrap{position:relative;display:inline-flex;align-items:center;}
+.status-badge-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:'Onest',sans-serif;transition:filter .15s,transform .1s;line-height:1.4;}
+.status-badge-btn:hover{filter:brightness(.88);transform:scale(1.03);}
+.status-badge-btn .sa{font-size:9px;opacity:0.65;margin-left:1px;}
+.status-drop-menu{position:fixed;top:0;left:0;background:white;border:1.5px solid #e0ece4;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.14);z-index:600;min-width:195px;padding:6px;display:none;}
+.status-drop-menu.open{display:block;}
+.status-drop-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:none;background:none;width:100%;text-align:left;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:8px;color:#1a2e22;transition:background .12s;}
+.status-drop-item:hover{background:#f2f7f4;}
+.status-drop-item.cur{color:var(--green-dark);background:#e8faf0;}
+@media print{
+  body>*:not(#printSlip){display:none!important;}
+  #printSlip{display:block!important;font-family:'Onest',sans-serif;color:#111;padding:24px;}
+  .pi-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1aab58;padding-bottom:14px;margin-bottom:20px;}
+  .pi-title{font-size:22px;font-weight:900;color:#1aab58;margin:0;}
+  .pi-meta{font-size:13px;color:#555;margin-top:4px;}
+  .pi-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;}
+  .pi-section{margin-bottom:12px;}
+  .pi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px;}
+  .pi-value{font-size:14px;line-height:1.5;}
+  .pi-table{width:100%;border-collapse:collapse;margin-top:8px;}
+  .pi-table th{background:#f2f7f4;text-align:left;padding:7px 10px;font-size:12px;font-weight:700;border:1px solid #d0d0d0;}
+  .pi-table td{padding:7px 10px;font-size:13px;border:1px solid #e0e0e0;}
+  .pi-table tbody tr:nth-child(even) td{background:#f9fafb;}
+  .pi-total{text-align:right;font-weight:900;font-size:17px;padding:10px 0;border-top:2px solid #1aab58;margin-top:10px;}
+  .pi-footer{margin-top:16px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px;}
+}
 
 /* CSV IMPORT */
 .csv-dropzone{border:2px dashed #c0d8c8;border-radius:14px;padding:32px 20px;text-align:center;transition:border-color .2s,background .2s;background:#fafbfa;}
@@ -191,7 +222,8 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .cat-admin-order{display:flex;flex-direction:column;gap:2px;}
 .cat-admin-order button{background:#f2f7f4;border:1px solid #d0e8d8;width:24px;height:20px;font-size:10px;cursor:pointer;color:#6b8a74;border-radius:4px;line-height:1;padding:0;}
 .cat-admin-order button:hover{background:var(--green);color:var(--dark);}
-.cat-admin-actions{display:flex;gap:6px;flex-shrink:0;}
+.cat-admin-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:center;}
+.cat-hp-btn:disabled{opacity:.4;cursor:not-allowed;}
 .cat-admin-toggle{background:none;border:none;color:#6b8a74;font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:6px;transition:transform .2s,background .15s;display:flex;align-items:center;justify-content:center;}
 .cat-admin-toggle:hover{background:#f2f7f4;}
 .cat-admin-card[data-open="true"] .cat-admin-toggle{transform:rotate(180deg);}
@@ -230,6 +262,21 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .promo-validity{font-size:12px;color:#8aaa94;}
 .promo-actions{display:flex;gap:6px;}
 
+/* BANNERS ADMIN */
+.banner-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+.banner-admin-card{background:white;border-radius:16px;border:1.5px solid #e0ece4;overflow:hidden;}
+.banner-admin-preview{height:140px;display:flex;align-items:center;padding:22px 28px;position:relative;background-size:cover;background-position:center;}
+.banner-admin-preview-overlay{position:absolute;inset:0;}
+.banner-admin-preview-inner{position:relative;z-index:1;max-width:280px;}
+.ban-preview-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;line-height:1.2;letter-spacing:-0.3px;margin-bottom:5px;}
+.ban-preview-sub{font-size:12px;opacity:0.82;line-height:1.4;}
+.banner-admin-footer{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.banner-admin-meta{display:flex;align-items:center;gap:8px;}
+.banner-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.banner-status.active{background:#e8faf0;color:#1aab58;}
+.banner-status.inactive{background:#f2f2f2;color:#8aaa94;}
+.banner-admin-actions{display:flex;gap:5px;flex-wrap:wrap;}
+
 /* RESPONSIVE */
 @media(max-width:900px){
   .admin-wrap.visible{grid-template-columns:1fr;}
@@ -258,10 +305,33 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
   .order-filter-tabs{overflow-x:auto;}
   .order-filter-tab{white-space:nowrap;font-size:13px;padding:9px 14px;}
 }
+@media(max-width:600px){
+  .sidebar{padding:10px 12px;gap:8px;}
+  .side-link{padding:8px 10px;font-size:12px;}
+  .side-link .count{font-size:10px;padding:1px 5px;}
+  .main{padding:12px 10px;}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .stat-card{padding:16px 12px;}
+  .stat-num{font-size:26px;}
+  .stat-label{font-size:11px;}
+  .page-title{font-size:20px;}
+  .page-sub{font-size:12px;}
+  .btn{padding:9px 14px;font-size:13px;}
+  .tbl{min-width:560px;}
+  .modal-overlay .modal{padding:20px 14px;margin:8px;}
+  .modal-title{font-size:18px;}
+  .cat-admin-head{flex-wrap:wrap;gap:8px;}
+  .cat-admin-actions{flex-wrap:wrap;}
+  .banner-admin-grid{grid-template-columns:1fr;}
+  .order-card{padding:14px 12px;}
+  .order-num{font-size:14px;}
+  .order-total{font-size:16px;}
+  .promo-grid{gap:10px;}
+}
 </style>
-<script src="categories.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
+<script defer src="categories.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -294,15 +364,12 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- ЭКРАН ВХОДА -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-box">
-    <div class="login-logo"><svg class="logo-icon" width="48" height="48" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg> <span>Clever</span></div>
+    <div class="login-logo"><svg class="logo-icon" width="48" height="48" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg> <span>Клевер</span></div>
     <div class="login-sub">Панель управления магазином</div>
     <div class="login-form">
       <input type="password" class="login-input" id="passInput" placeholder="Введите пароль" onkeypress="if(event.key==='Enter') doLogin()">
       <div class="login-err" id="loginErr">Неверный пароль</div>
       <button class="login-btn" onclick="doLogin()">Войти →</button>
-    </div>
-    <div class="login-hint">
-      💡 Демо-пароль: <strong>klever2025</strong>
     </div>
     <a href="index.html" style="display:block;text-align:center;margin-top:20px;color:#8aaa94;font-size:13px;text-decoration:none;">← Вернуться на сайт</a>
   </div>
@@ -313,19 +380,20 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span><span class="badge">админ</span></a>
+    <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span><span class="badge">админ</span></a>
     <nav class="side-nav">
-      <button class="side-link active" onclick="showTab('dashboard', this)">📊 Дашборд</button>
-      <button class="side-link" onclick="showTab('products', this)">📦 Товары <span class="count" id="cntProducts">0</span></button>
-      <button class="side-link" onclick="showTab('categories', this)">📁 Категории <span class="count" id="cntCategories">0</span></button>
-      <button class="side-link" onclick="showTab('orders', this)">🛍️ Заказы <span class="count" id="cntOrders">0</span></button>
-      <button class="side-link" onclick="showTab('contacts', this)">✉️ Заявки <span class="count" id="cntContacts">0</span></button>
-      <button class="side-link" onclick="showTab('promotions', this)">🔥 Акции <span class="count" id="cntPromos">0</span></button>
-      <button class="side-link" onclick="showTab('news', this)">📢 Новости <span class="count" id="cntNews">0</span></button>
-      <button class="side-link" onclick="showTab('settings', this)">⚙️ Настройки</button>
+      <button class="side-link active" onclick="showTab('dashboard', this)"><span class="icon icon-chart"></span> Дашборд</button>
+      <button class="side-link" onclick="showTab('products', this)"><span class="icon icon-package"></span> Товары <span class="count" id="cntProducts">0</span></button>
+      <button class="side-link" onclick="showTab('categories', this)"><span class="icon icon-folder"></span> Категории <span class="count" id="cntCategories">0</span></button>
+      <button class="side-link" onclick="showTab('orders', this)"><span class="icon icon-bag"></span> Заказы <span class="count" id="cntOrders">0</span></button>
+      <button class="side-link" onclick="showTab('contacts', this)"><span class="icon icon-mail"></span> Заявки <span class="count" id="cntContacts">0</span></button>
+      <button class="side-link" onclick="showTab('promotions', this)"><span class="icon icon-flame"></span> Акции <span class="count" id="cntPromos">0</span></button>
+      <button class="side-link" onclick="showTab('banners', this)"><span class="icon icon-image"></span> Баннеры <span class="count" id="cntBanners">0</span></button>
+      <button class="side-link" onclick="showTab('news', this)"><span class="icon icon-megaphone"></span> Новости <span class="count" id="cntNews">0</span></button>
+      <button class="side-link" onclick="showTab('settings', this)"><span class="icon icon-gear"></span> Настройки</button>
     </nav>
     <div class="side-bottom">
-      <div class="side-user">👤 Администратор</div>
+      <div class="side-user"><span class="icon icon-user"></span> Администратор</div>
       <button class="side-logout" onclick="doLogout()">Выйти</button>
     </div>
   </aside>
@@ -372,7 +440,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
       <!-- Статистика выполненных заказов -->
       <div style="margin-top:20px;">
-        <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:14px;">📊 Выполнено заказов за период</div>
+        <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:14px;"><span class="icon icon-chart"></span> Выполнено заказов за период</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
           <div class="stat-card" style="padding:18px;">
             <div class="stat-label">Сегодня</div>
@@ -413,9 +481,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-sub">Управление товарами в каталоге</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary" onclick="exportProductsCsv()">📤 Экспорт CSV</button>
-          <button class="btn btn-secondary" onclick="openImportModal()">📥 Импорт CSV</button>
-          <button class="btn btn-secondary" onclick="resetProducts()" title="Восстановить товары из стандартного списка">🔄 Сбросить</button>
+          <button class="btn btn-secondary" onclick="exportProductsCsv()"><span class="icon icon-upload"></span> Экспорт CSV</button>
+          <button class="btn btn-secondary" onclick="openImportModal()"><span class="icon icon-download"></span> Импорт CSV</button>
+          <button class="btn btn-secondary" onclick="resetProducts()" title="Восстановить товары из стандартного списка"><span class="icon icon-refresh"></span> Сбросить</button>
           <button class="btn btn-primary" onclick="openProductModal()">+ Добавить товар</button>
         </div>
       </div>
@@ -478,7 +546,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Заказы</div>
           <div class="page-sub">Все заказы клиентов</div>
         </div>
-        <button class="btn btn-secondary" onclick="clearOrders()">🗑️ Очистить все</button>
+        <button class="btn btn-secondary" onclick="clearOrders()"><span class="icon icon-trash"></span> Очистить все</button>
       </div>
       <div class="order-filter-tabs">
         <button class="order-filter-tab active" data-filter="active" onclick="setOrdersFilter('active', this)">Активные <span class="count" id="cntFilterActive">0</span></button>
@@ -495,7 +563,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Заявки с формы</div>
           <div class="page-sub">Сообщения от посетителей сайта</div>
         </div>
-        <button class="btn btn-secondary" onclick="clearContacts()">🗑️ Очистить все</button>
+        <button class="btn btn-secondary" onclick="clearContacts()"><span class="icon icon-trash"></span> Очистить все</button>
       </div>
       <div id="contactsList"></div>
     </section>
@@ -510,6 +578,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <button class="btn btn-primary" onclick="openPromoModal()">+ Создать акцию</button>
       </div>
       <div class="promo-grid" id="promotionsList"></div>
+    </section>
+
+    <!-- BANNERS -->
+    <section class="tab-content" id="tab-banners">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Баннеры</div>
+          <div class="page-sub">Карусель баннеров на главной странице</div>
+        </div>
+        <button class="btn btn-primary" onclick="openBannerModal()"><span class="icon icon-image"></span> Добавить баннер</button>
+      </div>
+      <div class="banner-admin-grid" id="bannersList"></div>
     </section>
 
     <!-- NEWS -->
@@ -566,7 +646,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
 
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8f4ec;">
-          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;">📱 Мессенджеры для связи</div>
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;"><span class="icon icon-mobile"></span> Мессенджеры для связи</div>
           <div style="font-size:13px;color:#8aaa94;margin-bottom:18px;">Ссылки будут использоваться плавающими кнопками на всех страницах. Пустое поле — кнопка не показывается.</div>
           <div class="settings-msg-grid">
             <div class="settings-msg-row">
@@ -598,10 +678,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
 
         <div style="margin-top:24px;display:flex;gap:10px;">
-          <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button>
+          <button class="btn btn-primary" onclick="saveSettings()"><span class="icon icon-save"></span> Сохранить</button>
         </div>
         <div style="margin-top:20px;padding:14px 18px;background:#fff3ee;border:1.5px solid #ffc4a8;border-radius:12px;font-size:13px;color:#cf7a00;">
-          ⚠️ В демо-версии настройки сохраняются только в этом браузере. Для полной интеграции нужен сервер.
+          <span class="icon icon-alert"></span> В демо-версии настройки сохраняются только в этом браузере. Для полной интеграции нужен сервер.
         </div>
       </div>
     </section>
@@ -612,7 +692,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- МОДАЛКА ТОВАРА -->
 <div class="modal-overlay" id="productModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeProductModal()">✕</button>
+    <button class="modal-close" onclick="closeProductModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="prodModalTitle">Новый товар</div>
     <div class="modal-sub">Заполните данные о товаре</div>
     <div class="modal-form">
@@ -650,9 +730,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <label>Метка</label>
         <select id="prodBadge">
           <option value="">Без метки</option>
-          <option value="hit">🔥 Хит</option>
-          <option value="new">✨ Новинка</option>
-          <option value="sale">🏷️ Скидка</option>
+          <option value="hit">★ Хит</option>
+          <option value="new">Новинка</option>
+          <option value="sale">% Скидка</option>
         </select>
       </div>
       <div class="form-grp full">
@@ -667,7 +747,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeProductModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveProduct()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveProduct()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -675,7 +755,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- МОДАЛКА АКЦИИ -->
 <div class="modal-overlay" id="promoModal">
   <div class="modal">
-    <button class="modal-close" onclick="closePromoModal()">✕</button>
+    <button class="modal-close" onclick="closePromoModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="promoModalTitle">Новая акция</div>
     <div class="modal-sub">Заполните данные об акции</div>
     <div class="modal-form">
@@ -690,9 +770,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <div class="form-grp">
         <label>Цвет</label>
         <select id="promoColor">
-          <option value="green">🟢 Зелёный</option>
-          <option value="accent">🟠 Оранжевый</option>
-          <option value="lime">🟡 Лаймовый</option>
+          <option value="green">● Зелёный</option>
+          <option value="accent">● Оранжевый</option>
+          <option value="lime">● Лаймовый</option>
         </select>
       </div>
       <div class="form-grp full">
@@ -710,7 +790,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closePromoModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="savePromo()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="savePromo()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -718,7 +798,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- NEWS MODAL -->
 <div class="modal-overlay" id="newsModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeNewsModal()">✕</button>
+    <button class="modal-close" onclick="closeNewsModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="newsModalTitle">Новая новость</div>
     <div class="modal-sub">Появится во всплывающей модалке у клиентов</div>
     <div class="modal-form">
@@ -733,9 +813,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <div class="form-grp">
         <label>Цвет плашки</label>
         <select id="newsColor">
-          <option value="green">🟢 Зелёный</option>
-          <option value="orange">🟠 Оранжевый</option>
-          <option value="blue">🔵 Синий</option>
+          <option value="green">● Зелёный</option>
+          <option value="orange">● Оранжевый</option>
+          <option value="blue">● Синий</option>
         </select>
       </div>
       <div class="form-grp">
@@ -748,7 +828,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeNewsModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveNews()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveNews()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -756,7 +836,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- CATEGORY MODAL -->
 <div class="modal-overlay" id="categoryModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeCategoryModal()">✕</button>
+    <button class="modal-close" onclick="closeCategoryModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="catModalTitle">Новая категория</div>
     <div class="modal-sub">Параметры верхнеуровневой категории каталога</div>
     <div class="modal-form">
@@ -787,7 +867,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeCategoryModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveCategory()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveCategory()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -795,7 +875,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- SUBCATEGORY MODAL -->
 <div class="modal-overlay" id="subcategoryModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeSubcategoryModal()">✕</button>
+    <button class="modal-close" onclick="closeSubcategoryModal()"><span class="icon icon-close"></span></button>
     <div class="modal-title" id="subModalTitle">Новая подкатегория</div>
     <div class="modal-sub" id="subModalSub">—</div>
     <div class="modal-form">
@@ -821,7 +901,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeSubcategoryModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveSubcategory()">💾 Сохранить</button>
+      <button class="btn btn-primary" onclick="saveSubcategory()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -829,8 +909,8 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 <!-- CSV IMPORT MODAL -->
 <div class="modal-overlay" id="importModal">
   <div class="modal" style="max-width:780px;">
-    <button class="modal-close" onclick="closeImportModal()">✕</button>
-    <div class="modal-title">📥 Импорт товаров из CSV</div>
+    <button class="modal-close" onclick="closeImportModal()"><span class="icon icon-close"></span></button>
+    <div class="modal-title"><span class="icon icon-download"></span> Импорт товаров из CSV</div>
     <div class="modal-sub">Формат: <code>name;sku;price;category;subcategory;img;description</code> (разделитель «;»)</div>
     <div style="margin-top:18px;">
       <div id="csvDropZone" class="csv-dropzone">
@@ -851,7 +931,81 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </label>
       </div>
       <button class="btn btn-secondary" onclick="closeImportModal()">Отмена</button>
-      <button class="btn btn-primary" id="csvImportBtn" onclick="runCsvImport()" disabled>📥 Импортировать</button>
+      <button class="btn btn-primary" id="csvImportBtn" onclick="runCsvImport()" disabled><span class="icon icon-download"></span> Импортировать</button>
+    </div>
+  </div>
+</div>
+
+<!-- BANNER MODAL -->
+<div class="modal-overlay" id="bannerModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeBannerModal()"><span class="icon icon-close"></span></button>
+    <div class="modal-title" id="bannerModalTitle">Новый баннер</div>
+    <div class="modal-sub">Баннер карусели на главной странице</div>
+    <div class="modal-form">
+      <div class="form-grp full">
+        <label>Заголовок</label>
+        <input type="text" id="bannerTitle" placeholder="Например: Бесплатная доставка" oninput="updateBannerPreview()">
+      </div>
+      <div class="form-grp full">
+        <label>Подзаголовок</label>
+        <input type="text" id="bannerSubtitle" placeholder="Например: При заказе до 18:00" oninput="updateBannerPreview()">
+      </div>
+      <div class="form-grp full">
+        <label>URL изображения <span style="color:#8aaa94;font-weight:400;">(опционально — если нет, используется цвет фона)</span></label>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <input type="url" id="bannerImageUrl" placeholder="https://example.com/banner.jpg" oninput="updateBannerPreview()" style="flex:1;">
+          <div class="img-preview" id="bannerImgPreview" style="width:80px;height:60px;flex-shrink:0;border-radius:8px;"><span class="icon icon-image" style="color:#8aaa94;"></span></div>
+        </div>
+      </div>
+      <div class="form-grp">
+        <label>Ссылка (URL куда ведёт клик)</label>
+        <input type="text" id="bannerLinkUrl" placeholder="catalog.html или delivery.html">
+      </div>
+      <div class="form-grp">
+        <label>Текст кнопки</label>
+        <input type="text" id="bannerLinkText" placeholder="Подробнее">
+      </div>
+      <div class="form-grp">
+        <label>Цвет фона</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="color" id="bannerBgColor" value="#2ECC71" oninput="updateBannerPreview()" style="width:40px;height:36px;border:1.5px solid #d0e8d8;border-radius:8px;padding:2px;cursor:pointer;">
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#2ECC71')" style="background:#2ECC71;color:#0f1a14;border:none;">Зелёный</button>
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#FF6B35')" style="background:#FF6B35;color:white;border:none;">Оранжевый</button>
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#0f1a14')" style="background:#0f1a14;color:white;border:none;">Тёмный</button>
+          <button type="button" class="btn btn-sm" onclick="setBannerColor('#1e6fb8')" style="background:#1e6fb8;color:white;border:none;">Синий</button>
+        </div>
+      </div>
+      <div class="form-grp">
+        <label>Цвет текста</label>
+        <select id="bannerTextColor" onchange="updateBannerPreview()">
+          <option value="#ffffff">Белый</option>
+          <option value="#0f1a14">Тёмный</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Порядок сортировки</label>
+        <input type="number" id="bannerSortOrder" value="0" min="0">
+      </div>
+      <div class="form-grp">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:400;">
+          <input type="checkbox" id="bannerIsActive" checked> Активен (показывать на главной)
+        </label>
+      </div>
+      <div class="form-grp full">
+        <label>Предпросмотр</label>
+        <div id="bannerPreviewCard" style="border-radius:14px;overflow:hidden;height:110px;display:flex;align-items:center;padding:20px 28px;position:relative;background:#2ECC71;transition:background .3s;">
+          <div id="bannerPreviewOverlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.08);pointer-events:none;"></div>
+          <div style="position:relative;z-index:1;" id="bannerPreviewInner">
+            <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;line-height:1.2;color:#fff;" id="bannerPreviewTitleEl">Заголовок</div>
+            <div style="font-size:12px;opacity:0.8;margin-top:4px;color:#fff;" id="bannerPreviewSubEl">Подзаголовок</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeBannerModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveBanner()"><span class="icon icon-save"></span> Сохранить</button>
     </div>
   </div>
 </div>
@@ -1135,7 +1289,7 @@ const DEFAULT_PRODUCTS=[
 ];
 
 // ===== АУТЕНТИФИКАЦИЯ =====
-const ADMIN_PASS = 'klever2025';
+const ADMIN_PASS = 'cleverspb33355';
 
 function doLogin() {
   const pass = document.getElementById('passInput').value;
@@ -1172,10 +1326,11 @@ function showTab(name, btn) {
     }
     renderOrders();
   }
-  if (name === 'contacts') renderContacts();
+  if (name === 'contacts') loadContactsAdmin();
   if (name === 'promotions') renderPromotions();
   if (name === 'news') renderNews();
-  if (name === 'products') renderProducts();
+  if (name === 'banners') loadBannersAdmin();
+  if (name === 'products') loadProductsAdmin();
   if (name === 'dashboard') {
     if (typeof refreshOrdersFromSupabase === 'function') {
       refreshOrdersFromSupabase().then(() => { renderDashboard(); updateCounts(); });
@@ -1183,7 +1338,7 @@ function showTab(name, btn) {
     renderDashboard();
   }
   if (name === 'settings') loadSettings();
-  if (name === 'categories') renderCategoriesAdmin();
+  if (name === 'categories') loadCatHomeStateAndRender();
 }
 
 // On admin login, prime orders from Supabase and subscribe to live changes
@@ -1265,11 +1420,12 @@ function updateCounts() {
   if (cntCatsEl && typeof getCategories === 'function') cntCatsEl.textContent = getCategories().length;
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
-  document.getElementById('cntContacts').textContent = getContacts().length;
+  document.getElementById('cntContacts').textContent = _contactsCache.length || getContacts().length;
   document.getElementById('cntPromos').textContent = getPromos().length;
   const newsCount = getNews().filter(n => n.active).length;
   const cntNewsEl = document.getElementById('cntNews');
   if (cntNewsEl) cntNewsEl.textContent = newsCount;
+  // Banner count is updated asynchronously by loadBannersAdmin()
 }
 
 // ===== ДАШБОРД =====
@@ -1295,18 +1451,8 @@ function renderDashboard() {
   const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
   const monthAgo = new Date(today); monthAgo.setMonth(today.getMonth() - 1);
 
-  // Заказ хранится с date в формате локали ru-RU (e.g. "24.05.2026"). Парсим.
-  function parseRuDate(s) {
-    // s может быть "24.05.2026" или "24.05.2026, 14:32"
-    if (!s) return null;
-    const datePart = s.split(',')[0].trim();
-    const parts = datePart.split('.');
-    if (parts.length !== 3) return null;
-    return new Date(+parts[2], +parts[1] - 1, +parts[0]);
-  }
-
   const inRange = (order, from) => {
-    const d = parseRuDate(order.date);
+    const d = parseOrderDate(order.date);
     if (!d) return false;
     return d >= from;
   };
@@ -1324,11 +1470,11 @@ function renderDashboard() {
   document.getElementById('doneAll').textContent = doneOrders.length;
   document.getElementById('doneAllSum').textContent = doneOrders.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
 
-  // Последние новые заказы
-  const recent = allOrders.slice(-3).reverse();
+  // Последние заказы — сортируем по дате убывания, показываем до 10
+  const recent = sortOrdersDesc(allOrders).slice(0, 10);
   const last = document.getElementById('dashLastOrders');
   if (recent.length === 0) {
-    last.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
+    last.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
   } else {
     last.innerHTML = recent.map(o => orderCardHtml(o)).join('');
   }
@@ -1338,6 +1484,28 @@ function renderDashboard() {
 let editingSku = null;
 let productsPage = 1;
 const PRODUCTS_PER_PAGE = 20;
+
+async function loadProductsAdmin() {
+  if (typeof window.supaGetProducts === 'function') {
+    try {
+      const data = await window.supaGetProducts();
+      if (data && data.length) {
+        const normalized = data.map(p => Object.assign({}, p, {
+          categoryId: p.category_id || p.categoryId || '',
+          isHit: !!(p.is_hit || p.isHit),
+          desc: p.description || p.desc || '',
+          emoji: p.emoji || '📦',
+        }));
+        try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
+        renderProducts();
+        updateCounts();
+        return;
+      }
+    } catch(e) {}
+  }
+  renderProducts();
+  updateCounts();
+}
 
 function renderProducts() {
   const q = (document.getElementById('searchProducts').value || '').toLowerCase().trim();
@@ -1358,7 +1526,7 @@ function renderProducts() {
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
   if (pageItems.length === 0) {
-    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
     document.getElementById('productsBody').innerHTML = pageItems.map(p => `
       <tr>
@@ -1374,7 +1542,7 @@ function renderProducts() {
         <td>
           <div class="actions">
             <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.sku}')">Изм.</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.sku}')">🗑️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.sku}')"><span class="icon icon-trash"></span></button>
           </div>
         </td>
       </tr>
@@ -1412,12 +1580,15 @@ function toggleHit(sku) {
   renderProducts();
   const p = products.find(x => x.sku === sku);
   toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
+  if (p && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(p).catch(e => console.error('[admin] toggleHit supabase', e));
+  }
 }
 
 function badgeHtml(b) {
-  if (b==='hit') return '<span class="col-badge b-hit">🔥 Хит</span>';
-  if (b==='new') return '<span class="col-badge b-new">✨ Новинка</span>';
-  if (b==='sale') return '<span class="col-badge b-sale">🏷️ Скидка</span>';
+  if (b==='hit') return '<span class="col-badge b-hit"><span class="icon icon-flame"></span> Хит</span>';
+  if (b==='new') return '<span class="col-badge b-new">Новинка</span>';
+  if (b==='sale') return '<span class="col-badge b-sale"><span class="icon icon-tag"></span> Скидка</span>';
   return '<span style="color:#c0d0c5;">—</span>';
 }
 
@@ -1494,6 +1665,10 @@ function saveProduct() {
   renderProducts();
   updateCounts();
   toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
+  const saved = products.find(p => p.sku === sku);
+  if (saved && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(saved).catch(e => console.error('[admin] saveProduct supabase', e));
+  }
 }
 
 function deleteProduct(sku) {
@@ -1501,18 +1676,46 @@ function deleteProduct(sku) {
   setProducts(getProducts().filter(p => p.sku !== sku));
   renderProducts();
   updateCounts();
-  toast('🗑️ Товар удалён');
+  toast('Товар удалён');
+  if (typeof window.supaDeleteProduct === 'function') {
+    window.supaDeleteProduct(sku).catch(e => console.error('[admin] deleteProduct supabase', e));
+  }
 }
 
-function resetProducts() {
+async function resetProducts() {
   if (!confirm('Восстановить стандартный список товаров? Все ваши изменения будут потеряны.')) return;
   localStorage.removeItem(STORAGE_PRODUCTS);
+  if (typeof window.supaBulkUpsertProducts === 'function') {
+    toast('⏳ Загрузка товаров в Supabase...');
+    const res = await window.supaBulkUpsertProducts(DEFAULT_PRODUCTS);
+    if (!res.ok) {
+      toast('Ошибка загрузки в Supabase: ' + (res.error && res.error.message || 'неизвестна'));
+    } else {
+      toast('✓ Товары загружены в Supabase');
+    }
+  }
   location.reload();
 }
 
 // ===== ЗАКАЗЫ =====
 let ordersFilter = 'active';
 const expandedOrders = new Set();
+
+function parseOrderDate(s) {
+  if (!s) return null;
+  const p = s.split(',')[0].trim().split('.');
+  return p.length === 3 ? new Date(+p[2], +p[1] - 1, +p[0]) : null;
+}
+
+function sortOrdersDesc(arr) {
+  return arr.slice().sort((a, b) => {
+    const da = parseOrderDate(a.date), db = parseOrderDate(b.date);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db - da;
+  });
+}
 
 function setOrdersFilter(f, el) {
   ordersFilter = f;
@@ -1546,14 +1749,14 @@ function toggleOrderCard(btn, num) {
 }
 
 function renderOrders() {
-  let orders = getOrders().slice().reverse();
+  let orders = sortOrdersDesc(getOrders());
   if (ordersFilter === 'active') orders = orders.filter(o => o.status !== 'done');
   else if (ordersFilter === 'done') orders = orders.filter(o => o.status === 'done');
   const list = document.getElementById('ordersList');
   updateOrderFilterCounts();
   if (orders.length === 0) {
     const msg = ordersFilter === 'done' ? 'Выполненных заказов пока нет' : ordersFilter === 'active' ? 'Активных заказов нет' : 'Заказов пока нет';
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">'+msg+'</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
+    list.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-bag" style="color:#d0e8d8;"></span></div><div class="empty-title">'+msg+'</div><div>Они появятся когда покупатели оформят первые заказы</div></div>';
   } else {
     list.innerHTML = orders.map(o => orderCardHtml(o)).join('');
   }
@@ -1562,6 +1765,11 @@ function renderOrders() {
 function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
+  const STATUS_CLASS = {assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'};
+  const STATUS_LABEL = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'✕ Отменён'};
+  const sClass = STATUS_CLASS[o.status] || 'new';
+  const sLabel = STATUS_LABEL[o.status] || 'Новый';
+  const isCur = s => ((!o.status || o.status==='new') && s==='new') || o.status===s;
   return `
     <div class="order-card" data-num="${o.num}" data-expanded="${expanded}">
       <div class="order-head">
@@ -1570,10 +1778,10 @@ function orderCardHtml(o) {
             <div class="order-num">#${o.num != null ? o.num : (o.id != null ? o.id : '?')}</div>
             <div class="order-date">${o.date}</div>
           </div>
-          <span class="order-status status-${o.status === 'done' ? 'done' : 'new'}">${o.status === 'done' ? '✓ Выполнен' : 'Новый'}</span>
+          <span class="order-status status-${sClass}">${sLabel}</span>
           <div class="order-total" style="margin-left:auto;">${o.total.toLocaleString('ru-RU')} ₽</div>
         </div>
-        <button class="order-toggle" onclick="toggleOrderCard(this, ${o.num})" title="Развернуть/свернуть">▼</button>
+        <button class="order-toggle" onclick="toggleOrderCard(this, '${o.num}')" title="Развернуть/свернуть">▼</button>
       </div>
       <div class="order-collapse"><div class="order-collapse-inner">
         <div class="order-body">
@@ -1581,29 +1789,41 @@ function orderCardHtml(o) {
             <div class="order-label">Клиент</div>
             <div class="order-value">
               <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
-              📞 ${o.phone}${o.email ? '<br>✉ ' + o.email : ''}
+              <span class="icon icon-phone"></span> ${o.phone}${o.email ? '<br><span class="icon icon-mail"></span> ' + o.email : ''}
             </div>
           </div>
           <div class="order-section">
             <div class="order-label">Доставка</div>
             <div class="order-value">
-              ${o.method === 'courier' ? '🚚 Курьер' : '🏪 Самовывоз'}<br>
-              ${o.address}
+              ${o.method === 'pickup' ? '<span class="icon icon-store"></span> Самовывоз' : '<span class="icon icon-truck"></span> Курьер'}<br>
+              ${o.address || '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + o.deliveryDate : ''}${o.deliveryTime ? ' ' + o.deliveryTime : ''}
             </div>
           </div>
         </div>
         ${o.payment ? `<div class="order-section" style="margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;">
           <div class="order-label">Оплата</div>
-          <div class="order-value">${({cash:'💵 Наличными или картой курьеру',invoice:'🏦 Безналичный расчёт (счёт)',transfer:'💳 Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
+          <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
         </div>` : ''}
         ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
         ${o.comment && String(o.comment).trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
-          <div class="order-label" style="margin-bottom:6px;">💬 Комментарий клиента</div>
+          <div class="order-label" style="margin-bottom:6px;"><span class="icon icon-chat"></span> Комментарий клиента</div>
           <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${String(o.comment).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;')}</div>
         </div>` : ''}
         <div class="order-actions">
-          ${o.status === 'done' ? '<button class="btn btn-secondary btn-sm" onclick="reopenOrder(' + o.num + ')">↩ Вернуть в новые</button>' : '<button class="btn btn-primary btn-sm" onclick="completeOrder(' + o.num + ')">✓ Отметить выполненным</button>'}
-          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.num})">🗑️ Удалить</button>
+          <div class="status-select-wrap">
+            <button class="status-badge-btn status-${sClass}" onclick="toggleStatusMenu(this, event)">
+              ${sLabel} <span class="sa">▼</span>
+            </button>
+            <div class="status-drop-menu">
+              <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus(this,'${o.num}','new')"><span class="icon icon-clipboard"></span> В обработке</button>
+              <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus(this,'${o.num}','assembling')"><span class="icon icon-package"></span> В сборке</button>
+              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus(this,'${o.num}','courier')"><span class="icon icon-truck"></span> Передан курьеру</button>
+              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus(this,'${o.num}','done')"><span class="icon icon-check-circle"></span> Доставлен</button>
+              <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus(this,'${o.num}','cancelled')"><span class="icon icon-close"></span> Отменён</button>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="printOrder('${o.num}')"><span class="icon icon-printer"></span> Накладная</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.num}')"><span class="icon icon-trash"></span> Удалить</button>
         </div>
       </div></div>
     </div>
@@ -1612,6 +1832,11 @@ function orderCardHtml(o) {
 
 // ===== Supabase orders bridge =====
 // Fetches from Supabase if configured, mirrors result into localStorage so the
+// Set of order nums/ids that have been deleted locally but a stale
+// in-flight refresh might try to bring back. Cleared automatically
+// once a fresh refresh confirms the row is gone.
+const _deletedNums = new Set();
+
 // existing sync renderers (renderOrders/renderDashboard) keep working.
 // Returns a Promise that resolves after sync (or immediately if unconfigured).
 async function refreshOrdersFromSupabase() {
@@ -1619,40 +1844,139 @@ async function refreshOrdersFromSupabase() {
   try {
     const data = await supaListOrders();
     if (data === null) return null; // unconfigured / error
-    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(data));
-    return data;
+    // Filter out any orders that were just deleted locally so a slow
+    // in-flight refresh can't race and bring them back.
+    const filtered = _deletedNums.size > 0
+      ? data.filter(o => !_deletedNums.has(String(o.num)) && !_deletedNums.has(String(o._supaId)))
+      : data;
+    // Clear stale deletion markers for orders that are truly gone from Supabase.
+    _deletedNums.forEach(k => { if (!data.find(o => String(o.num) === k || String(o._supaId) === k)) _deletedNums.delete(k); });
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(filtered));
+    return filtered;
   } catch (e) { console.warn('[admin] supa refresh failed', e); return null; }
 }
 
-// Wrap status update: try Supabase first, then mirror to localStorage.
-async function _updateOrderStatus(num, status) {
-  if (typeof supaUpdateOrder === 'function') {
-    try { await supaUpdateOrder(num, { status }); } catch (e) { console.warn('[admin] supa update failed', e); }
-  }
-  const orders = getOrders().map(o => o.num === num ? {...o, status} : o);
+function setOrderStatus(num, status) {
+  // Instant localStorage update + UI, then async Supabase sync
+  const orders = getOrders().map(o => String(o.num) === String(num) ? {...o, status} : o);
   localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
+  renderOrders(); renderDashboard(); updateCounts();
+  if (typeof supaUpdateOrder === 'function') {
+    supaUpdateOrder(num, { status }).catch(e => console.warn('[admin] supa status update failed', e));
+  }
 }
 
-function completeOrder(num) {
-  _updateOrderStatus(num, 'done').then(() => {
-    renderOrders(); renderDashboard(); updateCounts();
-  });
+// Toggle the dropdown belonging to THIS button (via its sibling menu, not by id —
+// the same order is rendered in both the dashboard and the orders tab, so ids
+// are duplicated and getElementById would grab the wrong/hidden one).
+function toggleStatusMenu(btn, e) {
+  if (e) e.stopPropagation();
+  const menu = btn.nextElementSibling;
+  if (!menu) return;
+  const wasOpen = menu.classList.contains('open');
+  // Close every open menu first
+  document.querySelectorAll('.status-drop-menu.open').forEach(m => m.classList.remove('open'));
+  if (wasOpen) return;
+  // Position with fixed coords (viewport-relative — no scroll offset) so the
+  // menu escapes the card's overflow:hidden clipping.
+  const rect = btn.getBoundingClientRect();
+  let left = rect.left;
+  const menuWidth = 200;
+  if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.classList.add('open');
 }
 
-function reopenOrder(num) {
-  _updateOrderStatus(num, 'new').then(() => {
-    renderOrders(); renderDashboard(); updateCounts();
-  });
+function pickStatus(el, num, status) {
+  const menu = el.closest('.status-drop-menu');
+  if (menu) menu.classList.remove('open');
+  setOrderStatus(num, status);
+}
+
+// Close any open status menu when clicking outside the dropdown widget.
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.status-select-wrap')) {
+    document.querySelectorAll('.status-drop-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+function printOrder(num) {
+  const o = getOrders().find(o => String(o.num) === String(num));
+  if (!o) return;
+  const slip = document.getElementById('printSlip');
+  slip.innerHTML = buildPrintSlip(o);
+  window.print();
+  window.addEventListener('afterprint', () => { slip.innerHTML = ''; }, { once: true });
+}
+
+function buildPrintSlip(o) {
+  const items = (o.items || []);
+  const rows = items.map((i, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>${(i.name || '').replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;')}</td>
+      <td style="text-align:center;">${i.qty}</td>
+      <td style="text-align:right;">${(i.price || 0).toLocaleString('ru-RU')} ₽</td>
+      <td style="text-align:right;">${((i.qty||1)*(i.price||0)).toLocaleString('ru-RU')} ₽</td>
+    </tr>`).join('');
+  const statusLabel = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'Доставлен'}[o.status] || o.status;
+  const methodLabel = o.method === 'pickup' ? 'Самовывоз' : 'Курьерская доставка';
+  const paymentLabel = {cash: o.method==='pickup'?'Наличными / картой при получении':'Наличными / картой курьеру', invoice:'Безналичный расчёт (счёт)', transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
+  const safeComment = o.comment ? String(o.comment).replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;') : '';
+  return `
+    <div class="pi-header">
+      <div>
+        <div class="pi-title">Накладная #${o.num != null ? o.num : (o.id || '?')}</div>
+        <div class="pi-meta">${o.date} · ${statusLabel}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#888;">
+        <div>Клевер HoReCa</div>
+        <div>Печать: ${new Date().toLocaleDateString('ru-RU')}</div>
+      </div>
+    </div>
+    <div class="pi-grid">
+      <div class="pi-section">
+        <div class="pi-label">Клиент</div>
+        <div class="pi-value"><strong>${o.name||'—'}</strong>${o.company?'<br>'+o.company:''}${o.phone?'<br>'+o.phone:''}${o.email?'<br>'+o.email:''}</div>
+      </div>
+      <div class="pi-section">
+        <div class="pi-label">Доставка</div>
+        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}${o.deliveryDate?'<br>'+o.deliveryDate:''}${o.deliveryTime?' '+o.deliveryTime:''}</div>
+      </div>
+      ${o.payment?`<div class="pi-section">
+        <div class="pi-label">Оплата</div>
+        <div class="pi-value">${paymentLabel}${o.invoiceCompany?'<br>'+o.invoiceCompany:''}${o.invoiceInn?'<br>ИНН '+o.invoiceInn:''}</div>
+      </div>`:''}
+      ${safeComment?`<div class="pi-section">
+        <div class="pi-label">Комментарий</div>
+        <div class="pi-value" style="white-space:pre-wrap;">${safeComment}</div>
+      </div>`:''}
+    </div>
+    <table class="pi-table">
+      <thead><tr><th>#</th><th>Товар</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="5" style="text-align:center;color:#999;">Позиции не указаны</td></tr>'}</tbody>
+    </table>
+    <div class="pi-total">Итого: ${(o.total||0).toLocaleString('ru-RU')} ₽</div>
+    <div class="pi-footer">Накладная сформирована автоматически · Клевер HoReCa</div>
+  `;
 }
 
 function deleteOrder(num) {
   if (!confirm('Удалить заказ #' + num + '?')) return;
+  // Mark as deleted immediately so any in-flight refresh won't restore it.
+  _deletedNums.add(String(num));
   const finish = () => {
-    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => o.num !== num)));
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(getOrders().filter(o => String(o.num) !== String(num))));
     renderOrders(); renderDashboard(); updateCounts();
   };
   if (typeof supaDeleteOrder === 'function') {
-    supaDeleteOrder(num).then(finish).catch(e => { console.warn('[admin] supa delete failed', e); finish(); });
+    supaDeleteOrder(num)
+      .then(res => {
+        if (!res.ok) console.warn('[admin] supa delete returned not-ok', res);
+        finish();
+      })
+      .catch(e => { console.warn('[admin] supa delete failed', e); finish(); });
   } else { finish(); }
 }
 
@@ -1661,53 +1985,95 @@ function clearOrders() {
   localStorage.removeItem(STORAGE_ORDERS);
   renderOrders();
   updateCounts();
-}
-
-// ===== ЗАЯВКИ =====
-function renderContacts() {
-  const list = getContacts().slice().reverse();
-  const c = document.getElementById('contactsList');
-  if (list.length === 0) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">✉️</div><div class="empty-title">Заявок пока нет</div><div>Сообщения с формы обратной связи появятся здесь</div></div>';
-  } else {
-    c.innerHTML = list.map((m, idx) => `
-      <div class="order-card">
-        <div class="order-head">
-          <div>
-            <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:16px;">${m.name}</div>
-            <div class="order-date">${m.date}</div>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteContact(${list.length - 1 - idx})">🗑️</button>
-        </div>
-        <div class="order-body">
-          <div class="order-section">
-            <div class="order-label">Контакты</div>
-            <div class="order-value">📞 <a href="tel:${m.phone}" style="color:var(--green-dark);">${m.phone}</a></div>
-          </div>
-          <div class="order-section">
-            <div class="order-label">Сообщение</div>
-            <div class="order-value">${m.message}</div>
-          </div>
-        </div>
-      </div>
-    `).join('');
+  if (typeof supaDeleteAllOrders === 'function') {
+    supaDeleteAllOrders().catch(e => console.warn('[admin] supa clear-all failed', e));
   }
 }
 
-function deleteContact(idx) {
-  if (!confirm('Удалить заявку?')) return;
-  const all = getContacts();
-  all.splice(idx, 1);
-  localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(all));
+// ===== ЗАЯВКИ =====
+let _contactsCache = [];
+
+async function loadContactsAdmin() {
+  const c = document.getElementById('contactsList');
+  c.innerHTML = '<div style="padding:40px;text-align:center;color:#8aaa94;">Загрузка...</div>';
+  if (typeof window.supaGetContacts === 'function') {
+    const data = await window.supaGetContacts();
+    if (data !== null) {
+      _contactsCache = data;
+      document.getElementById('cntContacts').textContent = data.length;
+      renderContacts();
+      return;
+    }
+  }
+  // Fallback: localStorage (если Supabase не настроен)
+  _contactsCache = getContacts().slice().reverse().map((m, i) => ({ _localIdx: i, ...m }));
   renderContacts();
-  updateCounts();
 }
 
-function clearContacts() {
-  if (!confirm('Удалить ВСЕ заявки?')) return;
-  localStorage.removeItem(STORAGE_CONTACTS);
+function renderContacts() {
+  const list = _contactsCache;
+  const c = document.getElementById('contactsList');
+  document.getElementById('cntContacts').textContent = list.length;
+  if (list.length === 0) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-mail" style="color:#d0e8d8;"></span></div><div class="empty-title">Заявок пока нет</div><div>Сообщения с формы обратной связи появятся здесь</div></div>';
+    return;
+  }
+  c.innerHTML = list.map((m) => {
+    const dateStr = m.created_at
+      ? new Date(m.created_at).toLocaleString('ru-RU')
+      : (m.date || '');
+    const deleteArg = m.id ? `'${escH(String(m.id))}'` : (m._localIdx !== undefined ? m._localIdx : '');
+    return `<div class="order-card">
+      <div class="order-head">
+        <div>
+          <div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:16px;">${escH(m.name)}</div>
+          <div class="order-date">${escH(dateStr)}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteContact(${deleteArg})"><span class="icon icon-trash"></span></button>
+      </div>
+      <div class="order-body">
+        <div class="order-section">
+          <div class="order-label">Контакты</div>
+          <div class="order-value"><span class="icon icon-phone"></span> <a href="tel:${escH(m.phone)}" style="color:var(--green-dark);">${escH(m.phone)}</a></div>
+        </div>
+        <div class="order-section">
+          <div class="order-label">Сообщение</div>
+          <div class="order-value" style="white-space:pre-wrap;">${escH(m.message)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteContact(idOrIdx) {
+  if (!confirm('Удалить заявку?')) return;
+  if (typeof idOrIdx === 'string' && typeof window.supaDeleteContact === 'function') {
+    const r = await window.supaDeleteContact(idOrIdx);
+    if (!r.ok) { toast('Ошибка удаления'); return; }
+    _contactsCache = _contactsCache.filter(m => String(m.id) !== idOrIdx);
+  } else {
+    // localStorage fallback
+    const all = getContacts();
+    all.splice(idOrIdx, 1);
+    localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(all));
+    _contactsCache = all.slice().reverse().map((m, i) => ({ _localIdx: i, ...m }));
+  }
   renderContacts();
   updateCounts();
+  toast('✓ Заявка удалена');
+}
+
+async function clearContacts() {
+  if (!confirm('Удалить ВСЕ заявки?')) return;
+  if (typeof window.supaDeleteAllContacts === 'function') {
+    const r = await window.supaDeleteAllContacts();
+    if (!r.ok) { toast('Ошибка очистки'); return; }
+  }
+  localStorage.removeItem(STORAGE_CONTACTS);
+  _contactsCache = [];
+  renderContacts();
+  updateCounts();
+  toast('✓ Все заявки удалены');
 }
 
 // ===== АКЦИИ =====
@@ -1717,21 +2083,21 @@ function renderPromotions() {
   const promos = getPromos();
   const c = document.getElementById('promotionsList');
   if (promos.length === 0) {
-    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">🔥</div><div class="empty-title">Акций пока нет</div><div>Создайте первую акцию для привлечения клиентов</div></div>';
+    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><span class="icon icon-flame" style="color:#d0e8d8;"></span></div><div class="empty-title">Акций пока нет</div><div>Создайте первую акцию для привлечения клиентов</div></div>';
   } else {
     c.innerHTML = promos.map((p, i) => `
       <div class="promo-card">
-        <div class="promo-top ${p.color}">
-          ${p.disc ? `<div class="promo-disc" style="color:${p.color==='green'?'#1aab58':p.color==='accent'?'#FF6B35':'#8ab800'}">${p.disc}</div>` : ''}
-          ${p.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">${p.badge}</div>` : ''}
-          <div class="promo-name">${p.name}</div>
-          <div class="promo-desc">${p.desc}</div>
+        <div class="promo-top ${escH(p.color||'')}">
+          ${p.disc ? `<div class="promo-disc" style="color:${p.color==='green'?'#1aab58':p.color==='accent'?'#FF6B35':'#8ab800'}">${escH(p.disc)}</div>` : ''}
+          ${p.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">${escH(p.badge)}</div>` : ''}
+          <div class="promo-name">${escH(p.name)}</div>
+          <div class="promo-desc">${escH(p.desc)}</div>
         </div>
         <div class="promo-bottom">
-          <span class="promo-validity">${p.valid || 'Бессрочно'}</span>
+          <span class="promo-validity">${escH(p.valid || 'Бессрочно')}</span>
           <div class="promo-actions">
             <button class="btn btn-secondary btn-sm" onclick="editPromo(${i})">Изм.</button>
-            <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})">🗑️</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})"><span class="icon icon-trash"></span></button>
           </div>
         </div>
       </div>
@@ -1812,7 +2178,7 @@ const NEWS_COLOR_GRADIENT = {
   orange: 'linear-gradient(135deg,#FF6B35,#ff9a70)',
   blue: 'linear-gradient(135deg,#1e6fb8,#4a9ce0)'
 };
-const NEWS_COLOR_LABEL = { green: '🟢 Зелёный', orange: '🟠 Оранжевый', blue: '🔵 Синий' };
+const NEWS_COLOR_LABEL = { green: '● Зелёный', orange: '● Оранжевый', blue: '● Синий' };
 
 function escNews(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1821,7 +2187,7 @@ function renderNews() {
   const c = document.getElementById('newsList');
   if (!c) return;
   if (list.length === 0) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">Новостей пока нет</div><div>Создайте первое уведомление для клиентов</div></div>';
+    c.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-megaphone" style="color:#d0e8d8;"></span></div><div class="empty-title">Новостей пока нет</div><div>Создайте первое уведомление для клиентов</div></div>';
     return;
   }
   c.innerHTML = list.map(n => {
@@ -1840,7 +2206,7 @@ function renderNews() {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn ${n.active ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="toggleNewsActive(${n.id})">${n.active ? '⏸ Деактивировать' : '✓ Активировать'}</button>
           <button class="btn btn-secondary btn-sm" onclick="editNews(${n.id})">Изм.</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteNews(${n.id})">🗑️ Удалить</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteNews(${n.id})"><span class="icon icon-trash"></span> Удалить</button>
         </div>
       </div>
     </div>`;
@@ -1972,6 +2338,7 @@ const _openCats = new Set();
 let editingCategoryId = null;
 let editingSubcategoryParent = null;
 let editingSubcategoryId = null;
+const _catHomeState = {}; // id → boolean (show_on_homepage)
 
 function escH(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1988,11 +2355,13 @@ function renderCategoriesAdmin(){
   document.getElementById('cntCategories').textContent = cats.length;
   const host = document.getElementById('categoriesList');
   if (!cats.length) {
-    host.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">Нет категорий</div><div>Создайте первую категорию</div></div>';
+    host.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-folder" style="color:#d0e8d8;"></span></div><div class="empty-title">Нет категорий</div><div>Создайте первую категорию</div></div>';
     return;
   }
-  host.innerHTML = cats.map((c, idx) => {
+  const homeCount = Object.values(_catHomeState).filter(Boolean).length;
+  host.innerHTML = cats.map((c) => {
     const open = _openCats.has(c.id);
+    const onHome = !!_catHomeState[c.id];
     const subCounts = productCountBySubcategory(c.id);
     const subsHtml = (c.subcategories || []).map((s) => {
       const n = subCounts[s.id] || 0;
@@ -2014,6 +2383,11 @@ function renderCategoriesAdmin(){
     const headerThumb = c.img
       ? `<img src="${escH(c.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
       : (c.icon ? `<span class="icon icon-${escH(c.icon)}"></span>` : '<span class="icon icon-box"></span>');
+    const homeBtnLabel = onHome ? 'На главной ✓' : 'На главную';
+    const homeBtnStyle = onHome
+      ? 'background:var(--green);color:var(--dark);border-color:var(--green);'
+      : '';
+    const homeBtnDisabled = (!onHome && homeCount >= 8) ? 'disabled title="Максимум 8 категорий на главной"' : `title="${onHome ? 'Убрать с главной' : 'Показывать на главной'}"`;
     return `<div class="cat-admin-card" data-cat-id="${escH(c.id)}" data-open="${open}">
       <div class="cat-admin-head">
         <div class="cat-admin-order">
@@ -2026,6 +2400,7 @@ function renderCategoriesAdmin(){
           <div class="cat-admin-meta">id: ${escH(c.id)} · ${(c.subcategories||[]).length} подкат. · ${counts[c.id]||0} ${plural(counts[c.id]||0,['товар','товара','товаров'])}</div>
         </div>
         <div class="cat-admin-actions">
+          <button class="btn btn-secondary btn-sm" style="${homeBtnStyle}" ${homeBtnDisabled} onclick="event.stopPropagation();toggleCatHomepage('${escH(c.id)}')">${homeBtnLabel}</button>
           <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openSubcategoryModal('${escH(c.id)}')">+ Подкат.</button>
           <button class="btn-icon" onclick="event.stopPropagation();editCategory('${escH(c.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
           <button class="btn-icon danger" onclick="event.stopPropagation();deleteCategory('${escH(c.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
@@ -2035,6 +2410,53 @@ function renderCategoriesAdmin(){
       <div class="cat-admin-body"><div class="cat-admin-body-inner">${subsHtml}</div></div>
     </div>`;
   }).join('');
+}
+
+async function loadCatHomeStateAndRender(){
+  if (typeof window.supaGetAllCategoriesHP === 'function') {
+    try {
+      const data = await window.supaGetAllCategoriesHP();
+      if (data && data.length) {
+        data.forEach(r => { _catHomeState[r.id] = !!r.show_on_homepage; });
+      }
+    } catch(e) {}
+  }
+  renderCategoriesAdmin();
+}
+
+async function toggleCatHomepage(id){
+  const current = !!_catHomeState[id];
+  const newVal = !current;
+  if (newVal) {
+    const count = Object.values(_catHomeState).filter(Boolean).length;
+    if (count >= 8) { toast('Максимум 8 категорий на главной'); return; }
+  }
+  if (typeof window.supaUpsertCategory !== 'function') {
+    toast('Supabase не настроен — изменение не сохранится');
+    return;
+  }
+  const cat = getCategoryById(id);
+  if (!cat) { toast('Категория не найдена'); return; }
+  const counts = productCountByCategory();
+  // Upsert полную запись категории, чтобы строка точно существовала в Supabase
+  // и фильтр show_on_homepage=true на главной её нашёл.
+  const r = await window.supaUpsertCategory({
+    id: cat.id,
+    name: cat.name,
+    image_url: cat.img || null,
+    sort_order: cat.order || 0,
+    product_count: counts[cat.id] || 0,
+    show_on_homepage: newVal
+  });
+  if (!r.ok) {
+    const msg = (r.error && (r.error.message || r.error.hint || r.error.code)) || r.reason || 'неизвестная ошибка';
+    toast('Ошибка Supabase: ' + msg);
+    console.error('[admin] toggleCatHomepage', r.error || r.reason, r.error);
+    return;
+  }
+  _catHomeState[id] = newVal;
+  renderCategoriesAdmin();
+  toast(newVal ? '✓ Добавлено на главную' : '✓ Убрано с главной');
 }
 
 function toggleCatOpen(id){
@@ -2474,6 +2896,201 @@ function runCsvImport() {
   }
   processChunk(1);
 }
+
+// ===== BANNERS ADMIN =====
+var adminBanners = [];
+var editingBannerId = null;
+
+async function loadBannersAdmin() {
+  if (typeof supaGetAllBanners === 'function') {
+    var data = await supaGetAllBanners();
+    if (data) adminBanners = data;
+  }
+  renderBannersAdmin();
+  var cntEl = document.getElementById('cntBanners');
+  if (cntEl) cntEl.textContent = adminBanners.filter(function(b){ return b.is_active; }).length;
+}
+
+function renderBannersAdmin() {
+  var c = document.getElementById('bannersList');
+  if (!c) return;
+  if (!adminBanners.length) {
+    c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><span class="icon icon-image" style="color:#d0e8d8;font-size:56px;"></span></div><div class="empty-title">Баннеров пока нет</div><div>Добавьте первый баннер для карусели на главной</div></div>';
+    return;
+  }
+  c.innerHTML = adminBanners.map(function(b) {
+    var bgStyle = b.image_url
+      ? 'background-image:url(' + escH(b.image_url) + ');background-size:cover;background-position:center;'
+      : 'background:' + (b.bg_color || '#2ECC71') + ';';
+    var textColor = b.text_color || '#ffffff';
+    var overlayAlpha = b.image_url ? '0.4' : '0.1';
+    return '<div class="banner-admin-card" data-id="' + b.id + '">'
+      + '<div class="banner-admin-preview" style="' + bgStyle + '">'
+      + '<div class="banner-admin-preview-overlay" style="background:rgba(0,0,0,' + overlayAlpha + ');"></div>'
+      + '<div class="banner-admin-preview-inner" style="color:' + textColor + ';">'
+      + (b.title ? '<div class="ban-preview-title">' + escH(b.title) + '</div>' : '')
+      + (b.subtitle ? '<div class="ban-preview-sub">' + escH(b.subtitle) + '</div>' : '')
+      + '</div></div>'
+      + '<div class="banner-admin-footer">'
+      + '<div class="banner-admin-meta">'
+      + '<span class="banner-status ' + (b.is_active ? 'active' : 'inactive') + '">' + (b.is_active ? 'Активен' : 'Скрыт') + '</span>'
+      + '<span style="font-size:12px;color:#8aaa94;">№' + (b.sort_order != null ? b.sort_order : 0) + '</span>'
+      + '</div>'
+      + '<div class="banner-admin-actions">'
+      + '<button class="btn btn-secondary btn-sm" onclick="moveBannerOrder(' + b.id + ',-1)" title="Выше">↑</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="moveBannerOrder(' + b.id + ',1)" title="Ниже">↓</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="toggleBannerActive(' + b.id + ',' + (!b.is_active) + ')">' + (b.is_active ? 'Скрыть' : 'Показать') + '</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="editBannerAdmin(' + b.id + ')">Изм.</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="deleteBannerAdmin(' + b.id + ')"><span class="icon icon-trash"></span></button>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+function openBannerModal() {
+  editingBannerId = null;
+  document.getElementById('bannerModalTitle').textContent = 'Новый баннер';
+  document.getElementById('bannerTitle').value = '';
+  document.getElementById('bannerSubtitle').value = '';
+  document.getElementById('bannerImageUrl').value = '';
+  document.getElementById('bannerLinkUrl').value = '';
+  document.getElementById('bannerLinkText').value = 'Подробнее';
+  document.getElementById('bannerBgColor').value = '#2ECC71';
+  document.getElementById('bannerTextColor').value = '#ffffff';
+  document.getElementById('bannerSortOrder').value = adminBanners.length;
+  document.getElementById('bannerIsActive').checked = true;
+  updateBannerPreview();
+  document.getElementById('bannerModal').classList.add('open');
+}
+
+function editBannerAdmin(id) {
+  var b = adminBanners.find(function(x){ return x.id === id; });
+  if (!b) return;
+  editingBannerId = id;
+  document.getElementById('bannerModalTitle').textContent = 'Редактирование баннера';
+  document.getElementById('bannerTitle').value = b.title || '';
+  document.getElementById('bannerSubtitle').value = b.subtitle || '';
+  document.getElementById('bannerImageUrl').value = b.image_url || '';
+  document.getElementById('bannerLinkUrl').value = b.link_url || '';
+  document.getElementById('bannerLinkText').value = b.link_text || 'Подробнее';
+  document.getElementById('bannerBgColor').value = b.bg_color || '#2ECC71';
+  document.getElementById('bannerTextColor').value = b.text_color || '#ffffff';
+  document.getElementById('bannerSortOrder').value = b.sort_order != null ? b.sort_order : 0;
+  document.getElementById('bannerIsActive').checked = !!b.is_active;
+  updateBannerPreview();
+  document.getElementById('bannerModal').classList.add('open');
+}
+
+function closeBannerModal() {
+  document.getElementById('bannerModal').classList.remove('open');
+}
+
+function setBannerColor(hex) {
+  document.getElementById('bannerBgColor').value = hex;
+  updateBannerPreview();
+}
+
+function updateBannerPreview() {
+  var imgUrl = document.getElementById('bannerImageUrl').value.trim();
+  var bg = document.getElementById('bannerBgColor').value;
+  var textColor = document.getElementById('bannerTextColor').value;
+  var title = document.getElementById('bannerTitle').value || 'Заголовок';
+  var sub = document.getElementById('bannerSubtitle').value || 'Подзаголовок';
+  var card = document.getElementById('bannerPreviewCard');
+  var overlay = document.getElementById('bannerPreviewOverlay');
+  var inner = document.getElementById('bannerPreviewInner');
+  if (!card) return;
+  if (imgUrl) {
+    card.style.background = 'url(' + imgUrl + ') center/cover';
+    overlay.style.background = 'rgba(0,0,0,0.4)';
+  } else {
+    card.style.background = bg;
+    overlay.style.background = 'rgba(0,0,0,0.08)';
+  }
+  inner.style.color = textColor;
+  document.getElementById('bannerPreviewTitleEl').textContent = title;
+  document.getElementById('bannerPreviewTitleEl').style.color = textColor;
+  document.getElementById('bannerPreviewSubEl').textContent = sub;
+  document.getElementById('bannerPreviewSubEl').style.color = textColor;
+  var imgPreview = document.getElementById('bannerImgPreview');
+  if (imgPreview) {
+    imgPreview.innerHTML = imgUrl
+      ? '<img src="' + escH(imgUrl) + '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.outerHTML=\'<span class=\\\"icon icon-image\\\" style=\\\"color:#8aaa94;\\\"></span>\'">'
+      : '<span class="icon icon-image" style="color:#8aaa94;"></span>';
+  }
+}
+
+async function saveBanner() {
+  var title = document.getElementById('bannerTitle').value.trim();
+  var subtitle = document.getElementById('bannerSubtitle').value.trim();
+  var imageUrl = document.getElementById('bannerImageUrl').value.trim();
+  var linkUrl = document.getElementById('bannerLinkUrl').value.trim();
+  var linkText = document.getElementById('bannerLinkText').value.trim() || 'Подробнее';
+  var bgColor = document.getElementById('bannerBgColor').value;
+  var textColor = document.getElementById('bannerTextColor').value;
+  var sortOrder = parseInt(document.getElementById('bannerSortOrder').value) || 0;
+  var isActive = document.getElementById('bannerIsActive').checked;
+
+  if (!title && !imageUrl) {
+    alert('Добавьте заголовок или URL изображения');
+    return;
+  }
+
+  var banner = {
+    title: title || null,
+    subtitle: subtitle || null,
+    image_url: imageUrl || null,
+    link_url: linkUrl || null,
+    link_text: linkText,
+    bg_color: bgColor,
+    text_color: textColor,
+    sort_order: sortOrder,
+    is_active: isActive,
+  };
+  if (editingBannerId) banner.id = editingBannerId;
+
+  if (typeof supaUpsertBanner === 'function') {
+    var r = await supaUpsertBanner(banner);
+    if (!r.ok) { alert('Ошибка сохранения: ' + (r.error && r.error.message ? r.error.message : JSON.stringify(r.error))); return; }
+  }
+  closeBannerModal();
+  await loadBannersAdmin();
+  toast('✓ Баннер сохранён');
+}
+
+async function deleteBannerAdmin(id) {
+  if (!confirm('Удалить этот баннер?')) return;
+  if (typeof supaDeleteBanner === 'function') {
+    var r = await supaDeleteBanner(id);
+    if (!r.ok) { alert('Ошибка удаления'); return; }
+  }
+  await loadBannersAdmin();
+  toast('Баннер удалён');
+}
+
+async function toggleBannerActive(id, active) {
+  if (typeof supaUpsertBanner === 'function') {
+    await supaUpsertBanner({ id: id, is_active: active });
+  }
+  await loadBannersAdmin();
+}
+
+async function moveBannerOrder(id, dir) {
+  var idx = adminBanners.findIndex(function(b){ return b.id === id; });
+  if (idx < 0) return;
+  var newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= adminBanners.length) return;
+  var a = adminBanners[idx], b2 = adminBanners[newIdx];
+  var tmpOrder = a.sort_order != null ? a.sort_order : idx;
+  var b2Order = b2.sort_order != null ? b2.sort_order : newIdx;
+  if (typeof supaUpsertBanner === 'function') {
+    await Promise.all([
+      supaUpsertBanner({ id: a.id, sort_order: b2Order }),
+      supaUpsertBanner({ id: b2.id, sort_order: tmpOrder }),
+    ]);
+  }
+  await loadBannersAdmin();
+}
 </script>
+<div id="printSlip" style="display:none;"></div>
 </body>
 </html>

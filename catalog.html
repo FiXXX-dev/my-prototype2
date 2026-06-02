@@ -1,11 +1,23 @@
 <!DOCTYPE html>
+<!-- MOBILE: Все новые элементы ОБЯЗАНЫ иметь @media (max-width: 600px) стили -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Каталог товаров Клевер: одноразовая посуда, бытовая химия, бумажная продукция, средства защиты, упаковка, хозтовары. Оптовые цены для ресторанов и кафе.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cloverspb.ru/catalog.html">
+<meta property="og:title" content="Каталог — Клевер">
+<meta property="og:description" content="Каталог товаров Клевер: одноразовая посуда, бытовая химия, бумажная продукция, средства защиты, упаковка, хозтовары. Оптовые цены для ресторанов и кафе.">
+<meta property="og:image" content="https://cloverspb.ru/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Каталог — Клевер">
+<meta name="twitter:description" content="Каталог товаров Клевер: одноразовая посуда, бытовая химия, бумажная продукция, средства защиты, упаковка, хозтовары. Оптовые цены для ресторанов и кафе.">
 <title>Каталог — КЛЕВЕР</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="icons.css">
+<link rel="preconnect" href="https://fquhoxxcucgesxrexsjn.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
 
@@ -236,9 +248,9 @@
 .cart-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 
-<script src="categories.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
+<script defer src="categories.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="supabase-client.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -279,7 +291,7 @@
 @keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
 </style>
 <div id="klever-preloader">
-  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Clever</span></div>
+  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Клевер</span></div>
   <div class="pre-bar"></div>
 </div>
 <script id="preloader-script">
@@ -299,13 +311,13 @@ setTimeout(function(){
 }, 5000);
 </script>
 <header>
-  <a href="index.html" class="logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></a>
+  <a href="index.html" class="logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></a>
   <nav>
     <a href="catalog.html" class="active" data-i18n="nav.catalog">Каталог</a>
     <a href="sales.html" data-i18n="nav.sales">Акции</a><a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a>
     <a href="delivery.html" data-i18n="nav.delivery">Доставка</a><a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone">📞 8 (812) 922-86-77</a>
+  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
     <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a>
     <button class="cart-btn" onclick="openCart()">
       <span class="icon icon-cart"></span>
@@ -329,19 +341,19 @@ setTimeout(function(){
 
 <div class="catalog-wrap" id="catalogWrap">
   <button class="mobile-filter-toggle" id="mobileFilterToggle" onclick="this.classList.toggle('open');document.querySelector('.sidebar').classList.toggle('mobile-open');" style="margin:14px 20px 0;width:calc(100% - 40px);">
-    <span data-i18n="catalog.filter_toggle">🔍 Фильтры и категории</span> <span class="arrow">▼</span>
+    <span data-i18n="catalog.filter_toggle"><span class="icon icon-search" style="margin-right:6px;"></span>Фильтры и категории</span> <span class="arrow">▼</span>
   </button>
   <aside class="sidebar">
     <div class="sidebar-title" data-i18n="catalog.sidebar_categories">Категории</div>
     <ul class="cat-list" id="sidebarCats">
-      <li><a href="javascript:void(0)" class="active" onclick="filterCat(event,'все')"><span data-i18n="cat.all_icon">🍀 Все товары</span> <span class="cat-count-badge" id="cnt-все">272</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'бумажная')"><span data-i18n="cat.paper_icon">🧻 Бумажная продукция</span> <span class="cat-count-badge" id="cnt-бумажная">26</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'одноразовая')"><span data-i18n="cat.disposable_icon">🥡 Одноразовая посуда</span> <span class="cat-count-badge" id="cnt-одноразовая">125</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'бытовая')"><span data-i18n="cat.chemistry_icon">🧴 Бытовая химия</span> <span class="cat-count-badge" id="cnt-бытовая">33</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'защита')"><span data-i18n="cat.protection_icon">🧤 Средства защиты</span> <span class="cat-count-badge" id="cnt-защита">27</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'упаковка')"><span data-i18n="cat.packaging_icon">📦 Упаковка</span> <span class="cat-count-badge" id="cnt-упаковка">27</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'хозтовары')"><span data-i18n="cat.household_icon">🧹 Хозтовары</span> <span class="cat-count-badge" id="cnt-хозтовары">26</span></a></li>
-      <li><a href="javascript:void(0)" onclick="filterCat(event,'канцелярия')"><span data-i18n="cat.stationery_icon">📎 Канцелярия</span> <span class="cat-count-badge" id="cnt-канцелярия">8</span></a></li>
+      <li><a href="javascript:void(0)" class="active" onclick="filterCat(event,'все')"><span data-i18n="cat.all_icon"><span class="icon icon-clover" style="margin-right:6px;vertical-align:-0.15em;"></span>Все товары</span> <span class="cat-count-badge" id="cnt-все">272</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'бумажная')"><span data-i18n="cat.paper_icon"><span class="icon icon-paper-roll" style="margin-right:6px;vertical-align:-0.15em;"></span>Бумажная продукция</span> <span class="cat-count-badge" id="cnt-бумажная">26</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'одноразовая')"><span data-i18n="cat.disposable_icon"><span class="icon icon-takeaway" style="margin-right:6px;vertical-align:-0.15em;"></span>Одноразовая посуда</span> <span class="cat-count-badge" id="cnt-одноразовая">125</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'бытовая')"><span data-i18n="cat.chemistry_icon"><span class="icon icon-spray" style="margin-right:6px;vertical-align:-0.15em;"></span>Бытовая химия</span> <span class="cat-count-badge" id="cnt-бытовая">33</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'защита')"><span data-i18n="cat.protection_icon"><span class="icon icon-shield" style="margin-right:6px;vertical-align:-0.15em;"></span>Средства защиты</span> <span class="cat-count-badge" id="cnt-защита">27</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'упаковка')"><span data-i18n="cat.packaging_icon"><span class="icon icon-box" style="margin-right:6px;vertical-align:-0.15em;"></span>Упаковка</span> <span class="cat-count-badge" id="cnt-упаковка">27</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'хозтовары')"><span data-i18n="cat.household_icon"><span class="icon icon-broom" style="margin-right:6px;vertical-align:-0.15em;"></span>Хозтовары</span> <span class="cat-count-badge" id="cnt-хозтовары">26</span></a></li>
+      <li><a href="javascript:void(0)" onclick="filterCat(event,'канцелярия')"><span data-i18n="cat.stationery_icon"><span class="icon icon-paperclip" style="margin-right:6px;vertical-align:-0.15em;"></span>Канцелярия</span> <span class="cat-count-badge" id="cnt-канцелярия">8</span></a></li>
     </ul>
     <div class="filter-section">
       <span class="filter-label" data-i18n="catalog.filter_price">Цена, ₽</span>
@@ -372,21 +384,21 @@ setTimeout(function(){
 
     <div class="search-wrap">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon icon icon-search" style="color:#8aaa94;font-size:18px;margin-right:8px;"></span>
         <input type="text" id="searchInput" class="search-input" placeholder="Поиск по названию или артикулу..." oninput="applyFilters()">
-        <button class="search-clear" id="clearBtn" onclick="clearSearch()" style="display:none;">✕</button>
+        <button class="search-clear" id="clearBtn" onclick="clearSearch()" style="display:none;"><span class="icon icon-close"></span></button>
       </div>
       <div class="search-result-count" id="resultCount"></div>
     </div>
 
     <div class="cat-chips">
       <span class="chip active" onclick="filterCat(event,'все')" data-i18n="cat.all_short">Все</span>
-      <span class="chip" onclick="filterCat(event,'бумажная')" data-i18n="cat.paper_short">🧻 Бумага</span>
-      <span class="chip" onclick="filterCat(event,'одноразовая')" data-i18n="cat.disposable_short">🥡 Посуда</span>
-      <span class="chip" onclick="filterCat(event,'бытовая')" data-i18n="cat.chemistry_short">🧴 Химия</span>
-      <span class="chip" onclick="filterCat(event,'защита')" data-i18n="cat.protection_short">🧤 Защита</span>
-      <span class="chip" onclick="filterCat(event,'упаковка')" data-i18n="cat.packaging_short">📦 Упаковка</span>
-      <span class="chip" onclick="filterCat(event,'хозтовары')" data-i18n="cat.household_short">🧹 Хозтовары</span>
+      <span class="chip" onclick="filterCat(event,'бумажная')" data-i18n="cat.paper_short"><span class="icon icon-paper-roll" style="margin-right:4px;vertical-align:-0.15em;"></span>Бумага</span>
+      <span class="chip" onclick="filterCat(event,'одноразовая')" data-i18n="cat.disposable_short"><span class="icon icon-takeaway" style="margin-right:4px;vertical-align:-0.15em;"></span>Посуда</span>
+      <span class="chip" onclick="filterCat(event,'бытовая')" data-i18n="cat.chemistry_short"><span class="icon icon-spray" style="margin-right:4px;vertical-align:-0.15em;"></span>Химия</span>
+      <span class="chip" onclick="filterCat(event,'защита')" data-i18n="cat.protection_short"><span class="icon icon-shield" style="margin-right:4px;vertical-align:-0.15em;"></span>Защита</span>
+      <span class="chip" onclick="filterCat(event,'упаковка')" data-i18n="cat.packaging_short"><span class="icon icon-box" style="margin-right:6px;vertical-align:-0.15em;"></span>Упаковка</span>
+      <span class="chip" onclick="filterCat(event,'хозтовары')" data-i18n="cat.household_short"><span class="icon icon-broom" style="margin-right:6px;vertical-align:-0.15em;"></span>Хозтовары</span>
     </div>
 
     <div class="prod-grid" id="prodGrid"></div>
@@ -395,8 +407,8 @@ setTimeout(function(){
 </div>
 
 <footer>
-  <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Clever</span></div>
-  <p>© 2025 ООО «Клевер». Все права защищены. <a href="admin.html" class="admin-link" data-i18n="footer.admin" style="color:rgba(255,255,255,0.15);font-size:11px;text-decoration:none;margin-left:8px;">⚙️ Админка</a></p>
+  <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></div>
+  <p>© 2025 ООО «Клевер». Все права защищены.</p>
   <div class="footer-links">
     <a href="index.html" data-i18n="footer.home_link">Главная</a><a href="delivery.html" data-i18n="footer.delivery">Доставка</a><a href="contacts.html" data-i18n="nav.contacts">Контакты</a>
   </div>
@@ -679,19 +691,19 @@ const DEFAULT_PRODUCTS=[
 {name:'Папка-скоросшиватель 10 шт',sku:'KANC08',price:125,cat:'Канцелярия',img:''}
 ];
 
-// Загружаем товары: сначала из localStorage (если админ менял), иначе из дефолтного списка
-let ALL_PRODUCTS;
-try {
-  const stored = localStorage.getItem('klever_products_v2');
-  const parsed = stored ? JSON.parse(stored) : null;
-  if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-    ALL_PRODUCTS = parsed;
-  } else {
-    ALL_PRODUCTS = DEFAULT_PRODUCTS;
-    localStorage.setItem('klever_products_v2', JSON.stringify(DEFAULT_PRODUCTS));
-  }
-} catch(e) {
-  ALL_PRODUCTS = DEFAULT_PRODUCTS;
+// Загружаем товары: сначала из Supabase, иначе localStorage, иначе дефолт
+let ALL_PRODUCTS = [];
+
+function normalizeProd(p) {
+  return {
+    ...p,
+    categoryId: p.category_id || p.categoryId || '',
+    isHit: !!( p.is_hit || p.isHit ),
+    img: p.img || '',
+    badge: p.badge || undefined,
+    desc: p.description || p.desc || '',
+    emoji: p.emoji || '📦',
+  };
 }
 
 
@@ -699,7 +711,7 @@ const PER_PAGE = 9;
 let currentCat = 'все';
 let currentSub = null;
 let currentPage = 1;
-let filteredProducts = [...ALL_PRODUCTS];
+let filteredProducts = [];
 
 function img(url) {
   return url
@@ -926,8 +938,12 @@ function toggleFav(sku, btn){
   });
   // Persist to Supabase if configured
   if (window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    const fn = wasOn ? window.supaRemoveFavorite : window.supaAddFavorite;
-    if (typeof fn === 'function') fn(sku).catch(()=>{});
+    if (!wasOn && typeof window.supaAddFavorite === 'function') {
+      const p = ALL_PRODUCTS.find(x => x.sku === sku);
+      window.supaAddFavorite(p ? {sku: p.sku, name: p.name, price: p.price, img: p.img||''} : sku).catch(()=>{});
+    } else if (wasOn && typeof window.supaRemoveFavorite === 'function') {
+      window.supaRemoveFavorite(sku).catch(()=>{});
+    }
   }
 }
 
@@ -1117,7 +1133,7 @@ function applyCatalogForCategory(catId, subId) {
   applyFilters();
 }
 
-(function initFromUrl() {
+function initFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const cat = params.get('cat');
   const sub = params.get('sub');
@@ -1163,9 +1179,68 @@ function applyCatalogForCategory(catId, subId) {
   // Fallback to Mode A
   hbrowseShow();
   renderCategoryTiles();
-})();
+}
+
+function _applyCatalogProducts(arr) {
+  ALL_PRODUCTS = arr;
+  filteredProducts = [...ALL_PRODUCTS];
+  initFromUrl();
+}
+
+// Pull fresh products from Supabase and cache them for the NEXT load.
+// We don't re-render here (to avoid resetting the user's filters/scroll);
+// the freshest data is shown on the next visit/navigation.
+function _refreshCatalogInBackground() {
+  if (typeof window.supaGetProducts !== 'function') return;
+  window.supaGetProducts().then(function(data) {
+    if (data && data.length) {
+      try { localStorage.setItem('klever_products_v2', JSON.stringify(data.map(normalizeProd))); } catch(e) {}
+    }
+  }).catch(function(){});
+}
+
+function loadAndInitCatalog() {
+  // Instant render: cached products if present, otherwise the bundled defaults.
+  // No network wait — the catalog appears immediately on every visit.
+  let cached = null;
+  try {
+    const stored = localStorage.getItem('klever_products_v2');
+    const parsed = stored ? JSON.parse(stored) : null;
+    cached = (parsed && parsed.length) ? parsed : null;
+  } catch(e) {}
+  _applyCatalogProducts(cached || DEFAULT_PRODUCTS);
+  // Quietly sync the latest data from Supabase for the next load.
+  _refreshCatalogInBackground();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadAndInitCatalog);
+} else {
+  loadAndInitCatalog();
+}
 
 // Re-render dynamic catalog content when the language changes.
+// Sync favorites from Supabase on page load so hearts reflect the real state.
+(function _syncFavoritesFromSupabase(){
+  if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
+  if (typeof supaListFavorites !== 'function') return;
+  supaListFavorites().then(favs => {
+    if (!Array.isArray(favs)) return;
+    const id = localStorage.getItem('klever_current_user'); if (!id) return;
+    const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
+    const i = users.findIndex(u => u.id === id); if (i < 0) return;
+    users[i].favorites = favs;
+    localStorage.setItem('klever_users', JSON.stringify(users));
+    // Re-render all visible fav buttons to reflect the loaded state
+    document.querySelectorAll('.fav-btn[data-sku]').forEach(btn => {
+      const on = favs.includes(btn.dataset.sku);
+      btn.classList.toggle('active', on);
+      const svg = btn.querySelector('svg');
+      if (svg) { svg.setAttribute('fill', on ? '#FF3B6B' : 'none'); svg.setAttribute('stroke', on ? '#FF3B6B' : '#0f1a14'); }
+    });
+  }).catch(()=>{});
+})();
+
 // translations.js fires a custom event `kleverLangChange` after applyLanguage.
 window.addEventListener('kleverLangChange', () => {
   try {
@@ -1187,7 +1262,7 @@ window.addEventListener('kleverLangChange', () => {
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-panel" id="cartPanel">
   <div class="cart-header">
-    <h3 data-i18n="cart.title">🛒 Корзина</h3>
+    <h3 data-i18n="cart.title"><span class="icon icon-cart"></span> Корзина</h3>
     <button class="cart-close" onclick="closeCart()" aria-label="Close" data-i18n-aria="nav.menu_close"><span class="icon icon-close"></span></button>
   </div>
   <div class="cart-items" id="cartItems"></div>
@@ -1217,7 +1292,7 @@ function closeCart(){document.getElementById('cartOverlay').classList.remove('op
 function getProdImg(sku,fallback){try{const arr=JSON.parse(localStorage.getItem('klever_products_v2'))||[];const p=arr.find(x=>x.sku===sku);return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
 function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(i.price*i.qty)+' ₽</div></div>';}).join('');total.textContent=getCartTotal()+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
-function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#2ECC71;font-weight:700;font-size:18px;">✓</span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span class="icon icon-check" style="color:#2ECC71;font-size:18px;"></span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded',updateCartBadge);
 </script>
 
