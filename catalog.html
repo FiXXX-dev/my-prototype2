@@ -279,37 +279,8 @@
     <circle cx="16" cy="16" r="1.8" fill="#1a8f4a"/>
   </symbol>
 </svg>
-<style id="preloader-style">
-#klever-preloader{position:fixed;inset:0;background:#0f1a14;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
-#klever-preloader.hidden{opacity:0;pointer-events:none;}
-#klever-preloader .pre-logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:42px;color:white;letter-spacing:-1.5px;display:flex;align-items:center;gap:14px;margin-bottom:32px;}
-#klever-preloader .pre-logo .leaf{font-size:48px;animation:preSpin 1.5s ease-in-out infinite;display:inline-block;}
-#klever-preloader .pre-logo span{color:#C8F135;}
-#klever-preloader .pre-bar{width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
-#klever-preloader .pre-bar::after{content:'';display:block;width:40%;height:100%;background:linear-gradient(90deg, transparent, #2ECC71, transparent);animation:preLoad 1.2s ease-in-out infinite;}
-@keyframes preSpin{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
-@keyframes preLoad{0%{transform:translateX(-100%);}100%{transform:translateX(350%);}}
-</style>
-<div id="klever-preloader">
-  <div class="pre-logo"><span class="leaf"><svg class="logo-icon" width="56" height="56" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg></span> <span>Клевер</span></div>
-  <div class="pre-bar"></div>
-</div>
-<script id="preloader-script">
-window.addEventListener('load', function(){
-  setTimeout(function(){
-    var p = document.getElementById('klever-preloader');
-    if (p) {
-      p.classList.add('hidden');
-      setTimeout(function(){ p.remove(); }, 400);
-    }
-  }, 200);
-});
-// Fallback - если что-то застряло, убираем через 5 секунд
-setTimeout(function(){
-  var p = document.getElementById('klever-preloader');
-  if (p) { p.classList.add('hidden'); setTimeout(function(){ p.remove(); }, 400); }
-}, 5000);
-</script>
+<div id="page-loader" style="position:fixed;top:0;left:0;width:0;height:3px;background:linear-gradient(90deg,#2ECC71,#C8F135);z-index:99999;transition:width 0.3s ease;"></div>
+<script>(function(){var l=document.getElementById('page-loader');if(!l)return;l.style.width='30%';setTimeout(function(){l.style.width='60%'},100);setTimeout(function(){l.style.width='85%'},300);window.addEventListener('load',function(){l.style.width='100%';setTimeout(function(){l.style.opacity='0';setTimeout(function(){l.remove()},300)},200)})})();</script>
 <header>
   <a href="index.html" class="logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></a>
   <nav>
