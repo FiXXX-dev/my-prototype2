@@ -799,5 +799,29 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
+  // ===== storage: image uploads (bucket: product-images) =====
+  // Uploads a File/Blob and returns its public URL. Used by the admin
+  // product/category forms so the owner can attach photos without hosting them.
+  window.supaUploadImage = async function(file, opts){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      if (!file) return { ok:false, reason:'no_file' };
+      const bucket = (opts && opts.bucket) || 'product-images';
+      // Build a safe, unique filename: <prefix><timestamp>-<rand>.<ext>
+      const extMatch = (file.name || '').match(/\.([a-z0-9]+)$/i);
+      const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
+      const prefix = (opts && opts.prefix) ? String(opts.prefix).replace(/[^a-z0-9_-]/gi,'') + '-' : '';
+      const path = prefix + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
+      const { error } = await sb.storage.from(bucket).upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'image/jpeg',
+      });
+      if (error) { console.error('[supabase] upload image', error); return { ok:false, error }; }
+      const { data } = sb.storage.from(bucket).getPublicUrl(path);
+      return { ok:true, url: data && data.publicUrl, path: path };
+    } catch(e) { console.error('[supabase] upload image exception', e); return { ok:false, error:e }; }
+  };
+
   window.kleverSupabase = { isConfigured, getClient };
 })();

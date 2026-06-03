@@ -736,9 +736,16 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </select>
       </div>
       <div class="form-grp full">
-        <label>Ссылка на фото (URL)</label>
-        <input type="url" id="prodImg" placeholder="https://example.com/image.jpg">
-        <small style="color:#8aaa94;font-size:12px;">Если оставить пустым — будет показываться эмодзи</small>
+        <label>Фото товара</label>
+        <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+          <div id="prodImgPreview" style="width:80px;height:80px;border-radius:12px;background:#f2f7f4;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0;border:1px solid #e0ebe5;">📦</div>
+          <div style="flex:1;min-width:200px;">
+            <input type="file" id="prodImgFile" accept="image/*" style="display:none;" onchange="uploadProductImage(this)">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('prodImgFile').click()" id="prodImgUploadBtn"><span class="icon icon-upload"></span> Загрузить фото</button>
+            <input type="url" id="prodImg" placeholder="или вставьте ссылку https://..." style="margin-top:8px;" oninput="refreshProdImgPreview()">
+            <small style="color:#8aaa94;font-size:12px;display:block;margin-top:4px;">Загрузите файл или вставьте ссылку. Пусто — будет эмодзи 📦</small>
+          </div>
+        </div>
       </div>
       <div class="form-grp full">
         <label>Описание</label>
@@ -857,10 +864,14 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <div class="icon-picker" id="catIconPicker"></div>
       </div>
       <div class="form-grp full">
-        <label>Ссылка на фото (URL, опционально)</label>
+        <label>Фото категории (опционально)</label>
         <div style="display:flex;gap:12px;align-items:center;">
-          <input type="url" id="catImg" placeholder="https://example.com/photo.jpg" oninput="updateImgPreview('catImg','catImgPreview')" style="flex:1;">
           <div class="img-preview" id="catImgPreview"><span class="icon icon-box"></span></div>
+          <div style="flex:1;">
+            <input type="file" id="catImgFile" accept="image/*" style="display:none;" onchange="uploadCategoryImage(this)">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('catImgFile').click()" id="catImgUploadBtn"><span class="icon icon-upload"></span> Загрузить фото</button>
+            <input type="url" id="catImg" placeholder="или вставьте ссылку https://..." oninput="updateImgPreview('catImg','catImgPreview')" style="margin-top:8px;width:100%;">
+          </div>
         </div>
         <small style="color:#8aaa94;font-size:12px;">Если пусто — карточка будет с градиентом и иконкой</small>
       </div>
@@ -1604,8 +1615,48 @@ function openProductModal() {
   document.getElementById('prodDesc').value = '';
   if (typeof onProductCatChange === 'function') onProductCatChange();
   document.getElementById('prodSubcat').value = '';
+  refreshProdImgPreview();
   document.getElementById('productModal').classList.add('open');
   document.getElementById('prodName').focus();
+}
+
+// Update the little image preview box from the current URL field.
+function refreshProdImgPreview() {
+  const url = (document.getElementById('prodImg').value || '').trim();
+  const box = document.getElementById('prodImgPreview');
+  if (!box) return;
+  box.innerHTML = url
+    ? '<img src="' + escH(url) + '" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentNode.textContent=\'📦\'">'
+    : '📦';
+}
+
+// Upload a chosen file to Supabase Storage and put the public URL into the field.
+async function uploadProductImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof window.supaUploadImage !== 'function') {
+    toast('Загрузка недоступна — Supabase не подключён');
+    return;
+  }
+  const btn = document.getElementById('prodImgUploadBtn');
+  const oldHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Загрузка...'; }
+  try {
+    const sku = (document.getElementById('prodSku').value || '').trim();
+    const res = await window.supaUploadImage(file, { prefix: sku || 'prod' });
+    if (res.ok && res.url) {
+      document.getElementById('prodImg').value = res.url;
+      refreshProdImgPreview();
+      toast('✓ Фото загружено');
+    } else {
+      toast('Ошибка загрузки: ' + ((res.error && res.error.message) || res.reason || 'неизвестна'));
+    }
+  } catch(e) {
+    toast('Ошибка загрузки фото');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+    input.value = '';
+  }
 }
 
 function editProduct(sku) {
@@ -1622,6 +1673,7 @@ function editProduct(sku) {
   document.getElementById('prodDesc').value = p.desc || '';
   if (typeof onProductCatChange === 'function') onProductCatChange();
   document.getElementById('prodSubcat').value = p.subcategory || '';
+  refreshProdImgPreview();
   document.getElementById('productModal').classList.add('open');
 }
 
@@ -2496,6 +2548,34 @@ function editCategory(id){
   document.getElementById('categoryModal').classList.add('open');
 }
 function closeCategoryModal(){ document.getElementById('categoryModal').classList.remove('open'); }
+async function uploadCategoryImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof window.supaUploadImage !== 'function') {
+    toast('Загрузка недоступна — Supabase не подключён');
+    return;
+  }
+  const btn = document.getElementById('catImgUploadBtn');
+  const oldHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Загрузка...'; }
+  try {
+    const catId = (document.getElementById('catId').value || '').trim();
+    const res = await window.supaUploadImage(file, { prefix: 'cat-' + (catId || 'x') });
+    if (res.ok && res.url) {
+      document.getElementById('catImg').value = res.url;
+      updateImgPreview('catImg','catImgPreview');
+      toast('✓ Фото загружено');
+    } else {
+      toast('Ошибка загрузки: ' + ((res.error && res.error.message) || res.reason || 'неизвестна'));
+    }
+  } catch(e) {
+    toast('Ошибка загрузки фото');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+    input.value = '';
+  }
+}
+
 function saveCategory(){
   const name = document.getElementById('catName').value.trim();
   const id = document.getElementById('catId').value.trim();
@@ -2508,7 +2588,6 @@ function saveCategory(){
   let cats = getCategories();
   if (editingCategoryId) {
     cats = cats.map(c => c.id === editingCategoryId ? { ...c, name, id, icon, img, order } : c);
-    // If id changed — also update existing products referring to old id
     if (editingCategoryId !== id) {
       let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
       let touched = 0;
@@ -2523,6 +2602,20 @@ function saveCategory(){
   closeCategoryModal();
   renderCategoriesAdmin();
   toast(editingCategoryId ? '✓ Категория обновлена' : '✓ Категория создана');
+
+  // Sync to Supabase so all visitors see the updated name/image/order
+  if (typeof window.supaUpsertCategory === 'function') {
+    const productCount = cats.find(c => c.id === id)?.subcategories?.reduce((s, sc) => s + (sc.count || 0), 0) || 0;
+    window.supaUpsertCategory({
+      id: id,
+      name: name,
+      image_url: img || null,
+      sort_order: order,
+      product_count: productCount,
+      show_on_homepage: !!_catHomeState[id],
+      color: '#2ECC71',
+    }).catch(e => console.error('[admin] saveCategory supabase', e));
+  }
 }
 function deleteCategory(id){
   const c = getCategoryById(id); if (!c) return;

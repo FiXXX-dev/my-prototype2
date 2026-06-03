@@ -1184,18 +1184,22 @@ function initFromUrl() {
 function _applyCatalogProducts(arr) {
   ALL_PRODUCTS = arr;
   filteredProducts = [...ALL_PRODUCTS];
+  // Sync to localStorage so productCountByCategory/productCountBySubcategory
+  // (which read from LS) show correct counts even on first incognito visit.
+  try { localStorage.setItem('klever_products_v2', JSON.stringify(arr)); } catch(e) {}
   initFromUrl();
 }
 
-// Pull fresh products from Supabase and cache them for the NEXT load.
-// We don't re-render here (to avoid resetting the user's filters/scroll);
-// the freshest data is shown on the next visit/navigation.
+// Pull fresh products from Supabase and re-render if data differs from what's shown.
+// initFromUrl() reads URL params so the current category/subcategory filter is restored.
 function _refreshCatalogInBackground() {
   if (typeof window.supaGetProducts !== 'function') return;
   window.supaGetProducts().then(function(data) {
-    if (data && data.length) {
-      try { localStorage.setItem('klever_products_v2', JSON.stringify(data.map(normalizeProd))); } catch(e) {}
-    }
+    if (!data || !data.length) return;
+    const fresh = data.map(normalizeProd);
+    // Always apply fresh data: updates images, prices, names.
+    // initFromUrl() inside _applyCatalogProducts restores the active URL filter.
+    _applyCatalogProducts(fresh);
   }).catch(function(){});
 }
 
