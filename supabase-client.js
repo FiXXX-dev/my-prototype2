@@ -805,7 +805,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const sb = getClient(); if (!sb) return null;
     try {
       const { data, error } = await sb.from('products').select('*')
-        .eq('is_active', true)
+        .or('is_active.eq.true,is_active.is.null')
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true });
       if (error) { console.error('[supabase] get products', error); return null; }
@@ -826,7 +826,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const sb = getClient(); if (!sb) return null;
     try {
       const { data, error } = await sb.from('products').select('*')
-        .eq('is_active', true).eq('is_hit', true)
+        .or('is_active.eq.true,is_active.is.null').eq('is_hit', true)
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true });
       if (error) { console.error('[supabase] get hits', error); return null; }
