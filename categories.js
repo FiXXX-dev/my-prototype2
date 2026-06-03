@@ -110,8 +110,18 @@ const KLEVER_LEGACY_CAT_TO_ID = {
   'Канцелярия': 'stationery',
 };
 
-// ---------- localStorage helpers ----------
+// ---------- category tree source ----------
+// Единый источник дерева категорий — Supabase (через data-loader.js,
+// window.getCategoryTreeSync). Пока оно не загрузилось (или Supabase
+// недоступен) — мягкий откат на localStorage, затем на DEFAULT_CATEGORIES.
+// Так ничего не ломается до того, как БД наполнена.
 function getCategories() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.getCategoryTreeSync === 'function') {
+      const tree = window.getCategoryTreeSync();
+      if (Array.isArray(tree) && tree.length) return tree;
+    }
+  } catch (e) {}
   try {
     const raw = localStorage.getItem(KLEVER_CATEGORIES_KEY);
     if (!raw) {

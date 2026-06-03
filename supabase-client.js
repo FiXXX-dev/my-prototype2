@@ -672,6 +672,76 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
+  window.supaDeleteCategory = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('categories').delete().eq('id', String(id));
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== subcategories (table: public.subcategories, PK (category_id, id)) =====
+  // Подкатегории дерева каталога. Привязка товара к подкатегории по-прежнему
+  // вычисляется на клиенте (classifyProduct) — здесь хранятся только определения
+  // (имя/порядок/картинка), чтобы их можно было редактировать в админке и видеть
+  // на всех устройствах.
+  window.supaGetSubcategories = async function(){
+    const sb = getClient(); if (!sb) return null;
+    try {
+      const { data, error } = await sb.from('subcategories').select('*')
+        .order('category_id', { ascending: true })
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) { console.error('[supabase] get subcategories', error); return null; }
+      return data || [];
+    } catch(e) { console.error('[supabase] get subcategories exception', e); return null; }
+  };
+
+  window.supaUpsertSubcategory = async function(sub){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const row = {
+        category_id: sub.category_id,
+        id: sub.id,
+        name: sub.name,
+        image_url: sub.image_url || null,
+        sort_order: sub.sort_order != null ? sub.sort_order : 0,
+      };
+      const { data, error } = await sb.from('subcategories').upsert([row], { onConflict: 'category_id,id' }).select();
+      return error ? { ok:false, error } : { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteSubcategory = async function(categoryId, id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('subcategories').delete()
+        .match({ category_id: String(categoryId), id: String(id) });
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // Bulk upsert subcategories (used by the admin "sync tree to Supabase" seed).
+  window.supaBulkUpsertSubcategories = async function(subs){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const rows = (subs || []).map(s => ({
+        category_id: s.category_id,
+        id: s.id,
+        name: s.name,
+        image_url: s.image_url || null,
+        sort_order: s.sort_order != null ? s.sort_order : 0,
+      }));
+      if (!rows.length) return { ok:true };
+      const CHUNK = 50;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const { error } = await sb.from('subcategories').upsert(rows.slice(i, i + CHUNK), { onConflict: 'category_id,id' });
+        if (error) { console.error('[supabase] bulk upsert subcategories', error); return { ok:false, error }; }
+      }
+      return { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
   window.supaInsertContact = async function(contact){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
