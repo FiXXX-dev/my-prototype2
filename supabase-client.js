@@ -60,21 +60,31 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     return _client;
   }
 
-  // Быстрая диагностика связи из консоли браузера: await window.supaPing()
-  // Возвращает { ok, status?, count?, error? }. Если ok:false с сетевой
-  // ошибкой (TypeError / Failed to fetch / ERR_CONNECTION_RESET) — почти
-  // наверняка проект Supabase на паузе (free tier) → восстановите его в дашборде.
+  // ─── _pgGet: простой GET без CORS preflight ──────────────────────────────
+  // Supabase JS SDK добавляет заголовки apikey / Authorization / x-client-info,
+  // из-за которых браузер отправляет OPTIONS preflight. В сетях с DPI (ТСПУ РФ)
+  // preflight к *.supabase.co блокируется → ERR_CONNECTION_RESET.
+  // Решение: apikey передаём query-параметром (так же, как в адресной строке),
+  // без кастомных заголовков — preflight не нужен, запрос «простой».
+  async function _pgGet(table, qp) {
+    if (!isConfigured()) return null;
+    const url = new URL(SUPABASE_URL + '/rest/v1/' + table);
+    url.searchParams.set('apikey', SUPABASE_ANON_KEY);
+    Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
+    const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+    if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
+    return resp.json();
+  }
+
+  // Быстрая диагностика: await window.supaPing()
   window.supaPing = async function(){
-    const sb = getClient();
-    if (!sb) return { ok:false, error:'client not configured (getClient вернул null)' };
+    if (!isConfigured()) return { ok:false, error:'не настроен' };
     try {
-      const { data, error, count } = await sb
-        .from('products').select('sku', { count:'exact', head:true });
-      if (error) return { ok:false, error: error.message || error };
-      return { ok:true, count: count != null ? count : (data ? data.length : 0) };
+      const data = await _pgGet('products', { select: 'sku', limit: '1' });
+      return { ok:true, count: Array.isArray(data) ? data.length : 0 };
     } catch(e) {
       return { ok:false, error: (e && e.message) || String(e),
-               hint:'сетевой сброс → вероятно проект Supabase на паузе' };
+               hint:'ERR_CONNECTION_RESET → DPI блокирует CORS preflight к supabase.co' };
     }
   };
 
@@ -601,26 +611,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // ===== banners (table: public.banners) =====
   window.supaGetBanners = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('banners').select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (error) { console.error('[supabase] get banners', error); return null; }
-      return data || [];
-    } catch(e) { console.error('[supabase] get banners exception', e); return null; }
+      const data = await _pgGet('banners', { select:'*', 'is_active':'eq.true', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get banners', e); return null; }
   };
 
   window.supaGetAllBanners = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('banners').select('*')
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (error) { console.error('[supabase] get all banners', error); return null; }
-      return data || [];
-    } catch(e) { console.error('[supabase] get all banners exception', e); return null; }
+      const data = await _pgGet('banners', { select:'*', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get all banners', e); return null; }
   };
 
   window.supaUpsertBanner = async function(banner){
@@ -664,25 +665,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaGetHomepageCategories = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('categories').select('*')
-        .eq('show_on_homepage', true)
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true })
-        .limit(8);
-      if (error) { console.error('[supabase] get homepage categories', error); return null; }
-      return data || [];
+      const data = await _pgGet('categories', { select:'*', 'show_on_homepage':'eq.true', order:'sort_order.asc,id.asc', limit:'8' });
+      return Array.isArray(data) ? data : [];
     } catch(e) { console.error('[supabase] get homepage categories', e); return null; }
   };
 
   window.supaGetAllCategoriesHP = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('categories').select('id,name,show_on_homepage,sort_order,image_url,color,product_count')
-        .order('sort_order', { ascending: true }).order('id', { ascending: true });
-      if (error) { console.error('[supabase] get all categories hp', error); return null; }
-      return data || [];
+      const data = await _pgGet('categories', { select:'id,name,show_on_homepage,sort_order,image_url,color,product_count', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
     } catch(e) { console.error('[supabase] get all categories hp', e); return null; }
   };
 
@@ -708,15 +700,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // (имя/порядок/картинка), чтобы их можно было редактировать в админке и видеть
   // на всех устройствах.
   window.supaGetSubcategories = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('subcategories').select('*')
-        .order('category_id', { ascending: true })
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (error) { console.error('[supabase] get subcategories', error); return null; }
-      return data || [];
-    } catch(e) { console.error('[supabase] get subcategories exception', e); return null; }
+      const data = await _pgGet('subcategories', { select:'*', order:'category_id.asc,sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get subcategories', e); return null; }
   };
 
   window.supaUpsertSubcategory = async function(sub){
@@ -802,14 +789,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // ===== products (table: public.products) =====
   window.supaGetProducts = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('products').select('*')
-        .or('is_active.eq.true,is_active.is.null')
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (error) { console.error('[supabase] get products', error); return null; }
-      return data || [];
+      const data = await _pgGet('products', { select:'*', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
     } catch(e) { console.error('[supabase] get products exception', e); return null; }
   };
 
@@ -823,14 +805,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaGetHits = async function(){
-    const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.from('products').select('*')
-        .or('is_active.eq.true,is_active.is.null').eq('is_hit', true)
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (error) { console.error('[supabase] get hits', error); return null; }
-      return data || [];
+      const data = await _pgGet('products', { select:'*', 'is_hit':'eq.true', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
     } catch(e) { return null; }
   };
 

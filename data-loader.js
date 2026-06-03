@@ -51,7 +51,7 @@
     }
     try {
       const data = await window.supaGetProducts();
-      if (Array.isArray(data)) return data.map(_normalize);
+      if (Array.isArray(data)) return data.filter(p => p.is_active !== false).map(_normalize);
       console.error('[data-loader] Supabase вернул не массив товаров:', data);
       return [];
     } catch (e) {
