@@ -83,7 +83,96 @@
     _loadingPromise = null;
   };
 
+  // ===== Дерево категорий (categories + subcategories из Supabase) =====
+  // Источник дерева каталога — Supabase. Строим, накладывая данные из БД на
+  // канонический «скелет» window.DEFAULT_CATEGORIES (фиксированные id, иконки,
+  // подкатегории по умолчанию). Это делает загрузку устойчивой: даже если
+  // таблицы пустые/недоступны — каталог получит валидное дерево.
+  let _catTree = null;
+  let _catTreeLoading = null;
+
+  function _cloneDefaults() {
+    const defs = (typeof window !== 'undefined' && Array.isArray(window.DEFAULT_CATEGORIES))
+      ? window.DEFAULT_CATEGORIES : [];
+    return defs.map(function (c) {
+      return Object.assign({}, c, {
+        subcategories: (c.subcategories || []).map(function (s) { return Object.assign({}, s); }),
+      });
+    });
+  }
+
+  async function _buildTree() {
+    let supaCats = null, supaSubs = null;
+    try {
+      if (typeof window.supaGetAllCategoriesHP === 'function') supaCats = await window.supaGetAllCategoriesHP();
+    } catch (e) { console.error('[data-loader] categories fetch failed', e); }
+    try {
+      if (typeof window.supaGetSubcategories === 'function') supaSubs = await window.supaGetSubcategories();
+    } catch (e) { console.error('[data-loader] subcategories fetch failed', e); }
+
+    // Если Supabase недоступен/без категорий — пусть getCategories() возьмёт
+    // локальный/дефолтный вариант (возвращаем null).
+    if (!Array.isArray(supaCats) || !supaCats.length) return null;
+
+    const tree = _cloneDefaults();
+    const byId = {};
+    tree.forEach(function (c) { byId[c.id] = c; });
+
+    // Накладываем поля категорий из Supabase (имя, картинка, порядок).
+    supaCats.forEach(function (r) {
+      if (byId[r.id]) {
+        if (r.name) byId[r.id].name = r.name;
+        if (r.image_url != null) byId[r.id].img = r.image_url || '';
+        if (r.sort_order != null) byId[r.id].order = r.sort_order;
+      } else {
+        const nc = { id: r.id, name: r.name || r.id, icon: 'box', img: r.image_url || '', order: r.sort_order || 0, subcategories: [] };
+        byId[r.id] = nc; tree.push(nc);
+      }
+    });
+
+    // Подкатегории из Supabase замещают дефолтные для тех категорий,
+    // у которых в БД есть хотя бы одна строка.
+    if (Array.isArray(supaSubs) && supaSubs.length) {
+      const grouped = {};
+      supaSubs.forEach(function (s) {
+        (grouped[s.category_id] = grouped[s.category_id] || []).push({
+          id: s.id, name: s.name, img: s.image_url || '', order: s.sort_order != null ? s.sort_order : 0,
+        });
+      });
+      Object.keys(grouped).forEach(function (catId) {
+        if (byId[catId]) byId[catId].subcategories = grouped[catId];
+      });
+    }
+
+    // Сортируем категории и подкатегории по order.
+    tree.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    tree.forEach(function (c) {
+      c.subcategories = (c.subcategories || []).slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    });
+    return tree;
+  }
+
+  window.getCategoryTree = function () {
+    if (_catTree) return Promise.resolve(_catTree);
+    if (_catTreeLoading) return _catTreeLoading;
+    _catTreeLoading = _buildTree().then(function (tree) {
+      _catTree = tree; // может быть null — тогда используется дефолт в categories.js
+      _catTreeLoading = null;
+      try { window.dispatchEvent(new Event('kleverCategoriesLoaded')); } catch (e) {}
+      return _catTree;
+    });
+    return _catTreeLoading;
+  };
+
+  window.getCategoryTreeSync = function () { return _catTree; };
+
+  window.invalidateCategoryTreeCache = function () {
+    _catTree = null;
+    _catTreeLoading = null;
+  };
+
   // Запускаем загрузку сразу при подключении скрипта — к моменту рендера
   // данные уже в пути (или готовы).
   window.getProducts();
+  window.getCategoryTree();
 })();

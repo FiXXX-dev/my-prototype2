@@ -535,7 +535,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Категории и подкатегории</div>
           <div class="page-sub">Иерархия каталога. У товара может быть категория и подкатегория.</div>
         </div>
-        <button class="btn btn-primary" onclick="openCategoryModal()">+ Категория</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="syncCategoryTreeToSupabase()" title="Записать всё дерево категорий и подкатегорий в Supabase"><span class="icon icon-refresh"></span> Синхр. в Supabase</button>
+          <button class="btn btn-primary" onclick="openCategoryModal()">+ Категория</button>
+        </div>
       </div>
       <div id="categoriesList"></div>
     </section>
@@ -2465,15 +2468,91 @@ function renderCategoriesAdmin(){
 }
 
 async function loadCatHomeStateAndRender(){
+  let supaCats = null, supaSubs = null;
   if (typeof window.supaGetAllCategoriesHP === 'function') {
     try {
-      const data = await window.supaGetAllCategoriesHP();
-      if (data && data.length) {
-        data.forEach(r => { _catHomeState[r.id] = !!r.show_on_homepage; });
+      supaCats = await window.supaGetAllCategoriesHP();
+      if (supaCats && supaCats.length) {
+        supaCats.forEach(r => { _catHomeState[r.id] = !!r.show_on_homepage; });
       }
     } catch(e) {}
   }
+  if (typeof window.supaGetSubcategories === 'function') {
+    try { supaSubs = await window.supaGetSubcategories(); } catch(e) {}
+  }
+  // Сливаем то, что лежит в Supabase, в локальное дерево, чтобы админка
+  // показывала актуальное состояние БД (единый источник правды).
+  mergeSupabaseTreeIntoLocal(supaCats, supaSubs);
   renderCategoriesAdmin();
+}
+
+// Накладывает категории/подкатегории из Supabase на локальное дерево и
+// сохраняет результат в localStorage (через setCategories).
+function mergeSupabaseTreeIntoLocal(supaCats, supaSubs){
+  if (!Array.isArray(supaCats) || !supaCats.length) return;
+  let cats = getCategories();
+  const byId = {};
+  cats.forEach(c => { byId[c.id] = c; });
+  supaCats.forEach(r => {
+    if (byId[r.id]) {
+      if (r.name) byId[r.id].name = r.name;
+      if (r.image_url != null) byId[r.id].img = r.image_url || '';
+      if (r.sort_order != null) byId[r.id].order = r.sort_order;
+    } else {
+      const nc = { id: r.id, name: r.name || r.id, icon: 'box', img: r.image_url || '', order: r.sort_order || 0, subcategories: [] };
+      byId[r.id] = nc; cats.push(nc);
+    }
+  });
+  if (Array.isArray(supaSubs) && supaSubs.length) {
+    const grouped = {};
+    supaSubs.forEach(s => { (grouped[s.category_id] = grouped[s.category_id] || []).push({
+      id: s.id, name: s.name, img: s.image_url || '', order: s.sort_order != null ? s.sort_order : 0,
+    }); });
+    Object.keys(grouped).forEach(catId => { if (byId[catId]) byId[catId].subcategories = grouped[catId]; });
+  }
+  setCategories(cats);
+}
+
+// Записать ВСЁ дерево (категории + подкатегории) в Supabase одной операцией.
+async function syncCategoryTreeToSupabase(){
+  if (typeof window.supaUpsertCategory !== 'function' || typeof window.supaBulkUpsertSubcategories !== 'function') {
+    toast('Supabase не подключён'); return;
+  }
+  const cats = sortedCategories();
+  const counts = productCountByCategory();
+  let okCats = 0, subs = [];
+  for (const c of cats) {
+    const r = await window.supaUpsertCategory({
+      id: c.id,
+      name: c.name,
+      image_url: c.img || null,
+      sort_order: c.order || 0,
+      product_count: counts[c.id] || 0,
+      show_on_homepage: !!_catHomeState[c.id],
+      color: '#2ECC71',
+    });
+    if (r.ok) okCats++; else console.error('[admin] sync category', c.id, r.error || r.reason);
+    (c.subcategories || []).forEach((s, i) => subs.push({
+      category_id: c.id, id: s.id, name: s.name, image_url: s.img || null, sort_order: s.order != null ? s.order : i,
+    }));
+  }
+  const sr = await window.supaBulkUpsertSubcategories(subs);
+  if (!sr.ok) {
+    const msg = (sr.error && (sr.error.message || sr.error.hint || sr.error.code)) || sr.reason || 'неизвестная ошибка';
+    toast('Категории: ' + okCats + '. Подкатегории — ошибка: ' + msg);
+    console.error('[admin] sync subcategories', sr.error);
+    return;
+  }
+  toast('✓ В Supabase: ' + okCats + ' катег., ' + subs.length + ' подкатег.');
+}
+
+// Записать одну подкатегорию в Supabase (вызывается после правок в localStorage).
+function _syncSubToSupabase(catId, sub, order){
+  if (typeof window.supaUpsertSubcategory !== 'function') return;
+  window.supaUpsertSubcategory({
+    category_id: catId, id: sub.id, name: sub.name,
+    image_url: sub.img || null, sort_order: order != null ? order : (sub.order || 0),
+  }).catch(e => console.error('[admin] upsert subcategory', e));
 }
 
 async function toggleCatHomepage(id){
@@ -2629,6 +2708,9 @@ function deleteCategory(id){
   products = products.map(p => p.categoryId === id ? { ...p, categoryId: undefined, subcategory: undefined } : p);
   localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
   setCategories(getCategories().filter(c => c.id !== id));
+  if (typeof window.supaDeleteCategory === 'function') {
+    window.supaDeleteCategory(id).catch(()=>{});
+  }
   renderCategoriesAdmin();
   toast('Категория удалена');
 }
@@ -2640,6 +2722,14 @@ function moveCategory(id, delta){
   [cats[idx], cats[newIdx]] = [cats[newIdx], cats[idx]];
   cats.forEach((c, i) => { c.order = i + 1; });
   setCategories(cats);
+  // Persist new category order to Supabase.
+  if (typeof window.supaUpsertCategory === 'function') {
+    const counts = productCountByCategory();
+    cats.forEach((c, i) => window.supaUpsertCategory({
+      id: c.id, name: c.name, image_url: c.img || null, sort_order: i + 1,
+      product_count: counts[c.id] || 0, show_on_homepage: !!_catHomeState[c.id], color: '#2ECC71',
+    }).catch(()=>{}));
+  }
   renderCategoriesAdmin();
 }
 
@@ -2698,6 +2788,13 @@ function saveSubcategory(){
     cats[ci].subcategories.push({ id, name, img, order });
   }
   setCategories(cats);
+  // Sync to Supabase (single source of truth across browsers).
+  _syncSubToSupabase(catId, { id, name, img, order }, order);
+  if (editingSubcategoryId && editingSubcategoryId !== id) {
+    if (typeof window.supaDeleteSubcategory === 'function') {
+      window.supaDeleteSubcategory(catId, editingSubcategoryId).catch(()=>{});
+    }
+  }
   closeSubcategoryModal();
   renderCategoriesAdmin();
   toast(editingSubcategoryId ? '✓ Подкатегория обновлена' : '✓ Подкатегория создана');
@@ -2716,6 +2813,9 @@ function deleteSubcategory(catId, subId){
   const ci = cats.findIndex(c => c.id === catId);
   cats[ci].subcategories = (cats[ci].subcategories || []).filter(s => s.id !== subId);
   setCategories(cats);
+  if (typeof window.supaDeleteSubcategory === 'function') {
+    window.supaDeleteSubcategory(catId, subId).catch(()=>{});
+  }
   renderCategoriesAdmin();
   toast('Подкатегория удалена');
 }
@@ -2731,6 +2831,10 @@ function moveSubcategory(catId, subId, delta){
   subs.forEach((s, i) => { s.order = i + 1; });
   cats[ci].subcategories = subs;
   setCategories(cats);
+  // Persist new order of all subs in this category to Supabase.
+  if (typeof window.supaUpsertSubcategory === 'function') {
+    subs.forEach((s, i) => _syncSubToSupabase(catId, s, i + 1));
+  }
   renderCategoriesAdmin();
 }
 

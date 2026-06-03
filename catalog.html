@@ -922,8 +922,8 @@ if (document.readyState === 'loading') {
   }).catch(()=>{});
 })();
 
-// translations.js fires a custom event `kleverLangChange` after applyLanguage.
-window.addEventListener('kleverLangChange', () => {
+// Перерисовать текущий вид каталога (плитки/подплитки/товары) по URL.
+function _rerenderCatalogView() {
   try {
     const params = new URLSearchParams(window.location.search);
     const cat = params.get('cat');
@@ -937,7 +937,11 @@ window.addEventListener('kleverLangChange', () => {
       applyCatalogForCategory(cat, sub);
     }
   } catch(e){}
-});
+}
+// translations.js fires a custom event `kleverLangChange` after applyLanguage.
+window.addEventListener('kleverLangChange', _rerenderCatalogView);
+// Дерево категорий пришло из Supabase — обновляем плитки/подкатегории.
+window.addEventListener('kleverCategoriesLoaded', _rerenderCatalogView);
 </script>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
