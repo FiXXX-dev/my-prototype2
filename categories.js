@@ -146,10 +146,16 @@ function sortedCategories() {
   }));
 }
 
-// Count products per category / subcategory (uses current localStorage products).
+// Count products per category / subcategory.
+// Источник — товары из Supabase, загруженные data-loader.js в память
+// (window.getProductsSync). Никакого localStorage.
+function _liveProducts() {
+  return (typeof window !== 'undefined' && typeof window.getProductsSync === 'function')
+    ? (window.getProductsSync() || [])
+    : [];
+}
 function productCountByCategory() {
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch (e) {}
+  const products = _liveProducts();
   const counts = {};
   for (const p of products) {
     const id = p.categoryId || KLEVER_LEGACY_CAT_TO_ID[p.cat] || null;
@@ -159,8 +165,7 @@ function productCountByCategory() {
   return counts;
 }
 function productCountBySubcategory(catId) {
-  let products = [];
-  try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch (e) {}
+  const products = _liveProducts();
   const counts = {};
   for (const p of products) {
     const id = p.categoryId || KLEVER_LEGACY_CAT_TO_ID[p.cat] || null;
