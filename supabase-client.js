@@ -53,8 +53,30 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       return null;
     }
     _client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Экспортируем живой клиент для отладки из консоли (window.supabaseClient).
+    // ВНИМАНИЕ: window.supabase — это SDK-библиотека (createClient и т.п.),
+    // а window.supabaseClient — уже созданный экземпляр клиента БД.
+    try { window.supabaseClient = _client; } catch (e) {}
     return _client;
   }
+
+  // Быстрая диагностика связи из консоли браузера: await window.supaPing()
+  // Возвращает { ok, status?, count?, error? }. Если ok:false с сетевой
+  // ошибкой (TypeError / Failed to fetch / ERR_CONNECTION_RESET) — почти
+  // наверняка проект Supabase на паузе (free tier) → восстановите его в дашборде.
+  window.supaPing = async function(){
+    const sb = getClient();
+    if (!sb) return { ok:false, error:'client not configured (getClient вернул null)' };
+    try {
+      const { data, error, count } = await sb
+        .from('products').select('sku', { count:'exact', head:true });
+      if (error) return { ok:false, error: error.message || error };
+      return { ok:true, count: count != null ? count : (data ? data.length : 0) };
+    } catch(e) {
+      return { ok:false, error: (e && e.message) || String(e),
+               hint:'сетевой сброс → вероятно проект Supabase на паузе' };
+    }
+  };
 
   // ===== Orders =====
 
