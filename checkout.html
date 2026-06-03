@@ -191,6 +191,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 <script src="categories.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
+<script src="data-loader.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -633,7 +634,7 @@ function updateSummary() {
 
   // Helper: latest image from products store
   const getProdImg = (sku, fallback) => {
-    try { const arr = JSON.parse(localStorage.getItem('klever_products_v2')) || []; const p = arr.find(x => x.sku === sku); return (p && p.img) || fallback || ''; }
+    try { const arr = (window.getProductsSync ? window.getProductsSync() : []); const p = arr.find(x => x.sku === sku); return (p && p.img) || fallback || ''; }
     catch(e) { return fallback || ''; }
   };
   // Список товаров с кнопками управления
@@ -1205,7 +1206,7 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
 (function(){
   let debounceT = null;
   function getProducts(){
-    try{ const a=JSON.parse(localStorage.getItem('klever_products_v2')); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+    return (window.getProductsSync ? window.getProductsSync() : []);
   }
   function escHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function openSearch(){
