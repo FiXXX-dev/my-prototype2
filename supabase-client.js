@@ -735,7 +735,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       if (!rows.length) return { ok:true };
       const CHUNK = 50;
       for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await sb.from('subcategories').upsert(rows.slice(i, i + CHUNK), { onConflict: 'category_id,id' });
+        const { error } = await sb.from('subcategories').upsert(rows.slice(i, i + CHUNK), { onConflict: 'id' });
         if (error) { console.error('[supabase] bulk upsert subcategories', error); return { ok:false, error }; }
       }
       return { ok:true };
