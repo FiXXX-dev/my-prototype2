@@ -38,8 +38,9 @@ nav a:hover{color:var(--lime);}
 .auth-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;letter-spacing:-1px;text-align:center;margin-bottom:8px;}
 .auth-sub{color:#8aaa94;font-size:14px;text-align:center;margin-bottom:32px;}
 .auth-tabs{display:flex;background:var(--gray);border-radius:14px;padding:4px;margin-bottom:28px;}
-.auth-tab{flex:1;padding:12px;border:none;background:none;border-radius:11px;font-family:'Onest',sans-serif;font-size:14px;font-weight:600;color:#6b8a74;cursor:pointer;transition:all .2s;}
+.auth-tab{flex:1;padding:10px 6px;border:none;background:none;border-radius:11px;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;color:#6b8a74;cursor:pointer;transition:all .2s;}
 .auth-tab.active{background:white;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+.auth-msg.info{background:#e8f4ff;color:#1e6fb8;}
 .auth-form{display:flex;flex-direction:column;gap:14px;}
 .form-grp{display:flex;flex-direction:column;gap:6px;}
 .form-grp label{font-size:13px;font-weight:600;color:var(--text);}
@@ -252,6 +253,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')" data-i18n="account.tab_login">Вход</button>
       <button class="auth-tab" id="tabRegBtn" onclick="switchAuthTab('register')" data-i18n="account.tab_register">Регистрация</button>
+      <button class="auth-tab" id="tabOrdersBtn" onclick="switchAuthTab('orders_lookup')">Мои заказы</button>
     </div>
 
     <div id="loginForm" class="auth-form">
@@ -270,6 +272,22 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
       <div class="auth-msg" id="loginMsg"></div>
       <button class="btn-submit" onclick="doLogin()">Войти →</button>
       <div class="guest-link">Нет аккаунта? <a onclick="switchAuthTab('register')">Зарегистрироваться</a></div>
+    </div>
+
+    <!-- Поиск заказов по номеру телефона (без регистрации) -->
+    <div id="ordersLookupForm" class="auth-form" style="display:none;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <span class="icon icon-bag" style="font-size:32px;color:#2ECC71;"></span>
+      </div>
+      <div class="form-grp">
+        <label>Ваш номер телефона <span class="req">*</span></label>
+        <input type="tel" id="lookupPhone" placeholder="+7 (___) ___-__-__" oninput="clearLookupResults()">
+        <div class="hint">Введите номер, который указывали при заказе</div>
+      </div>
+      <div class="auth-msg" id="lookupMsg"></div>
+      <button class="btn-submit" onclick="doLookupOrders()">Найти заказы →</button>
+      <div id="lookupResults" style="margin-top:18px;display:none;"></div>
+      <div class="guest-link" style="margin-top:12px;">Есть аккаунт? <a onclick="switchAuthTab('login')">Войти</a></div>
     </div>
 
     <div id="registerForm" class="auth-form" style="display:none;">
@@ -530,8 +548,46 @@ function normalizePhone(p){ return (p || '').replace(/\D/g, ''); }
 function switchAuthTab(tab){
   document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
   document.getElementById('tabRegBtn').classList.toggle('active', tab === 'register');
+  document.getElementById('tabOrdersBtn').classList.toggle('active', tab === 'orders_lookup');
   document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
   document.getElementById('registerForm').style.display = tab === 'register' ? 'flex' : 'none';
+  document.getElementById('ordersLookupForm').style.display = tab === 'orders_lookup' ? 'flex' : 'none';
+}
+
+function clearLookupResults(){
+  const r = document.getElementById('lookupResults');
+  if (r) r.style.display = 'none';
+}
+
+async function doLookupOrders(){
+  hideMsg('lookupMsg');
+  const phone = document.getElementById('lookupPhone').value.trim();
+  const phone10 = phone.replace(/\D/g,'').slice(-10);
+  if (phone10.length < 10){ showMsg('lookupMsg', 'Введите корректный номер телефона', 'error'); return; }
+  if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()){ showMsg('lookupMsg', 'Сервис временно недоступен', 'error'); return; }
+  showMsg('lookupMsg', 'Ищем заказы…', 'info');
+  document.getElementById('lookupResults').style.display = 'none';
+  try {
+    const orders = await supaListOrdersByUser(null, { phone: phone10, email: '' });
+    hideMsg('lookupMsg');
+    const res = document.getElementById('lookupResults');
+    if (!orders || orders.length === 0){
+      res.innerHTML = '<div class="empty" style="padding:24px 0;"><div class="empty-title">Заказов не найдено</div><div style="font-size:13px;color:#8aaa94;">Проверьте номер телефона, который указывали при заказе</div></div>';
+    } else {
+      res.innerHTML = '<div style="font-size:12px;color:#8aaa94;margin-bottom:10px;">Найдено заказов: ' + orders.length + '</div>' +
+        orders.map(o => `<div class="order" style="margin-bottom:10px;">
+          <div class="order-head">
+            <div><div class="order-num">Заказ #${o.num}</div><div class="order-date">${o.date}</div></div>
+            <span class="order-status status-${({'assembling':'assembling','courier':'courier','ready':'ready','done':'done','issued':'issued','cancelled':'cancelled'}[o.status]||'new')}">${{'new':'В обработке','assembling':'В сборке','courier':'Передан курьеру','ready':'Готов к выдаче','done':'✓ Доставлен','issued':'✓ Выдан','cancelled':'✕ Отменён'}[o.status]||'В обработке'}</span>
+            <div class="order-total">${(o.total||0).toLocaleString('ru-RU')} ₽</div>
+          </div>
+          <div class="order-items">${(o.items||[]).slice(0,3).map(i=>`<div class="order-line"><span>${i.name} × ${i.qty}</span><span>${Math.round(i.price*i.qty*100)/100} ₽</span></div>`).join('')}${(o.items||[]).length > 3 ? `<div class="order-line" style="color:#8aaa94;">...ещё ${o.items.length-3} поз.</div>` : ''}</div>
+        </div>`).join('');
+    }
+    res.style.display = 'block';
+  } catch(e){
+    showMsg('lookupMsg', 'Ошибка загрузки, попробуйте ещё раз', 'error');
+  }
 }
 
 function setLoginMethod(method){
@@ -569,36 +625,45 @@ function doLogin(){
   if (currentLoginMethod === 'email' && typeof supaSignIn === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     showMsg('loginMsg', 'Вход…', 'info');
-    supaSignIn(id, pass).then(res => {
+    supaSignIn(id, pass).then(async res => {
       if (res.ok) {
-        // Mirror to local users so existing flows (account dashboard) still work
+        // Fetch profile FIRST so phone is known before loading orders (cross-device fix)
+        const m = res.user.user_metadata || {};
+        let prof = null;
+        if (typeof supaGetProfile === 'function') {
+          prof = await supaGetProfile(res.user.id).catch(() => null);
+        }
+        const p = prof || {};
+        const phone      = p.phone      || m.phone      || '';
+        const firstName  = p.first_name || m.firstName  || '';
+        const lastName   = p.last_name  || m.lastName   || '';
+        const middleName = p.middle_name|| m.middleName || '';
+        const fullName   = [lastName, firstName, middleName].filter(Boolean).join(' ') || m.name || id;
         const users = getUsers();
         let local = users.find(u => u.email && u.email.toLowerCase() === id.toLowerCase());
         if (!local) {
-          local = { id: res.user.id, email: id, name: res.user.user_metadata?.name || id, password: '*', addresses: [], favorites: [], type: res.user.user_metadata?.type || 'individual' };
+          local = {
+            id: res.user.id, email: id, password: '*', addresses: [], favorites: [],
+            type: p.user_type || m.type || 'individual',
+            name: fullName, phone, firstName, lastName, middleName,
+            company: p.company || m.company || undefined,
+            inn: p.inn || m.inn || undefined,
+          };
           users.push(local); setUsers(users);
-        } else if (local.id !== res.user.id) {
-          local.id = res.user.id; setUsers(users);
+        } else {
+          if (local.id !== res.user.id) local.id = res.user.id;
+          if (phone)       local.phone      = phone;
+          if (firstName)   local.firstName  = firstName;
+          if (lastName)    local.lastName   = lastName;
+          if (middleName)  local.middleName = middleName;
+          if (fullName !== id) local.name   = fullName;
+          if (p.user_type || m.type) local.type = p.user_type || m.type || local.type;
+          if (p.company || m.company) local.company = p.company || m.company || local.company;
+          if (p.inn || m.inn) local.inn = p.inn || m.inn || local.inn;
+          setUsers(users);
         }
         setCurrentUserId(res.user.id);
         showAccount();
-        // Merge cloud profile (name/phone/company) so it reflects across browsers.
-        if (typeof supaGetProfile === 'function') {
-          supaGetProfile(res.user.id).then(p => {
-            if (!p) return;
-            const upd = {};
-            if (p.first_name)  upd.firstName  = p.first_name;
-            if (p.last_name)   upd.lastName   = p.last_name;
-            if (p.middle_name) upd.middleName = p.middle_name;
-            if (p.phone)       upd.phone      = p.phone;
-            if (p.user_type)   upd.type       = p.user_type;
-            if (p.company)     upd.company    = p.company;
-            if (p.inn)         upd.inn        = p.inn;
-            upd.name = [upd.lastName||p.last_name, upd.firstName||p.first_name, upd.middleName||p.middle_name].filter(Boolean).join(' ') || undefined;
-            updateCurrentUser(upd);
-            renderProfile();
-          }).catch(()=>{});
-        }
         return;
       }
       // Fall back to local check
@@ -620,7 +685,14 @@ function _doLoginLocal(id, pass){
     if (currentLoginMethod === 'email') return u.email && u.email.toLowerCase() === id.toLowerCase();
     return u.phone && normalizePhone(u.phone) === normalizePhone(id);
   });
-  if (!user){ showMsg('loginMsg', 'Пользователь не найден', 'error'); return; }
+  if (!user){
+    if (currentLoginMethod === 'phone') {
+      showMsg('loginMsg', 'Аккаунт не найден на этом устройстве. Используйте вкладку «Мои заказы» чтобы найти заказы по номеру телефона.', 'error');
+    } else {
+      showMsg('loginMsg', 'Пользователь не найден', 'error');
+    }
+    return;
+  }
   if (user.password !== pass){ showMsg('loginMsg', 'Неверный пароль', 'error'); return; }
   setCurrentUserId(user.id);
   showAccount();
@@ -721,45 +793,58 @@ function doLogout(){
 (function bootSupabaseSession(){
   if (typeof supaGetCurrentUser !== 'function') return;
   if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
-  supaGetCurrentUser().then(u => {
+  supaGetCurrentUser().then(async u => {
     if (!u) return;
+    const m = u.user_metadata || {};
+    // Fetch profile FIRST so phone is known before loading orders (cross-device fix)
+    let prof = null;
+    if (typeof supaGetProfile === 'function') {
+      prof = await supaGetProfile(u.id).catch(() => null);
+    }
+    const p = prof || {};
+    const phone      = p.phone      || m.phone      || '';
+    const firstName  = p.first_name || m.firstName  || '';
+    const lastName   = p.last_name  || m.lastName   || '';
+    const middleName = p.middle_name|| m.middleName || '';
+    const fullName   = [lastName, firstName, middleName].filter(Boolean).join(' ') || m.name || u.email;
     const users = getUsers();
     let local = users.find(x => x.id === u.id);
     if (!local) {
-      const m = u.user_metadata || {};
-      local = { id: u.id, email: u.email, name: m.name || u.email, type: m.type || 'individual',
-                lastName: m.lastName||'', firstName: m.firstName||'', middleName: m.middleName||'',
-                phone: m.phone||'', addresses: [], favorites: [], password: '*' };
+      local = {
+        id: u.id, email: p.email || u.email, password: '*', addresses: [], favorites: [],
+        type: p.user_type || m.type || 'individual',
+        name: fullName, phone, firstName, lastName, middleName,
+        company: p.company || m.company || undefined,
+        inn: p.inn || m.inn || undefined,
+      };
       users.push(local); setUsers(users);
+    } else {
+      let changed = false;
+      if (phone      && phone      !== local.phone)      { local.phone      = phone;      changed = true; }
+      if (firstName  && firstName  !== local.firstName)  { local.firstName  = firstName;  changed = true; }
+      if (lastName   && lastName   !== local.lastName)   { local.lastName   = lastName;   changed = true; }
+      if (middleName && middleName !== local.middleName) { local.middleName = middleName; changed = true; }
+      if ((p.email || u.email) && (p.email || u.email) !== local.email) { local.email = p.email || u.email; changed = true; }
+      if (p.user_type  && p.user_type  !== local.type)    { local.type    = p.user_type;  changed = true; }
+      if (p.company    && p.company    !== local.company) { local.company  = p.company;   changed = true; }
+      if (p.inn        && p.inn        !== local.inn)     { local.inn      = p.inn;       changed = true; }
+      if (changed) {
+        local.name = [local.lastName, local.firstName, local.middleName].filter(Boolean).join(' ') || local.name;
+        setUsers(users);
+      }
     }
     setCurrentUserId(u.id);
-    // Session confirmed asynchronously — make sure the dashboard is shown
-    // even if the synchronous boot check (bottom of script) ran first while
-    // klever_current_user wasn't yet persisted.
-    if (!document.getElementById('accountWrap').classList.contains('visible')) showAccount();
-    // Orders / favorites / addresses badges are filled by loadAccountData()
-    // (called from showAccount) — no duplicate orders request here.
-    // Pull profile from Supabase (source of truth across browsers) and merge.
-    if (typeof supaGetProfile === 'function') {
-      supaGetProfile(u.id).then(p => {
-        if (!p) return;
-        const us = getUsers(); const i = us.findIndex(x => x.id === u.id); if (i < 0) return;
-        const merged = { ...us[i] };
-        if (p.first_name)  merged.firstName  = p.first_name;
-        if (p.last_name)   merged.lastName   = p.last_name;
-        if (p.middle_name) merged.middleName = p.middle_name;
-        if (p.email)       merged.email      = p.email;
-        if (p.phone)       merged.phone      = p.phone;
-        if (p.user_type)   merged.type       = p.user_type;
-        if (p.company)     merged.company    = p.company;
-        if (p.inn)         merged.inn        = p.inn;
-        merged.name = [merged.lastName, merged.firstName, merged.middleName].filter(Boolean).join(' ') || merged.name;
-        us[i] = merged; setUsers(us);
-        if (document.getElementById('accountWrap').classList.contains('visible')) renderProfile();
-      });
+    const wrap = document.getElementById('accountWrap');
+    if (!wrap.classList.contains('visible')) {
+      showAccount();
+    } else {
+      renderProfile();
+      // Phone was just loaded from DB — re-fetch orders if they came back empty without it
+      if (myOrders.length === 0 && accountDataLoaded) {
+        invalidateAccountCache();
+        loadAccountData().then(() => renderMyOrders());
+      }
     }
-    // Orders / favorites / addresses are fetched once by loadAccountData()
-    // (called from showAccount) — no per-tab or duplicate requests here.
   });
 })();
 
