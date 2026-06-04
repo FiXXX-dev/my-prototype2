@@ -82,7 +82,23 @@ jobs:
           git add products.json categories.json subcategories.json promotions.json news.json settings.json
           if git diff --staged --quiet; then
             echo "No changes — nothing to commit."
-          else
-            git commit -m "chore: sync catalog data from Supabase [skip ci]"
-            git push
+            exit 0
           fi
+          git commit -m "chore: sync catalog data from Supabase [skip ci]"
+          # Несколько sync-запусков (cron/push/dispatch) могут пересечься: checkout
+          # берёт SHA триггера, а не свежий main, поэтому push иногда отклоняется
+          # ("fetch first"). Ребейзим на актуальный origin/main и повторяем.
+          # Наши JSON — всегда производные от Supabase, поэтому при конфликте
+          # оставляем нашу свежевыгруженную версию (-X ours).
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt) — rebasing on origin/main and retrying."
+            git fetch origin main
+            git rebase -X ours origin/main
+            sleep $((attempt * 2))
+          done
+          echo "ERROR: could not push after 5 attempts."
+          exit 1
