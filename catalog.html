@@ -76,7 +76,7 @@
   .crumb-bar a:hover{text-decoration:underline;}
   .crumb-bar .sep{color:#c0d0c5;}
   .prod-img{position:relative;}
-  .fav-btn{position:absolute;top:8px;left:8px;width:36px;height:36px;border:none;background:rgba(255,255,255,0.95);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform .15s,background .2s;padding:0;z-index:2;}
+  .fav-btn{position:absolute;top:8px;right:8px;width:36px;height:36px;border:none;background:rgba(255,255,255,0.95);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform .15s,background .2s;padding:0;z-index:2;}
   .fav-btn:hover{transform:scale(1.1);background:white;}
   .fav-btn.active{background:#fff0f5;}
   /* Mobile-only sub-chip strip; hidden on desktop (sidebar is shown instead) */
@@ -137,6 +137,9 @@
   .search-clear:hover{background:#e0ece4;}
   .search-result-count{font-size:13px;color:#8aaa94;margin-top:8px;padding-left:4px;min-height:20px;}
   .cat-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+  /* В Mode C (sidebar показывает подкатегории) — чипы избыточны на десктопе */
+  .catalog-main.has-subcat-sidebar .cat-chips{display:none;}
+  @media(max-width:900px){.catalog-main.has-subcat-sidebar .cat-chips{display:flex;}}
   .chip{padding:8px 16px;border-radius:30px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:1.5px solid #d0e8d8;background:white;color:var(--text);display:inline-flex;align-items:center;gap:6px;user-select:none;}
   .chip:hover{border-color:var(--green);color:var(--green-dark);}
   .chip.active{background:var(--green);border-color:var(--green);color:var(--dark);}
@@ -962,6 +965,9 @@ function showCatSubSidebar(catId, subId) {
   if (!subs.length) return; // no subcategories — keep default top-level sidebar
   _catSubSidebarState = { catId: catId, subId: subId || null };
   var counts = (typeof productCountBySubcategory === 'function') ? productCountBySubcategory(catId) : {};
+  // На десктопе прячем дублирующую полосу чипов (сайдбар уже показывает то же).
+  var mainEl = document.querySelector('.catalog-main');
+  if (mainEl) mainEl.classList.add('has-subcat-sidebar');
   // Sidebar title becomes a back-link showing the category name.
   var titleEl = document.querySelector('.sidebar-title');
   if (titleEl) {
