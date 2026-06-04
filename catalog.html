@@ -62,6 +62,10 @@
   .sub-list a.active{background:var(--green);color:var(--dark);font-weight:700;}
   .sub-list-count{background:rgba(0,0,0,0.06);padding:1px 8px;border-radius:20px;font-size:11px;}
   .sub-list a.active .sub-list-count{background:rgba(0,0,0,0.16);}
+  /* Level-3 children nested under the active level-2 item */
+  .sub-list-children{list-style:none;margin:2px 0 6px;padding:0 0 0 12px;border-left:2px solid #d7ece0;}
+  .sub-list-children a{font-size:13px;padding:7px 12px;color:#5a7567;}
+  .sub-list-children a.active{background:var(--green);color:var(--dark);font-weight:700;}
   /* Subcategory tiles slightly smaller */
   .sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .sub-tile{min-height:150px;}
@@ -772,6 +776,57 @@ function renderCategoryTiles(){
   }).join('') + '</div>';
 }
 
+// Суммарный счётчик узла: собственные товары + товары его детей (уровень-3).
+function subRollup(node, counts){
+  if (typeof subcategoryRollupCount === 'function') return subcategoryRollupCount(node, counts);
+  let n = counts[node.id] || 0;
+  (node.children||[]).forEach(k => { n += counts[k.id] || 0; });
+  return n;
+}
+
+// Левый сайдбар подкатегорий. Под активной подкатегорией уровня-2
+// раскрывается список её под-подкатегорий (уровень-3), как у конкурента.
+function subSidebarHtml(catId, subs, counts, activeId){
+  let activeTop = activeId;
+  const pid = activeId && (typeof getSubParentId === 'function') ? getSubParentId(catId, activeId) : null;
+  if (pid) activeTop = pid;
+  return subs.map(s => {
+    const n = subRollup(s, counts);
+    const isTop = s.id === activeTop;
+    const kids = (s.children || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    let html = `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="${isTop && !pid ? 'active' : ''}">
+      <span>${escHtml(subDisplayName(catId, s))}</span><span class="sub-list-count">${n}</span></a>`;
+    if (kids.length && isTop) {
+      html += `<ul class="sub-list-children">` + kids.map(k => {
+        const kn = counts[k.id] || 0;
+        return `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(k.id)}" class="${k.id===activeId?'active':''}">
+          <span>${escHtml(subDisplayName(catId, k))}</span><span class="sub-list-count">${kn}</span></a></li>`;
+      }).join('') + `</ul>`;
+    }
+    return html + `</li>`;
+  }).join('');
+}
+
+// Плитки для массива узлов. Каждая ведёт на ?cat=catId&sub=<node.id>.
+function subTilesHtml(catId, cat, nodes, counts){
+  return nodes.map(s => {
+    const n = subRollup(s, counts);
+    const photo = s.img
+      ? `background-image:url('${escHtml(s.img)}')`
+      : `background-image:${categoryGradient(catId)}`;
+    const iconCls = cat.icon ? 'icon icon-'+escHtml(cat.icon) : 'icon icon-box';
+    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="cat-tile sub-tile ${s.img ? 'tinted' : 'no-photo'}">
+      <div class="cat-tile-bg" style="${photo}"></div>
+      ${s.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
+      <div class="cat-tile-overlay">
+        <div class="cat-tile-name">${escHtml(subDisplayName(catId, s))}</div>
+        <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+// Mode B: плитки подкатегорий уровня-2 категории + сайдбар.
 function renderSubcategoryTiles(catId){
   const cat = getCategoryById(catId);
   if (!cat) { renderCategoryTiles(); return; }
@@ -797,39 +852,56 @@ function renderSubcategoryTiles(catId){
     return;
   }
 
-  const body = document.getElementById('hbrowseBody');
-  const sidebarLis = subs.map(s => {
-    const n = counts[s.id] || 0;
-    return `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}">
-      <span>${escHtml(subDisplayName(catId, s))}</span><span class="sub-list-count">${n}</span></a></li>`;
-  }).join('');
-  const mobileChips = subs.map(s => {
-    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="sub-chip">${escHtml(subDisplayName(catId, s))}</a>`;
-  }).join('');
-  const tiles = subs.map(s => {
-    const n = counts[s.id] || 0;
-    const photo = s.img
-      ? `background-image:url('${escHtml(s.img)}')`
-      : `background-image:${categoryGradient(catId)}`;
-    const iconCls = cat.icon ? 'icon icon-'+escHtml(cat.icon) : 'icon icon-box';
-    return `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="cat-tile sub-tile ${s.img ? 'tinted' : 'no-photo'}">
-      <div class="cat-tile-bg" style="${photo}"></div>
-      ${s.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
-      <div class="cat-tile-overlay">
-        <div class="cat-tile-name">${escHtml(subDisplayName(catId, s))}</div>
-        <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
-      </div>
-    </a>`;
-  }).join('');
+  const mobileChips = subs.map(s =>
+    `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="sub-chip">${escHtml(subDisplayName(catId, s))}</a>`
+  ).join('');
 
-  body.innerHTML =
+  document.getElementById('hbrowseBody').innerHTML =
     `<div class="sub-chips">${mobileChips}</div>
      <div class="hbrowse-with-sidebar">
        <aside class="sub-sidebar">
          <div class="sub-sidebar-title">${escHtml(catDisplayName(cat))}</div>
-         <ul class="sub-list">${sidebarLis}</ul>
+         <ul class="sub-list">${subSidebarHtml(catId, subs, counts, null)}</ul>
        </aside>
-       <div class="sub-grid">${tiles}</div>
+       <div class="sub-grid">${subTilesHtml(catId, cat, subs, counts)}</div>
+     </div>`;
+}
+
+// Mode B2: плитки под-подкатегорий (уровень-3) внутри подкатегории уровня-2.
+function renderSubSubcategoryTiles(catId, subId){
+  const cat = getCategoryById(catId);
+  const node = getSubcategoryById(catId, subId);
+  if (!cat || !node) { renderSubcategoryTiles(catId); return; }
+  const subs = (cat.subcategories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const kids = (node.children || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const counts = (typeof productCountBySubcategory === 'function') ? productCountBySubcategory(catId) : {};
+  const total = subRollup(node, counts);
+  document.getElementById('hbrowseTitle').textContent = subDisplayName(catId, node);
+  document.getElementById('hbrowseTitle').removeAttribute('data-i18n');
+  document.getElementById('hbrowseCount').textContent = total + ' ' + wordForm(total, ['товар','товара','товаров']);
+  const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+  const t = (typeof TRANSLATIONS === 'object' && TRANSLATIONS[lang]) || {};
+  document.getElementById('hbrowseCrumb').innerHTML =
+    `<a href="index.html" data-i18n="crumb.home">${t['crumb.home']||'Главная'}</a>
+     <span class="sep">→</span>
+     <a href="catalog.html" data-i18n="crumb.catalog">${t['crumb.catalog']||'Каталог'}</a>
+     <span class="sep">→</span>
+     <a href="catalog.html?cat=${escHtml(catId)}">${escHtml(catDisplayName(cat))}</a>
+     <span class="sep">→</span>
+     <span>${escHtml(subDisplayName(catId, node))}</span>`;
+
+  const mobileChips = kids.map(k =>
+    `<a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(k.id)}" class="sub-chip">${escHtml(subDisplayName(catId, k))}</a>`
+  ).join('');
+
+  document.getElementById('hbrowseBody').innerHTML =
+    `<div class="sub-chips">${mobileChips}</div>
+     <div class="hbrowse-with-sidebar">
+       <aside class="sub-sidebar">
+         <div class="sub-sidebar-title">${escHtml(catDisplayName(cat))}</div>
+         <ul class="sub-list">${subSidebarHtml(catId, subs, counts, subId)}</ul>
+       </aside>
+       <div class="sub-grid">${subTilesHtml(catId, cat, kids, counts)}</div>
      </div>`;
 }
 
@@ -856,6 +928,9 @@ function applyCatalogForCategory(catId, subId) {
   const oldCrumb = document.querySelector('.breadcrumb');
   if (oldCrumb) {
     const sub = subId ? getSubcategoryById(catId, subId) : null;
+    // Если выбран лист уровня-3 — добавляем в путь его родителя уровня-2.
+    const parentId = (subId && typeof getSubParentId === 'function') ? getSubParentId(catId, subId) : null;
+    const parent = parentId ? getSubcategoryById(catId, parentId) : null;
     const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
     const t = (typeof TRANSLATIONS === 'object' && TRANSLATIONS[lang]) || {};
     const home = t['crumb.home'] || 'Главная';
@@ -866,6 +941,7 @@ function applyCatalogForCategory(catId, subId) {
        <a href="catalog.html" data-i18n="crumb.catalog">${cata}</a>
        <span>→</span>
        <a href="catalog.html?cat=${escHtml(catId)}">${escHtml(catDisplayName(cat))}</a>` +
+      (parent ? `<span>→</span><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(parent.id)}">${escHtml(subDisplayName(catId, parent))}</a>` : '') +
       (sub ? `<span>→</span><span>${escHtml(subDisplayName(catId, sub))}</span>` : '');
   }
   applyFilters();
@@ -900,11 +976,21 @@ function initFromUrl() {
   }
   // New id-based URLs
   if (cat && getCategoryById(cat)) {
-    if (sub && getSubcategoryById(cat, sub)) {
-      // Mode C: products of a subcategory
-      hbrowseHide();
-      applyCatalogForCategory(cat, sub);
-      return;
+    if (sub) {
+      const node = getSubcategoryById(cat, sub);
+      if (node && (node.children || []).length) {
+        // Mode B2: подкатегория уровня-2 с детьми → плитки под-подкатегорий
+        hbrowseShow();
+        renderSubSubcategoryTiles(cat, sub);
+        return;
+      }
+      if (node) {
+        // Mode C: товары листовой (под)категории
+        hbrowseHide();
+        applyCatalogForCategory(cat, sub);
+        return;
+      }
+      // неизвестный sub → показываем подкатегории категории
     }
     // Mode B: subcategory tiles
     hbrowseShow();

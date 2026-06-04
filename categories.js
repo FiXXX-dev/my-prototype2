@@ -142,17 +142,44 @@ function getCategoryByLegacyName(name) {
   const id = KLEVER_LEGACY_CAT_TO_ID[name];
   return id ? getCategoryById(id) : null;
 }
+// Ищет подкатегорию по id среди уровня-2 и их детей (уровень-3).
 function getSubcategoryById(catId, subId) {
   const c = getCategoryById(catId);
   if (!c) return null;
-  return (c.subcategories || []).find(s => s.id === subId) || null;
+  for (const s of (c.subcategories || [])) {
+    if (s.id === subId) return s;
+    for (const k of (s.children || [])) {
+      if (k.id === subId) return k;
+    }
+  }
+  return null;
+}
+// Дочерние под-подкатегории (уровень-3) данной подкатегории уровня-2.
+function getSubChildren(catId, subId) {
+  const s = getSubcategoryById(catId, subId);
+  return (s && Array.isArray(s.children)) ? s.children : [];
+}
+// id родительской подкатегории уровня-2 для под-подкатегории уровня-3 (или null).
+function getSubParentId(catId, subId) {
+  const c = getCategoryById(catId);
+  if (!c) return null;
+  for (const s of (c.subcategories || [])) {
+    for (const k of (s.children || [])) {
+      if (k.id === subId) return s.id;
+    }
+  }
+  return null;
 }
 
-// Sort categories by order, subcategories by order.
+// Sort categories by order, subcategories (и их детей) by order.
 function sortedCategories() {
-  return getCategories().slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map(c => ({
+  const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+  return getCategories().slice().sort(byOrder).map(c => ({
     ...c,
-    subcategories: (c.subcategories || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0)),
+    subcategories: (c.subcategories || []).slice().sort(byOrder).map(s => ({
+      ...s,
+      children: (s.children || []).slice().sort(byOrder),
+    })),
   }));
 }
 
@@ -191,6 +218,13 @@ function productCountBySubcategory(catId) {
     if (p.subcategory) counts[p.subcategory] = (counts[p.subcategory] || 0) + 1;
   }
   return counts;
+}
+// Суммарное число товаров узла: собственные + всех его детей (уровень-3).
+function subcategoryRollupCount(node, directCounts) {
+  if (!node) return 0;
+  let n = directCounts[node.id] || 0;
+  for (const k of (node.children || [])) n += directCounts[k.id] || 0;
+  return n;
 }
 
 // ---------- product → subcategory auto-classification ----------
@@ -312,9 +346,12 @@ if (typeof window !== 'undefined') {
   window.getCategoryById = getCategoryById;
   window.getCategoryByLegacyName = getCategoryByLegacyName;
   window.getSubcategoryById = getSubcategoryById;
+  window.getSubChildren = getSubChildren;
+  window.getSubParentId = getSubParentId;
   window.sortedCategories = sortedCategories;
   window.productCountByCategory = productCountByCategory;
   window.productCountBySubcategory = productCountBySubcategory;
+  window.subcategoryRollupCount = subcategoryRollupCount;
   window.classifyProduct = classifyProduct;
   window.migrateProductsToSubcategories = migrateProductsToSubcategories;
 }

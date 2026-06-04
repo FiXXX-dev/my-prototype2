@@ -915,6 +915,12 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <input type="number" id="subOrder" min="1" value="1">
       </div>
       <div class="form-grp full">
+        <label>Родительская подкатегория (для 3-го уровня)</label>
+        <select id="subParent">
+          <option value="">— Верхний уровень (без родителя) —</option>
+        </select>
+      </div>
+      <div class="form-grp full">
         <label>Ссылка на фото (URL, опционально)</label>
         <div style="display:flex;gap:12px;align-items:center;">
           <input type="url" id="subImg" placeholder="https://example.com/photo.jpg" oninput="updateImgPreview('subImg','subImgPreview')" style="flex:1;">
@@ -2650,21 +2656,39 @@ function renderCategoriesAdmin(){
     const onHome = !!_catHomeState[c.id];
     const subCounts = productCountBySubcategory(c.id);
     const subsHtml = (c.subcategories || []).map((s) => {
-      const n = subCounts[s.id] || 0;
+      const n = (typeof subcategoryRollupCount === 'function') ? subcategoryRollupCount(s, subCounts) : (subCounts[s.id]||0);
       const thumb = s.img
         ? `<img src="${escH(s.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
         : `<span class="icon icon-box"></span>`;
+      const kidsHtml = (s.children || []).map(k => {
+        const kn = subCounts[k.id] || 0;
+        const kThumb = k.img
+          ? `<img src="${escH(k.img)}" alt="" style="width:28px;height:28px;object-fit:contain;" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
+          : `<span class="icon icon-box" style="font-size:14px;color:#8aaa94;"></span>`;
+        return `<div class="sub-admin-row" style="padding-left:28px;background:#f7faf8;border-top:1px solid #edf3ee;">
+          <div class="sub-admin-thumb" style="width:28px;height:28px;">${kThumb}</div>
+          <div><span class="sub-admin-name" style="font-size:13px;">↳ ${escH(k.name)}</span><span class="sub-admin-count">${kn} ${plural(kn,['товар','товара','товаров'])}</span></div>
+          <div class="cat-admin-spacer"></div>
+          <div class="cat-admin-actions">
+            <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(k.id)}',-1)" title="Вверх">↑</button>
+            <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(k.id)}',1)" title="Вниз">↓</button>
+            <button class="btn-icon" onclick="editSubcategory('${escH(c.id)}','${escH(k.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
+            <button class="btn-icon danger" onclick="deleteSubcategory('${escH(c.id)}','${escH(k.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
+          </div>
+        </div>`;
+      }).join('');
       return `<div class="sub-admin-row">
         <div class="sub-admin-thumb">${thumb}</div>
         <div><span class="sub-admin-name">${escH(s.name)}</span><span class="sub-admin-count">${n} ${plural(n,['товар','товара','товаров'])}</span></div>
         <div class="cat-admin-spacer"></div>
         <div class="cat-admin-actions">
+          <button class="btn-icon" onclick="event.stopPropagation();openSubcategoryModal('${escH(c.id)}','${escH(s.id)}')" title="+ под-подкат." style="color:var(--green-dark);font-weight:700;">+</button>
           <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',-1)" title="Вверх">↑</button>
           <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',1)" title="Вниз">↓</button>
           <button class="btn-icon" onclick="editSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
           <button class="btn-icon danger" onclick="deleteSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
         </div>
-      </div>`;
+      </div>${kidsHtml}`;
     }).join('') || '<div style="font-size:13px;color:#8aaa94;padding:8px 4px;">Подкатегорий нет</div>';
     const headerThumb = c.img
       ? `<img src="${escH(c.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
@@ -2683,7 +2707,7 @@ function renderCategoriesAdmin(){
         <div class="cat-admin-thumb">${headerThumb}</div>
         <div onclick="toggleCatOpen('${escH(c.id)}')" style="cursor:pointer;flex:1;">
           <div class="cat-admin-name">${escH(c.name)}</div>
-          <div class="cat-admin-meta">id: ${escH(c.id)} · ${(c.subcategories||[]).length} подкат. · ${counts[c.id]||0} ${plural(counts[c.id]||0,['товар','товара','товаров'])}</div>
+          <div class="cat-admin-meta">id: ${escH(c.id)} · ${(c.subcategories||[]).length} подкат. (${(c.subcategories||[]).reduce((s,x)=>s+(x.children||[]).length,0)} вложенных) · ${counts[c.id]||0} ${plural(counts[c.id]||0,['товар','товара','товаров'])}</div>
         </div>
         <div class="cat-admin-actions">
           <button class="btn btn-secondary btn-sm" style="${homeBtnStyle}" ${homeBtnDisabled} onclick="event.stopPropagation();toggleCatHomepage('${escH(c.id)}')">${homeBtnLabel}</button>
@@ -2735,11 +2759,9 @@ function mergeSupabaseTreeIntoLocal(supaCats, supaSubs){
     }
   });
   if (Array.isArray(supaSubs) && supaSubs.length) {
-    const grouped = {};
-    supaSubs.forEach(s => { (grouped[s.category_id] = grouped[s.category_id] || []).push({
-      id: s.id, name: s.name, img: s.image_url || '', order: s.sort_order != null ? s.sort_order : 0,
-    }); });
-    Object.keys(grouped).forEach(catId => { if (byId[catId]) byId[catId].subcategories = grouped[catId]; });
+    const byCat = {};
+    supaSubs.forEach(s => { (byCat[s.category_id] = byCat[s.category_id] || []).push(s); });
+    Object.keys(byCat).forEach(catId => { if (byId[catId]) byId[catId].subcategories = _nestSubsLocal(byCat[catId]); });
   }
   setCategories(cats);
 }
@@ -2763,9 +2785,12 @@ async function syncCategoryTreeToSupabase(){
       color: '#2ECC71',
     });
     if (r.ok) okCats++; else console.error('[admin] sync category', c.id, r.error || r.reason);
-    (c.subcategories || []).forEach((s, i) => subs.push({
-      category_id: c.id, id: s.id, name: s.name, image_url: s.img || null, sort_order: s.order != null ? s.order : i,
-    }));
+    (c.subcategories || []).forEach((s, i) => {
+      subs.push({ category_id: c.id, id: s.id, name: s.name, image_url: s.img || null, sort_order: s.order != null ? s.order : i, parent_id: null });
+      (s.children || []).forEach((k, j) => subs.push({
+        category_id: c.id, id: k.id, name: k.name, image_url: k.img || null, sort_order: k.order != null ? k.order : j, parent_id: s.id,
+      }));
+    });
   }
   const sr = await window.supaBulkUpsertSubcategories(subs);
   if (!sr.ok) {
@@ -2783,6 +2808,7 @@ function _syncSubToSupabase(catId, sub, order){
   window.supaUpsertSubcategory({
     category_id: catId, id: sub.id, name: sub.name,
     image_url: sub.img || null, sort_order: order != null ? order : (sub.order || 0),
+    parent_id: sub.parent_id || null,
   }).catch(e => console.error('[admin] upsert subcategory', e));
 }
 
@@ -2966,8 +2992,66 @@ function moveCategory(id, delta){
   renderCategoriesAdmin();
 }
 
+// ===== Subcategory CRUD helpers =====
+
+// Строит вложенное дерево из плоского списка строк Supabase (parent_id).
+function _nestSubsLocal(rows) {
+  const nodes = {};
+  rows.forEach(s => {
+    nodes[s.id] = { id: s.id, name: s.name, img: s.image_url || '',
+      order: s.sort_order != null ? s.sort_order : 0, parent_id: s.parent_id || null, children: [] };
+  });
+  const roots = [];
+  rows.forEach(s => {
+    const node = nodes[s.id];
+    const pid = s.parent_id || null;
+    if (pid && nodes[pid] && !nodes[pid].parent_id) {
+      nodes[pid].children.push(node);
+    } else { node.parent_id = null; roots.push(node); }
+  });
+  roots.sort((a,b) => (a.order||0)-(b.order||0));
+  roots.forEach(r => r.children.sort((a,b) => (a.order||0)-(b.order||0)));
+  return roots;
+}
+
+// Удаляет узел из любого уровня дерева подкатегорий. Возвращает удалённый узел.
+function _removeSub(subs, targetId) {
+  const idx = subs.findIndex(s => s.id === targetId);
+  if (idx >= 0) return subs.splice(idx, 1)[0];
+  for (const s of subs) {
+    s.children = s.children || [];
+    const ki = s.children.findIndex(k => k.id === targetId);
+    if (ki >= 0) return s.children.splice(ki, 1)[0];
+  }
+  return null;
+}
+
+// Заполняет select родителей доступными подкатегориями уровня-2.
+function _populateSubParentSelect(catId, selectedId) {
+  const sel = document.getElementById('subParent');
+  sel.innerHTML = '<option value="">— Верхний уровень (без родителя) —</option>';
+  const cat = getCategoryById(catId);
+  if (cat && cat.subcategories) {
+    cat.subcategories.slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = s.name;
+      if (s.id === selectedId) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+}
+
+function _nextSubOrder(catId, parentId) {
+  const cat = getCategoryById(catId); if (!cat) return 1;
+  if (parentId) {
+    const p = (cat.subcategories||[]).find(s => s.id === parentId);
+    return p ? ((p.children||[]).length + 1) : 1;
+  }
+  return (cat.subcategories||[]).length + 1;
+}
+
 // ===== Subcategory CRUD =====
-function openSubcategoryModal(catId){
+function openSubcategoryModal(catId, preSelectedParentId){
   const c = getCategoryById(catId); if (!c) return;
   editingSubcategoryParent = catId;
   editingSubcategoryId = null;
@@ -2975,8 +3059,9 @@ function openSubcategoryModal(catId){
   document.getElementById('subModalSub').textContent = 'Категория: ' + c.name;
   document.getElementById('subName').value = '';
   document.getElementById('subId').value = '';
-  document.getElementById('subOrder').value = (c.subcategories||[]).length + 1;
+  document.getElementById('subOrder').value = _nextSubOrder(catId, preSelectedParentId || null);
   document.getElementById('subImg').value = '';
+  _populateSubParentSelect(catId, preSelectedParentId || null);
   updateImgPreview('subImg','subImgPreview');
   document.getElementById('subcategoryModal').classList.add('open');
   document.getElementById('subName').focus();
@@ -2986,12 +3071,14 @@ function editSubcategory(catId, subId){
   const s = getSubcategoryById(catId, subId); if (!s) return;
   editingSubcategoryParent = catId;
   editingSubcategoryId = subId;
+  const parentId = (typeof getSubParentId === 'function') ? getSubParentId(catId, subId) : null;
   document.getElementById('subModalTitle').textContent = 'Редактирование подкатегории';
   document.getElementById('subModalSub').textContent = 'Категория: ' + c.name;
   document.getElementById('subName').value = s.name;
   document.getElementById('subId').value = s.id;
   document.getElementById('subOrder').value = s.order || 1;
   document.getElementById('subImg').value = s.img || '';
+  _populateSubParentSelect(catId, parentId);
   updateImgPreview('subImg','subImgPreview');
   document.getElementById('subcategoryModal').classList.add('open');
 }
@@ -3002,27 +3089,42 @@ function saveSubcategory(){
   const id = document.getElementById('subId').value.trim();
   const order = parseInt(document.getElementById('subOrder').value) || 1;
   const img = document.getElementById('subImg').value.trim();
+  const parentId = document.getElementById('subParent').value || null;
   if (!name || !id) { alert('Укажите название и ID'); return; }
-  if (!/^[a-z0-9-]+$/i.test(id)) { alert('ID может содержать только латиницу, цифры и тире'); return; }
+  if (!/^[a-z0-9-]+$/i.test(id)) { alert('ID: только латиница, цифры и тире'); return; }
   let cats = getCategories();
   const ci = cats.findIndex(c => c.id === catId);
   if (ci < 0) return;
   cats[ci].subcategories = cats[ci].subcategories || [];
+
+  const newNode = { id, name, img, order, children: [] };
   if (editingSubcategoryId) {
-    cats[ci].subcategories = cats[ci].subcategories.map(s => s.id === editingSubcategoryId ? { ...s, name, id, img, order } : s);
+    const old = _removeSub(cats[ci].subcategories, editingSubcategoryId);
+    if (old) newNode.children = old.children || [];
     if (editingSubcategoryId !== id) {
-      // Update products referencing old sub id
       let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
       products = products.map(p => (p.categoryId === catId && p.subcategory === editingSubcategoryId) ? { ...p, subcategory: id } : p);
       localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
     }
   } else {
-    if (cats[ci].subcategories.some(s => s.id === id)) { alert('Подкатегория с таким ID уже существует'); return; }
-    cats[ci].subcategories.push({ id, name, img, order });
+    const allIds = [
+      ...cats[ci].subcategories.map(s => s.id),
+      ...cats[ci].subcategories.flatMap(s => (s.children||[]).map(k => k.id)),
+    ];
+    if (allIds.includes(id)) { alert('Подкатегория с таким ID уже существует'); return; }
+  }
+  if (parentId) {
+    const parent = cats[ci].subcategories.find(s => s.id === parentId);
+    if (!parent) { alert('Родительская подкатегория не найдена'); return; }
+    parent.children = parent.children || [];
+    parent.children.push(newNode);
+    parent.children.sort((a,b)=>(a.order||0)-(b.order||0));
+  } else {
+    cats[ci].subcategories.push(newNode);
+    cats[ci].subcategories.sort((a,b)=>(a.order||0)-(b.order||0));
   }
   setCategories(cats);
-  // Sync to Supabase (single source of truth across browsers).
-  _syncSubToSupabase(catId, { id, name, img, order }, order);
+  _syncSubToSupabase(catId, { id, name, img, order, parent_id: parentId }, order);
   if (editingSubcategoryId && editingSubcategoryId !== id) {
     if (typeof window.supaDeleteSubcategory === 'function') {
       window.supaDeleteSubcategory(catId, editingSubcategoryId).catch(()=>{});
@@ -3035,19 +3137,25 @@ function saveSubcategory(){
 function deleteSubcategory(catId, subId){
   const s = getSubcategoryById(catId, subId); if (!s) return;
   const counts = productCountBySubcategory(catId);
-  const n = counts[subId] || 0;
-  let msg = `Удалить подкатегорию «${s.name}»?`;
-  if (n > 0) msg += `\n\nЕё ${n} ${plural(n,['товар','товара','товаров'])} останется в категории, но без подкатегории.`;
+  const kids = s.children || [];
+  const n = (typeof subcategoryRollupCount === 'function') ? subcategoryRollupCount(s, counts) : (counts[subId]||0);
+  let msg = `Удалить «${s.name}»?`;
+  if (kids.length) msg += `\n\nВместе с ней удалятся ${kids.length} вложенных подкатегорий.`;
+  if (n > 0) msg += `\n\n${n} ${plural(n,['товар','товара','товаров'])} останется в категории без подкатегории.`;
   if (!confirm(msg)) return;
+  const idsToRemove = [subId, ...kids.map(k => k.id)];
   let products = []; try { products = JSON.parse(localStorage.getItem(KLEVER_PRODUCTS_KEY)) || []; } catch(e){}
-  products = products.map(p => (p.categoryId === catId && p.subcategory === subId) ? { ...p, subcategory: undefined } : p);
+  products = products.map(p => (p.categoryId === catId && idsToRemove.includes(p.subcategory)) ? { ...p, subcategory: undefined } : p);
   localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
   let cats = getCategories();
   const ci = cats.findIndex(c => c.id === catId);
-  cats[ci].subcategories = (cats[ci].subcategories || []).filter(s => s.id !== subId);
+  if (ci >= 0) {
+    cats[ci].subcategories = (cats[ci].subcategories||[]).filter(s => s.id !== subId);
+    cats[ci].subcategories.forEach(s => { s.children = (s.children||[]).filter(k => k.id !== subId); });
+  }
   setCategories(cats);
   if (typeof window.supaDeleteSubcategory === 'function') {
-    window.supaDeleteSubcategory(catId, subId).catch(()=>{});
+    idsToRemove.forEach(rid => window.supaDeleteSubcategory(catId, rid).catch(()=>{}));
   }
   renderCategoriesAdmin();
   toast('Подкатегория удалена');
@@ -3056,17 +3164,24 @@ function moveSubcategory(catId, subId, delta){
   let cats = getCategories();
   const ci = cats.findIndex(c => c.id === catId);
   if (ci < 0) return;
-  let subs = (cats[ci].subcategories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
-  const idx = subs.findIndex(s => s.id === subId);
+  // Найти список, в котором живёт subId (L2 или L3).
+  let list = cats[ci].subcategories || [];
+  let parentNode = null;
+  if (!list.find(s => s.id === subId)) {
+    for (const s of list) {
+      if ((s.children||[]).find(k => k.id === subId)) { list = s.children; parentNode = s; break; }
+    }
+  }
+  const sorted = list.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const idx = sorted.findIndex(s => s.id === subId);
   const newIdx = idx + delta;
-  if (idx < 0 || newIdx < 0 || newIdx >= subs.length) return;
-  [subs[idx], subs[newIdx]] = [subs[newIdx], subs[idx]];
-  subs.forEach((s, i) => { s.order = i + 1; });
-  cats[ci].subcategories = subs;
+  if (idx < 0 || newIdx < 0 || newIdx >= sorted.length) return;
+  [sorted[idx], sorted[newIdx]] = [sorted[newIdx], sorted[idx]];
+  sorted.forEach((s, i) => { s.order = i + 1; });
+  if (parentNode) parentNode.children = sorted; else cats[ci].subcategories = sorted;
   setCategories(cats);
-  // Persist new order of all subs in this category to Supabase.
   if (typeof window.supaUpsertSubcategory === 'function') {
-    subs.forEach((s, i) => _syncSubToSupabase(catId, s, i + 1));
+    sorted.forEach((s, i) => _syncSubToSupabase(catId, s, i + 1));
   }
   renderCategoriesAdmin();
 }
@@ -3074,7 +3189,6 @@ function moveSubcategory(catId, subId, delta){
 // ===== Product modal — subcategory dropdown =====
 function onProductCatChange(){
   const catId = document.getElementById('prodCat').value;
-  // value теперь = id категории; запасной поиск по названию для совместимости.
   const cat = (typeof getCategoryById === 'function' ? getCategoryById(catId) : null)
     || getCategories().find(c => c.id === catId || c.name === catId);
   const sel = document.getElementById('prodSubcat');
@@ -3084,6 +3198,12 @@ function onProductCatChange(){
       const o = document.createElement('option');
       o.value = s.id; o.textContent = s.name;
       sel.appendChild(o);
+      // Под-подкатегории уровня-3 — с отступом
+      (s.children||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(k => {
+        const ko = document.createElement('option');
+        ko.value = k.id; ko.textContent = '  ↳ ' + k.name;
+        sel.appendChild(ko);
+      });
     });
   }
 }

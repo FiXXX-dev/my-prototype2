@@ -155,6 +155,37 @@
     });
   }
 
+  // Собирает плоский список строк подкатегорий одной категории в 2-уровневое
+  // дерево: корни (parent_id пустой) + их дети (parent_id = id родителя).
+  // Глубже 3-го уровня не уходим — внука прикрепляем к ближайшему известному
+  // родителю-корню, иначе делаем корнем (защита от «висячих» ссылок).
+  function _nestSubs(rows) {
+    var byOrder = function (a, b) { return (a.order || 0) - (b.order || 0); };
+    var nodes = {};
+    rows.forEach(function (s) {
+      nodes[s.id] = {
+        id: s.id, name: s.name, img: s.image_url || '',
+        order: s.sort_order != null ? s.sort_order : 0,
+        parent_id: s.parent_id || null, children: [],
+      };
+    });
+    var roots = [];
+    rows.forEach(function (s) {
+      var node = nodes[s.id];
+      var pid = s.parent_id || null;
+      // Прикрепляем к родителю только если родитель сам корневой (3 уровня max).
+      if (pid && nodes[pid] && !(nodes[pid].parent_id)) {
+        nodes[pid].children.push(node);
+      } else {
+        node.parent_id = null;
+        roots.push(node);
+      }
+    });
+    roots.sort(byOrder);
+    roots.forEach(function (r) { r.children.sort(byOrder); });
+    return roots;
+  }
+
   async function _buildTree() {
     // Категории и подкатегории — тоже из статических JSON (быстро), Supabase fallback.
     const supaCats = await _getJson('categories.json', window.supaGetAllCategoriesHP);
@@ -181,23 +212,25 @@
     });
 
     // Подкатегории из Supabase замещают дефолтные для тех категорий,
-    // у которых в БД есть хотя бы одна строка.
+    // у которых в БД есть хотя бы одна строка. Поддерживаем 3-й уровень:
+    // строка с parent_id становится дочерней под-подкатегорией (node.children).
     if (Array.isArray(supaSubs) && supaSubs.length) {
-      const grouped = {};
+      const byCat = {};
       supaSubs.forEach(function (s) {
-        (grouped[s.category_id] = grouped[s.category_id] || []).push({
-          id: s.id, name: s.name, img: s.image_url || '', order: s.sort_order != null ? s.sort_order : 0,
-        });
+        (byCat[s.category_id] = byCat[s.category_id] || []).push(s);
       });
-      Object.keys(grouped).forEach(function (catId) {
-        if (byId[catId]) byId[catId].subcategories = grouped[catId];
+      Object.keys(byCat).forEach(function (catId) {
+        if (byId[catId]) byId[catId].subcategories = _nestSubs(byCat[catId]);
       });
     }
 
-    // Сортируем категории и подкатегории по order.
+    // Сортируем категории и подкатегории по order (children тоже).
     tree.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
     tree.forEach(function (c) {
       c.subcategories = (c.subcategories || []).slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+      c.subcategories.forEach(function (s) {
+        s.children = (s.children || []).slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+      });
     });
     return tree;
   }

@@ -864,6 +864,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       name: sub.name,
       image_url: sub.image_url || null,
       sort_order: sub.sort_order != null ? sub.sort_order : 0,
+      parent_id: sub.parent_id || null,
     };
     return _pgUpsert('subcategories', row, 'category_id,id');
   };
@@ -883,6 +884,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       name: s.name,
       image_url: s.image_url || null,
       sort_order: s.sort_order != null ? s.sort_order : 0,
+      parent_id: s.parent_id || null,
     }));
     if (!rows.length) return { ok:true };
     const CHUNK = 50;
