@@ -595,7 +595,7 @@ function getCart() {
 }
 
 function getSubtotal() {
-  return getCart().reduce((s, i) => s + i.price * i.qty, 0);
+  return Math.round(getCart().reduce((s, i) => s + i.price * i.qty, 0) * 100) / 100;
 }
 
 function getDeliveryCost() {
@@ -604,7 +604,7 @@ function getDeliveryCost() {
 }
 
 function getTotal() {
-  return getSubtotal() + getDeliveryCost();
+  return Math.round((getSubtotal() + getDeliveryCost()) * 100) / 100;
 }
 
 // Выбор способа доставки
@@ -729,7 +729,7 @@ function updateSummary() {
         </div>
       </div>
       <div class="summary-item-price-col">
-        <div class="summary-item-price">${i.qty * i.price} ₽</div>
+        <div class="summary-item-price">${Math.round(i.qty * i.price * 100) / 100} ₽</div>
       </div>
     </div>
   `;}).join('') || '<div style="color:#8aaa94;font-size:14px;text-align:center;padding:20px;">Корзина пуста</div>';
