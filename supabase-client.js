@@ -159,6 +159,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch (e) { return _writeErr(e); }
   }
 
+  // Upsert, перебирающий несколько вариантов on_conflict, пока один не совпадёт
+  // с реальным уникальным ограничением таблицы. Нужен, т.к. PK таблицы
+  // subcategories может быть как `id`, так и составной `(category_id,id)`.
+  async function _pgUpsertAny(table, rows, conflictTargets) {
+    let last = null;
+    for (let i = 0; i < conflictTargets.length; i++) {
+      const r = await _pgUpsert(table, rows, conflictTargets[i]);
+      if (r.ok) return r;
+      last = r;
+      const msg = '' + (r.error && (r.error.message || r.error.hint || r.error.details) || '');
+      // Переходим к следующему варианту только если дело именно в ON CONFLICT.
+      if (!/ON CONFLICT|unique or exclusion/i.test(msg)) return r;
+    }
+    return last || { ok:false, error:{ message:'upsert failed' } };
+  }
+
   async function _pgUpdate(table, filter, fields) {
     try {
       const data = await _pgPostRetry(table + '?' + filter, fields, 'PATCH',
@@ -881,7 +897,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       image_url: sub.image_url || null,
       sort_order: sub.sort_order != null ? sub.sort_order : 0,
     };
-    return _pgUpsert('subcategories', row, 'category_id,id');
+    // PK таблицы может быть `id` или `(category_id,id)` — пробуем оба.
+    return _pgUpsertAny('subcategories', row, ['id', 'category_id,id']);
   };
 
   window.supaDeleteSubcategory = async function(categoryId, id){
@@ -903,7 +920,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if (!rows.length) return { ok:true };
     const CHUNK = 50;
     for (let i = 0; i < rows.length; i += CHUNK) {
-      const r = await _pgUpsert('subcategories', rows.slice(i, i + CHUNK), 'category_id,id');
+      const r = await _pgUpsertAny('subcategories', rows.slice(i, i + CHUNK), ['id', 'category_id,id']);
       if (!r.ok) { console.error('[supabase] bulk upsert subcategories', r.error); return { ok:false, error:r.error }; }
     }
     return { ok:true };
