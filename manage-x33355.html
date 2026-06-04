@@ -1426,6 +1426,11 @@ function loadAll() {
   // Подгружаем акции и новости в фоне, чтобы счётчики в сайдбаре были верны.
   if (typeof loadPromotionsAdmin === 'function') loadPromotionsAdmin();
   if (typeof loadNewsAdmin === 'function') loadNewsAdmin();
+  // Подтягиваем дерево категорий из БД, чтобы список категорий в модалке
+  // товара и в фильтре сразу содержал все добавленные категории/подкатегории.
+  if (typeof ensureCategoriesLoaded === 'function') {
+    ensureCategoriesLoaded().then(function(){ if (typeof populateFilterCat === 'function') populateFilterCat(); });
+  }
 }
 
 function updateCounts() {
@@ -1511,12 +1516,14 @@ async function loadProductsAdmin() {
           emoji: p.emoji || '📦',
         }));
         try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
+        populateFilterCat();
         renderProducts();
         updateCounts();
         return;
       }
     } catch(e) {}
   }
+  populateFilterCat();
   renderProducts();
   updateCounts();
 }
@@ -1606,21 +1613,61 @@ function badgeHtml(b) {
   return '<span style="color:#c0d0c5;">—</span>';
 }
 
+// Категории/подкатегории для модалки товара берём из общего дерева
+// (getCategories) — оно включает категории, добавленные в админке (Supabase),
+// а не только 7 захардкоженных. Один раз подтягиваем дерево из БД и кэшируем.
+let _adminCatsLoaded = false;
+async function ensureCategoriesLoaded(){
+  if (_adminCatsLoaded) return;
+  let supaCats = null, supaSubs = null;
+  try { if (typeof window.supaGetAllCategoriesHP === 'function') supaCats = await window.supaGetAllCategoriesHP(); } catch(e){}
+  try { if (typeof window.supaGetSubcategories === 'function') supaSubs = await window.supaGetSubcategories(); } catch(e){}
+  if (typeof mergeSupabaseTreeIntoLocal === 'function') mergeSupabaseTreeIntoLocal(supaCats, supaSubs);
+  if (Array.isArray(supaCats) && supaCats.length) _adminCatsLoaded = true;
+}
+
+// Заполняет выпадающий список категорий из дерева. value = id категории,
+// текст = название. Так в списке появляются все добавленные категории.
+function populateProdCatSelect(selectedId){
+  const sel = document.getElementById('prodCat');
+  if (!sel) return;
+  const cats = (typeof sortedCategories === 'function') ? sortedCategories() : getCategories();
+  sel.innerHTML = (cats || []).map(c => '<option value="' + escH(c.id) + '">' + escH(c.name) + '</option>').join('');
+  if (selectedId != null && cats.some(c => c.id === selectedId)) sel.value = selectedId;
+  else if (cats.length) sel.value = cats[0].id;
+}
+
+// Список категорий в фильтре товаров (value = название, как в p.cat).
+function populateFilterCat(){
+  const sel = document.getElementById('filterCat');
+  if (!sel) return;
+  const cur = sel.value;
+  const cats = (typeof sortedCategories === 'function') ? sortedCategories() : getCategories();
+  sel.innerHTML = '<option value="">Все категории</option>' +
+    (cats || []).map(c => '<option>' + escH(c.name) + '</option>').join('');
+  if (cur) sel.value = cur;
+}
+
 function openProductModal() {
   editingSku = null;
   document.getElementById('prodModalTitle').textContent = 'Новый товар';
   document.getElementById('prodName').value = '';
   document.getElementById('prodSku').value = '';
   document.getElementById('prodPrice').value = '';
-  document.getElementById('prodCat').value = 'Бытовая химия';
   document.getElementById('prodBadge').value = '';
   document.getElementById('prodImg').value = '';
   document.getElementById('prodDesc').value = '';
+  populateProdCatSelect();
   if (typeof onProductCatChange === 'function') onProductCatChange();
   document.getElementById('prodSubcat').value = '';
   refreshProdImgPreview();
   document.getElementById('productModal').classList.add('open');
   document.getElementById('prodName').focus();
+  // Догружаем актуальное дерево категорий из БД и обновляем список.
+  ensureCategoriesLoaded().then(function(){
+    populateProdCatSelect(document.getElementById('prodCat').value);
+    if (typeof onProductCatChange === 'function') onProductCatChange();
+  });
 }
 
 // Update the little image preview box from the current URL field.
@@ -1666,18 +1713,26 @@ function editProduct(sku) {
   const p = getProducts().find(x => x.sku === sku);
   if (!p) return;
   editingSku = sku;
+  // id категории: из товара (category_id) или по легаси-названию.
+  const cid = p.categoryId || (typeof KLEVER_LEGACY_CAT_TO_ID === 'object' ? KLEVER_LEGACY_CAT_TO_ID[p.cat] : '') || '';
   document.getElementById('prodModalTitle').textContent = 'Редактирование';
   document.getElementById('prodName').value = p.name;
   document.getElementById('prodSku').value = p.sku;
   document.getElementById('prodPrice').value = p.price;
-  document.getElementById('prodCat').value = p.cat;
   document.getElementById('prodBadge').value = p.badge || '';
   document.getElementById('prodImg').value = p.img || '';
   document.getElementById('prodDesc').value = p.desc || '';
+  populateProdCatSelect(cid);
   if (typeof onProductCatChange === 'function') onProductCatChange();
   document.getElementById('prodSubcat').value = p.subcategory || '';
   refreshProdImgPreview();
   document.getElementById('productModal').classList.add('open');
+  // Догружаем дерево из БД и восстанавливаем выбор категории/подкатегории.
+  ensureCategoriesLoaded().then(function(){
+    populateProdCatSelect(cid);
+    if (typeof onProductCatChange === 'function') onProductCatChange();
+    document.getElementById('prodSubcat').value = p.subcategory || '';
+  });
 }
 
 function closeProductModal() {
@@ -1688,9 +1743,13 @@ async function saveProduct() {
   const name = document.getElementById('prodName').value.trim();
   const sku = document.getElementById('prodSku').value.trim();
   const price = parseFloat(document.getElementById('prodPrice').value);
-  const cat = document.getElementById('prodCat').value;
+  // value списка = id категории. Имя берём из дерева (для p.cat и отображения),
+  // id — для категории на клиенте (классификация/фильтры).
+  const categoryId = document.getElementById('prodCat').value || undefined;
+  const _catObj = (typeof getCategoryById === 'function') ? getCategoryById(categoryId) : null;
+  const cat = _catObj ? _catObj.name
+    : (getCategories().find(c => c.id === categoryId) || {}).name || categoryId || '';
   const subcategory = document.getElementById('prodSubcat').value || undefined;
-  const categoryId = (typeof KLEVER_LEGACY_CAT_TO_ID === 'object' ? KLEVER_LEGACY_CAT_TO_ID[cat] : null) || undefined;
   const badge = document.getElementById('prodBadge').value;
   const img = document.getElementById('prodImg').value.trim();
   const desc = document.getElementById('prodDesc').value.trim();
@@ -3008,8 +3067,10 @@ function moveSubcategory(catId, subId, delta){
 
 // ===== Product modal — subcategory dropdown =====
 function onProductCatChange(){
-  const catName = document.getElementById('prodCat').value;
-  const cat = getCategoryByLegacyName(catName) || getCategories().find(c => c.name === catName);
+  const catId = document.getElementById('prodCat').value;
+  // value теперь = id категории; запасной поиск по названию для совместимости.
+  const cat = (typeof getCategoryById === 'function' ? getCategoryById(catId) : null)
+    || getCategories().find(c => c.id === catId || c.name === catId);
   const sel = document.getElementById('prodSubcat');
   sel.innerHTML = '<option value="">— Без подкатегории —</option>';
   if (cat && cat.subcategories) {
