@@ -85,7 +85,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   }
 
   // POST/PATCH/DELETE для RPC и записей — plain fetch (без SDK-заголовков).
-  async function _pgPost(path, body, method) {
+  // extraHeaders позволяет добавить, напр., Prefer: return=representation.
+  async function _pgPost(path, body, method, extraHeaders) {
     if (!isConfigured()) return null;
     const url = new URL(SUPABASE_URL + '/rest/v1/' + path);
     url.searchParams.set('apikey', SUPABASE_ANON_KEY);
@@ -94,7 +95,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     try {
       const resp = await fetch(url.toString(), {
         method: method || 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY },
+        headers: Object.assign(
+          { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY },
+          extraHeaders || {}
+        ),
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
@@ -104,6 +108,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       }
       return resp.status === 204 ? null : await resp.json().catch(() => null);
     } finally { clearTimeout(timer); }
+  }
+
+  // _pgPost с повтором — на DPI-сетях первый POST тоже может оборваться.
+  async function _pgPostRetry(path, body, method, extraHeaders, tries) {
+    const max = tries || 3;
+    let lastErr = null;
+    for (let i = 0; i < max; i++) {
+      if (i) await new Promise(r => setTimeout(r, i * 800));
+      try { return await _pgPost(path, body, method, extraHeaders); }
+      catch (e) {
+        lastErr = e;
+        // Ошибки уровня БД (а не сети) повторять бессмысленно — пробрасываем сразу.
+        if (e && e.status && e.status >= 400 && e.status < 500) throw e;
+      }
+    }
+    throw lastErr || new Error('request failed');
   }
 
   // _pgGet с повтором: на сетях с DPI первая попытка иногда обрывается даже
@@ -154,8 +174,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // That guarantees the insert lands even if your table is bare-minimal,
   // and uses the extra columns automatically if they exist.
   window.supaInsertOrder = async function(order){
-    const sb = getClient();
-    if (!sb) return { ok: false, reason: 'unconfigured' };
+    if (!isConfigured()) return { ok: false, reason: 'unconfigured' };
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
 
@@ -205,22 +224,28 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     };
 
     // Recursively retry, removing the offending column on each missing-column error.
+    // Uses plain-fetch _pgPostRetry (NO CORS preflight) so the insert lands even on
+    // DPI/ТСПУ networks that block the SDK's OPTIONS request ("Failed to fetch").
     async function tryInsert(row) {
-      let { data, error } = await sb.from('orders').insert([row]).select();
-      if (!error) return { ok: true, data: data && data[0] };
-      if (!isMissingColumnError(error)) {
-        console.error('[supabase] insert error', error);
-        return { ok: false, error };
+      try {
+        const data = await _pgPostRetry('orders', [row], 'POST', { Prefer: 'return=representation' });
+        return { ok: true, data: Array.isArray(data) ? data[0] : data };
+      } catch (e) {
+        const error = (e && e.supaError) || e || {};
+        if (!isMissingColumnError(error)) {
+          console.error('[supabase] insert error', error);
+          return { ok: false, error };
+        }
+        const col = missingColName(error);
+        if (!col || REQUIRED.has(col)) {
+          console.error('[supabase] cannot strip required column or unknown col', error);
+          return { ok: false, error };
+        }
+        const stripped = { ...row };
+        delete stripped[col];
+        console.warn(`[supabase] column "${col}" missing — retrying without it`);
+        return tryInsert(stripped);
       }
-      const col = missingColName(error);
-      if (!col || REQUIRED.has(col)) {
-        console.error('[supabase] cannot strip required column or unknown col', error);
-        return { ok: false, error };
-      }
-      const stripped = { ...row };
-      delete stripped[col];
-      console.warn(`[supabase] column "${col}" missing — retrying without it`);
-      return tryInsert(stripped);
     }
 
     try {
