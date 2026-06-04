@@ -38,7 +38,7 @@ jobs:
             -H "apikey: $SUPABASE_ANON_KEY" -o products.json
           curl -fsS "$SUPABASE_URL/rest/v1/categories?select=id,name,show_on_homepage,sort_order,image_url,color,product_count&order=sort_order.asc,id.asc" \
             -H "apikey: $SUPABASE_ANON_KEY" -o categories.json
-          curl -fsS "$SUPABASE_URL/rest/v1/subcategories?select=id,category_id,name,image_url,sort_order,parent_id&order=category_id.asc,sort_order.asc,id.asc" \
+          curl -fsS "$SUPABASE_URL/rest/v1/subcategories?select=*&order=category_id.asc,sort_order.asc,id.asc" \
             -H "apikey: $SUPABASE_ANON_KEY" -o subcategories.json
           # Акции: мягкий fallback если таблицы нет.
           curl -fsS "$SUPABASE_URL/rest/v1/promotions?select=*&order=sort_order.asc,id.asc" \

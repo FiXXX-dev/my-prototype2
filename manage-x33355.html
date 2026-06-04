@@ -2795,23 +2795,17 @@ async function syncCategoryTreeToSupabase(){
       color: '#2ECC71',
     });
     if (r.ok) okCats++; else console.error('[admin] sync category', c.id, r.error || r.reason);
+    // id уже содержит привязку к родителю ("<parent>~<local>") для 3-го уровня,
+    // поэтому отдельная колонка parent_id не нужна.
     (c.subcategories || []).forEach((s, i) => {
-      subs.push({ category_id: c.id, id: s.id, name: s.name, image_url: s.img || null, sort_order: s.order != null ? s.order : i, parent_id: null });
+      subs.push({ category_id: c.id, id: s.id, name: s.name, image_url: s.img || null, sort_order: s.order != null ? s.order : i });
       (s.children || []).forEach((k, j) => subs.push({
-        category_id: c.id, id: k.id, name: k.name, image_url: k.img || null, sort_order: k.order != null ? k.order : j, parent_id: s.id,
+        category_id: c.id, id: k.id, name: k.name, image_url: k.img || null, sort_order: k.order != null ? k.order : j,
       }));
     });
   }
   const sr = await window.supaBulkUpsertSubcategories(subs);
   if (!sr.ok) {
-    if (_isMissingParentIdError(sr.error)) {
-      alert('В базе Supabase нет колонки «parent_id» — вложенные подкатегории сохранить нельзя.\n\n' +
-        'Откройте Supabase → SQL Editor и выполните один раз:\n\n' +
-        'ALTER TABLE subcategories ADD COLUMN IF NOT EXISTS parent_id text;\n\n' +
-        'Затем нажмите «Синхр. в Supabase» снова.');
-      console.error('[admin] sync subcategories', sr.error);
-      return;
-    }
     const msg = (sr.error && (sr.error.message || sr.error.hint || sr.error.code)) || sr.reason || 'неизвестная ошибка';
     toast('Категории: ' + okCats + '. Подкатегории — ошибка: ' + msg);
     console.error('[admin] sync subcategories', sr.error);
@@ -2826,16 +2820,7 @@ function _syncSubToSupabase(catId, sub, order){
   return window.supaUpsertSubcategory({
     category_id: catId, id: sub.id, name: sub.name,
     image_url: sub.img || null, sort_order: order != null ? order : (sub.order || 0),
-    parent_id: sub.parent_id || null,
   }).catch(e => { console.error('[admin] upsert subcategory', e); return { ok:false, error:e }; });
-}
-
-// Распознаёт ошибку «нет колонки parent_id» в БД (миграция не выполнена).
-function _isMissingParentIdError(err){
-  try {
-    const s = JSON.stringify(err && (err.message || err.error || err)) + '' + (err && err.message || '');
-    return /parent_id/i.test(s) && /(column|PGRST204|does not exist|schema cache|find)/i.test(s);
-  } catch(e){ return false; }
 }
 
 async function toggleCatHomepage(id){
@@ -3020,17 +3005,27 @@ function moveCategory(id, delta){
 
 // ===== Subcategory CRUD helpers =====
 
-// Строит вложенное дерево из плоского списка строк Supabase (parent_id).
+// Привязка под-подкатегории к родителю кодируется прямо в её id через «~»
+// (например, "containers~kont-500"). Это позволяет хранить 3-й уровень БЕЗ
+// отдельной колонки parent_id в Supabase. Если колонка всё же есть — она тоже
+// учитывается (обратная совместимость). Символ «~» не может встретиться в
+// пользовательском id (валидация — только [a-z0-9-]).
+var SUBSEP = '~';
+function _subParentFromId(id){ var i = String(id||'').indexOf(SUBSEP); return i > 0 ? String(id).slice(0, i) : null; }
+function _subLocalId(id){ var i = String(id||'').indexOf(SUBSEP); return i >= 0 ? String(id).slice(i+1) : String(id||''); }
+function _subParentOf(row){ return (row && row.parent_id) || _subParentFromId(row && row.id); }
+
+// Строит вложенное дерево из плоского списка строк Supabase (parent_id ИЛИ id с «~»).
 function _nestSubsLocal(rows) {
   const nodes = {};
   rows.forEach(s => {
     nodes[s.id] = { id: s.id, name: s.name, img: s.image_url || '',
-      order: s.sort_order != null ? s.sort_order : 0, parent_id: s.parent_id || null, children: [] };
+      order: s.sort_order != null ? s.sort_order : 0, parent_id: _subParentOf(s), children: [] };
   });
   const roots = [];
   rows.forEach(s => {
     const node = nodes[s.id];
-    const pid = s.parent_id || null;
+    const pid = _subParentOf(s);
     if (pid && nodes[pid] && !nodes[pid].parent_id) {
       nodes[pid].children.push(node);
     } else { node.parent_id = null; roots.push(node); }
@@ -3101,7 +3096,8 @@ function editSubcategory(catId, subId){
   document.getElementById('subModalTitle').textContent = 'Редактирование подкатегории';
   document.getElementById('subModalSub').textContent = 'Категория: ' + c.name;
   document.getElementById('subName').value = s.name;
-  document.getElementById('subId').value = s.id;
+  // В поле ID показываем «локальную» часть (без префикса родителя).
+  document.getElementById('subId').value = _subLocalId(s.id);
   document.getElementById('subOrder').value = s.order || 1;
   document.getElementById('subImg').value = s.img || '';
   _populateSubParentSelect(catId, parentId);
@@ -3112,12 +3108,15 @@ function closeSubcategoryModal(){ document.getElementById('subcategoryModal').cl
 async function saveSubcategory(){
   const catId = editingSubcategoryParent;
   const name = document.getElementById('subName').value.trim();
-  const id = document.getElementById('subId').value.trim();
+  const localId = document.getElementById('subId').value.trim();
   const order = parseInt(document.getElementById('subOrder').value) || 1;
   const img = document.getElementById('subImg').value.trim();
   const parentId = document.getElementById('subParent').value || null;
-  if (!name || !id) { alert('Укажите название и ID'); return; }
-  if (!/^[a-z0-9-]+$/i.test(id)) { alert('ID: только латиница, цифры и тире'); return; }
+  if (!name || !localId) { alert('Укажите название и ID'); return; }
+  if (!/^[a-z0-9-]+$/i.test(localId)) { alert('ID: только латиница, цифры и тире'); return; }
+  // Для под-подкатегории (есть родитель) кодируем привязку в id: "<parent>~<local>".
+  // Так 3-й уровень сохраняется в Supabase без отдельной колонки parent_id.
+  const id = parentId ? (parentId + SUBSEP + localId) : localId;
   let cats = getCategories();
   const ci = cats.findIndex(c => c.id === catId);
   if (ci < 0) return;
@@ -3150,19 +3149,13 @@ async function saveSubcategory(){
     cats[ci].subcategories.sort((a,b)=>(a.order||0)-(b.order||0));
   }
   setCategories(cats);
-  // Пишем в Supabase и ПРОВЕРЯЕМ результат — иначе вложенная подкатегория
-  // осталась бы только в этом браузере и пропала после обновления страницы.
-  const res = await _syncSubToSupabase(catId, { id, name, img, order, parent_id: parentId }, order);
+  // Пишем в Supabase и ПРОВЕРЯЕМ результат — иначе подкатегория осталась бы
+  // только в этом браузере и пропала после обновления страницы. Привязка к
+  // родителю закодирована в id ("<parent>~<local>"), отдельная колонка не нужна.
+  const res = await _syncSubToSupabase(catId, { id, name, img, order }, order);
   if (res && res.ok === false) {
-    if (parentId && _isMissingParentIdError(res.error)) {
-      alert('Не удалось сохранить под-подкатегорию: в базе Supabase нет колонки «parent_id».\n\n' +
-        'Откройте Supabase → SQL Editor и выполните один раз:\n\n' +
-        'ALTER TABLE subcategories ADD COLUMN IF NOT EXISTS parent_id text;\n\n' +
-        'После этого вложенные подкатегории будут сохраняться.');
-    } else {
-      const m = (res.error && (res.error.message || res.error.msg)) || 'неизвестная ошибка';
-      alert('Не удалось сохранить в Supabase: ' + m + '\nПопробуйте ещё раз.');
-    }
+    const m = (res.error && (res.error.message || res.error.msg)) || 'неизвестная ошибка';
+    alert('Не удалось сохранить в Supabase: ' + m + '\nПопробуйте ещё раз.');
     return; // не закрываем модалку, чтобы пользователь не потерял ввод
   }
   if (editingSubcategoryId && editingSubcategoryId !== id) {

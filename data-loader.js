@@ -159,6 +159,15 @@
   // дерево: корни (parent_id пустой) + их дети (parent_id = id родителя).
   // Глубже 3-го уровня не уходим — внука прикрепляем к ближайшему известному
   // родителю-корню, иначе делаем корнем (защита от «висячих» ссылок).
+  // Привязка под-подкатегории к родителю берётся из колонки parent_id ИЛИ
+  // (если её нет) кодируется в id через «~»: "<parent>~<local>". Так 3-й уровень
+  // работает без отдельной колонки в Supabase.
+  function _subParentOf(s) {
+    if (s && s.parent_id) return s.parent_id;
+    var id = s && s.id ? String(s.id) : '';
+    var i = id.indexOf('~');
+    return i > 0 ? id.slice(0, i) : null;
+  }
   function _nestSubs(rows) {
     var byOrder = function (a, b) { return (a.order || 0) - (b.order || 0); };
     var nodes = {};
@@ -166,13 +175,13 @@
       nodes[s.id] = {
         id: s.id, name: s.name, img: s.image_url || '',
         order: s.sort_order != null ? s.sort_order : 0,
-        parent_id: s.parent_id || null, children: [],
+        parent_id: _subParentOf(s), children: [],
       };
     });
     var roots = [];
     rows.forEach(function (s) {
       var node = nodes[s.id];
-      var pid = s.parent_id || null;
+      var pid = _subParentOf(s);
       // Прикрепляем к родителю только если родитель сам корневой (3 уровня max).
       if (pid && nodes[pid] && !(nodes[pid].parent_id)) {
         nodes[pid].children.push(node);
