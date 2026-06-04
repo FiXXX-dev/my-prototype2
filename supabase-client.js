@@ -672,6 +672,48 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
+  // ===== promotions / акции (table: public.promotions) =====
+  window.supaGetPromotions = async function(){
+    try {
+      const data = await _pgGet('promotions', { select:'*', 'is_active':'eq.true', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get promotions', e); return null; }
+  };
+
+  window.supaGetAllPromotions = async function(){
+    try {
+      const data = await _pgGet('promotions', { select:'*', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get all promotions', e); return null; }
+  };
+
+  window.supaUpsertPromotion = async function(promo){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const fields = Object.assign({}, promo);
+      delete fields.created_at;
+      if (promo.id) {
+        delete fields.id;
+        const { data, error } = await sb.from('promotions').update(fields).eq('id', promo.id).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      } else {
+        delete fields.id;
+        const { data, error } = await sb.from('promotions').insert([fields]).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      }
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeletePromotion = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('promotions').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
   window.supaGetHomepageCategories = async function(){
     try {
       const data = await _pgGet('categories', { select:'*', 'show_on_homepage':'eq.true', order:'sort_order.asc,id.asc', limit:'8' });

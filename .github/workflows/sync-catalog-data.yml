@@ -36,6 +36,10 @@ jobs:
             -H "apikey: $SUPABASE_ANON_KEY" -o categories.json
           curl -fsS "$SUPABASE_URL/rest/v1/subcategories?select=*&order=category_id.asc,sort_order.asc,id.asc" \
             -H "apikey: $SUPABASE_ANON_KEY" -o subcategories.json
+          # Акции: если таблицы ещё нет в Supabase — не валим весь job, кладём [].
+          curl -fsS "$SUPABASE_URL/rest/v1/promotions?select=*&order=sort_order.asc,id.asc" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o promotions.json || echo '[]' > promotions.json
+          if ! jq -e 'type == "array"' promotions.json >/dev/null 2>&1; then echo '[]' > promotions.json; fi
 
       - name: Validate JSON (must be arrays)
         run: |
@@ -50,12 +54,13 @@ jobs:
           echo "products:     $(jq 'length' products.json)"
           echo "categories:   $(jq 'length' categories.json)"
           echo "subcategories:$(jq 'length' subcategories.json)"
+          echo "promotions:   $(jq 'length' promotions.json)"
 
       - name: Commit if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add products.json categories.json subcategories.json
+          git add products.json categories.json subcategories.json promotions.json
           if git diff --staged --quiet; then
             echo "No changes — nothing to commit."
           else

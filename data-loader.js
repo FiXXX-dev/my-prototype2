@@ -221,8 +221,49 @@
     _catTreeLoading = null;
   };
 
+  // ===== Акции (promotions из Supabase / статический promotions.json) =====
+  // Источник один — Supabase (через статический JSON для скорости). Никакого
+  // хардкода: если акций нет — страницы показывают пустое состояние одинаково
+  // во всех браузерах. Поле description из БД маппим в desc (его ждут рендеры).
+  let _promos = null;
+  let _promosLoading = null;
+
+  function _normalizePromo(p) {
+    return {
+      id: p.id,
+      name: p.name || '',
+      disc: p.disc || '',
+      color: ['green', 'accent', 'lime'].includes(p.color) ? p.color : 'green',
+      badge: p.badge || '',
+      desc: p.desc || p.description || '',
+      valid: p.valid || '',
+      sort_order: p.sort_order != null ? p.sort_order : 0,
+      is_active: p.is_active,
+    };
+  }
+
+  window.getPromotions = function () {
+    if (_promos) return Promise.resolve(_promos);
+    if (_promosLoading) return _promosLoading;
+    _promosLoading = _getJson('promotions.json', window.supaGetPromotions).then(function (arr) {
+      _promosLoading = null;
+      _promos = Array.isArray(arr) ? arr.filter(function (p) { return p.is_active !== false; }).map(_normalizePromo) : [];
+      try { window.dispatchEvent(new Event('kleverPromotionsLoaded')); } catch (e) {}
+      return _promos;
+    });
+    return _promosLoading;
+  };
+
+  window.getPromotionsSync = function () { return _promos || []; };
+
+  window.invalidatePromotionsCache = function () {
+    _promos = null;
+    _promosLoading = null;
+  };
+
   // Запускаем загрузку сразу при подключении скрипта — к моменту рендера
   // данные уже в пути (или готовы).
   window.getProducts();
   window.getCategoryTree();
+  window.getPromotions();
 })();

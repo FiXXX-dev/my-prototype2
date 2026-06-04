@@ -1341,7 +1341,7 @@ function showTab(name, btn) {
     renderOrders();
   }
   if (name === 'contacts') loadContactsAdmin();
-  if (name === 'promotions') renderPromotions();
+  if (name === 'promotions') loadPromotionsAdmin();
   if (name === 'news') renderNews();
   if (name === 'banners') loadBannersAdmin();
   if (name === 'products') loadProductsAdmin();
@@ -1376,7 +1376,6 @@ function _kleverWireSupabaseOrders() {
 const STORAGE_PRODUCTS = 'klever_products_v2';
 const STORAGE_ORDERS = 'klever_orders';
 const STORAGE_CONTACTS = 'klever_contacts';
-const STORAGE_PROMOS = 'klever_promos';
 const STORAGE_NEWS = 'klever_news';
 const STORAGE_SETTINGS = 'klever_settings';
 
@@ -1399,11 +1398,11 @@ function getOrders() {
 function getContacts() {
   return JSON.parse(localStorage.getItem(STORAGE_CONTACTS) || '[]');
 }
+// Акции теперь хранятся в Supabase (таблица public.promotions), а не в
+// localStorage — иначе у каждого браузера был бы свой список. adminPromos —
+// кэш последней загрузки из БД (см. loadPromotionsAdmin).
 function getPromos() {
-  return JSON.parse(localStorage.getItem(STORAGE_PROMOS) || 'null') || getDefaultPromos();
-}
-function setPromos(arr) {
-  localStorage.setItem(STORAGE_PROMOS, JSON.stringify(arr));
+  return adminPromos;
 }
 
 function getNews() {
@@ -1412,14 +1411,6 @@ function getNews() {
 }
 function setNews(arr) {
   localStorage.setItem(STORAGE_NEWS, JSON.stringify(arr));
-}
-
-function getDefaultPromos() {
-  return [
-    {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
-    {name:'При заказе от 5 000 ₽', disc:'-20%', color:'accent', badge:'Оптом выгоднее', desc:'Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ', valid:'Постоянная акция'},
-    {name:'Скидка на первый заказ', disc:'-10%', color:'lime', badge:'Новым клиентам', desc:'Скидка 10% для новых покупателей при оформлении первого заказа', valid:'Бессрочно'},
-  ];
 }
 
 function loadAll() {
@@ -1435,7 +1426,7 @@ function updateCounts() {
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
   document.getElementById('cntContacts').textContent = _contactsCache.length || getContacts().length;
-  document.getElementById('cntPromos').textContent = getPromos().length;
+  document.getElementById('cntPromos').textContent = adminPromos.length;
   const newsCount = getNews().filter(n => n.active).length;
   const cntNewsEl = document.getElementById('cntNews');
   if (cntNewsEl) cntNewsEl.textContent = newsCount;
@@ -2132,7 +2123,21 @@ async function clearContacts() {
 }
 
 // ===== АКЦИИ =====
-let editingPromo = null;
+let editingPromo = null;          // id редактируемой акции (null = новая)
+let adminPromos = [];             // кэш акций из Supabase
+
+// desc в БД хранится как description (desc — зарезервированное слово SQL).
+function _promoDesc(p) { return p.desc || p.description || ''; }
+
+async function loadPromotionsAdmin() {
+  if (typeof supaGetAllPromotions === 'function') {
+    const data = await supaGetAllPromotions();
+    if (data) adminPromos = data;
+  }
+  renderPromotions();
+  const el = document.getElementById('cntPromos');
+  if (el) el.textContent = adminPromos.length;
+}
 
 function renderPromotions() {
   const promos = getPromos();
@@ -2140,19 +2145,19 @@ function renderPromotions() {
   if (promos.length === 0) {
     c.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><span class="icon icon-flame" style="color:#d0e8d8;"></span></div><div class="empty-title">Акций пока нет</div><div>Создайте первую акцию для привлечения клиентов</div></div>';
   } else {
-    c.innerHTML = promos.map((p, i) => `
+    c.innerHTML = promos.map((p) => `
       <div class="promo-card">
         <div class="promo-top ${escH(p.color||'')}">
           ${p.disc ? `<div class="promo-disc" style="color:${p.color==='green'?'#1aab58':p.color==='accent'?'#FF6B35':'#8ab800'}">${escH(p.disc)}</div>` : ''}
           ${p.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.2);color:white;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">${escH(p.badge)}</div>` : ''}
           <div class="promo-name">${escH(p.name)}</div>
-          <div class="promo-desc">${escH(p.desc)}</div>
+          <div class="promo-desc">${escH(_promoDesc(p))}</div>
         </div>
         <div class="promo-bottom">
           <span class="promo-validity">${escH(p.valid || 'Бессрочно')}</span>
           <div class="promo-actions">
-            <button class="btn btn-secondary btn-sm" onclick="editPromo(${i})">Изм.</button>
-            <button class="btn btn-danger btn-sm" onclick="deletePromo(${i})"><span class="icon icon-trash"></span></button>
+            <button class="btn btn-secondary btn-sm" onclick="editPromo(${p.id})">Изм.</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePromo(${p.id})"><span class="icon icon-trash"></span></button>
           </div>
         </div>
       </div>
@@ -2172,15 +2177,16 @@ function openPromoModal() {
   document.getElementById('promoModal').classList.add('open');
 }
 
-function editPromo(idx) {
-  const p = getPromos()[idx];
-  editingPromo = idx;
+function editPromo(id) {
+  const p = adminPromos.find(x => x.id === id);
+  if (!p) return;
+  editingPromo = id;
   document.getElementById('promoModalTitle').textContent = 'Редактирование акции';
-  document.getElementById('promoName').value = p.name;
+  document.getElementById('promoName').value = p.name || '';
   document.getElementById('promoDisc').value = p.disc || '';
-  document.getElementById('promoColor').value = p.color;
+  document.getElementById('promoColor').value = p.color || 'green';
   document.getElementById('promoBadge').value = p.badge || '';
-  document.getElementById('promoDesc').value = p.desc;
+  document.getElementById('promoDesc').value = _promoDesc(p);
   document.getElementById('promoValid').value = p.valid || '';
   document.getElementById('promoModal').classList.add('open');
 }
@@ -2189,41 +2195,44 @@ function closePromoModal() {
   document.getElementById('promoModal').classList.remove('open');
 }
 
-function savePromo() {
-  const promo = {
-    name: document.getElementById('promoName').value.trim(),
-    disc: document.getElementById('promoDisc').value.trim(),
-    color: document.getElementById('promoColor').value,
-    badge: document.getElementById('promoBadge').value.trim(),
-    desc: document.getElementById('promoDesc').value.trim(),
-    valid: document.getElementById('promoValid').value.trim(),
-  };
-
-  if (!promo.name || !promo.desc) {
+async function savePromo() {
+  const name = document.getElementById('promoName').value.trim();
+  const desc = document.getElementById('promoDesc').value.trim();
+  if (!name || !desc) {
     alert('Заполните название и описание');
     return;
   }
+  // В БД поле называется description (desc зарезервировано в SQL).
+  const promo = {
+    name: name,
+    disc: document.getElementById('promoDisc').value.trim() || null,
+    color: document.getElementById('promoColor').value,
+    badge: document.getElementById('promoBadge').value.trim() || null,
+    description: desc,
+    valid: document.getElementById('promoValid').value.trim() || null,
+    sort_order: editingPromo !== null ? undefined : adminPromos.length,
+    is_active: true,
+  };
+  if (promo.sort_order === undefined) delete promo.sort_order;
+  if (editingPromo !== null) promo.id = editingPromo;
 
-  const promos = getPromos();
-  if (editingPromo !== null) {
-    promos[editingPromo] = promo;
-  } else {
-    promos.push(promo);
+  if (typeof supaUpsertPromotion === 'function') {
+    const r = await supaUpsertPromotion(promo);
+    if (!r.ok) { alert('Ошибка сохранения: ' + (r.error && r.error.message ? r.error.message : JSON.stringify(r.error))); return; }
   }
-  setPromos(promos);
+  const wasEdit = editingPromo !== null;
   closePromoModal();
-  renderPromotions();
-  updateCounts();
-  toast(editingPromo !== null ? '✓ Акция обновлена' : '✓ Акция создана');
+  await loadPromotionsAdmin();
+  toast(wasEdit ? '✓ Акция обновлена' : '✓ Акция создана');
 }
 
-function deletePromo(idx) {
+async function deletePromo(id) {
   if (!confirm('Удалить акцию?')) return;
-  const promos = getPromos();
-  promos.splice(idx, 1);
-  setPromos(promos);
-  renderPromotions();
-  updateCounts();
+  if (typeof supaDeletePromotion === 'function') {
+    const r = await supaDeletePromotion(id);
+    if (!r.ok) { alert('Ошибка удаления'); return; }
+  }
+  await loadPromotionsAdmin();
 }
 
 // ===== НОВОСТИ =====
