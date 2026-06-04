@@ -147,7 +147,7 @@
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a><a href="sales.html" data-i18n="nav.sales">Акции</a><a href="wholesale.html" data-i18n="nav.wholesale">Оптовикам</a>
     <a href="delivery.html" data-i18n="nav.delivery">Доставка</a><a href="about.html" data-i18n="nav.about">О нас</a><a href="contacts.html" class="active" data-i18n="nav.contacts">Контакты</a>
   </nav>
-  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
+  <div class="header-actions"><a href="tel:+78129228677" class="btn-phone" id="hdrPhone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
     <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" data-i18n-title="nav.account" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a>
     <button class="cart-btn" onclick="openCart()">
       <span class="icon icon-cart"></span>
@@ -166,20 +166,20 @@
     <div class="contact-card">
       <div class="contact-icon"><span class="icon icon-phone" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.phones_title">Телефоны</div>
-      <div class="contact-value"><a href="tel:+78129228677">8 (812) 922-86-77</a></div>
-      <div class="contact-value"><a href="tel:+79112368277">+7 911 236-82-77</a></div>
+      <div class="contact-value" id="cPhone1Wrap"><a href="tel:+78129228677" id="cPhone1">8 (812) 922-86-77</a></div>
+      <div class="contact-value" id="cPhone2Wrap"><a href="tel:+79112368277" id="cPhone2">+7 911 236-82-77</a></div>
       <div class="contact-sub">Пн–Пт: 9:00–18:00, Сб: 10:00–16:00, Вс: 10:00–17:00</div>
     </div>
     <div class="contact-card">
       <div class="contact-icon"><span class="icon icon-mail" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.email_title">Email</div>
-      <div class="contact-value"><a href="mailto:9112368277@mail.ru">9112368277@mail.ru</a></div>
+      <div class="contact-value"><a href="mailto:9112368277@mail.ru" id="cEmail">9112368277@mail.ru</a></div>
       <div class="contact-sub">Ответим в течение рабочего дня</div>
     </div>
     <div class="contact-card">
       <div class="contact-icon"><span class="icon icon-pin" style="color:var(--green-dark);"></span></div>
       <div class="contact-label" data-i18n="contacts.addr_title">Адрес</div>
-      <div class="contact-value" style="font-size:16px;">Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8</div>
+      <div class="contact-value" style="font-size:16px;" id="cAddress">Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8</div>
       <div class="contact-sub">Самовывоз — бесплатно</div>
     </div>
     <div class="contact-card">
@@ -690,6 +690,38 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
         + '<a class="klever-fab-btn '+k+'" href="'+url+'" target="_blank" rel="noopener" aria-label="'+LABELS[k]+'">'+icon+'</a>'
         + '</div>';
     }).join('');
+    renderContactInfo();
+  }
+  // Обновляет карточку контактов и телефон в шапке из настроек админки.
+  function renderContactInfo(){
+    const s = readSettings();
+    if (!s || !Object.keys(s).length) return;
+    const tel = v => 'tel:+' + String(v||'').replace(/[^\d]/g,'');
+    const setPhone = (linkId, wrapId, val) => {
+      const a = document.getElementById(linkId);
+      const wrap = document.getElementById(wrapId);
+      if (!a) return;
+      if (val && String(val).trim()) {
+        a.textContent = val; a.setAttribute('href', tel(val));
+        if (wrap) wrap.style.display = '';
+      } else if (wrap) {
+        wrap.style.display = 'none';
+      }
+    };
+    setPhone('cPhone1', 'cPhone1Wrap', s.phone1);
+    setPhone('cPhone2', 'cPhone2Wrap', s.phone2);
+    if (s.phone1 && String(s.phone1).trim()) {
+      const h = document.getElementById('hdrPhone');
+      if (h) { h.setAttribute('href', tel(s.phone1)); h.innerHTML = '<span class="icon icon-phone"></span> ' + s.phone1; }
+    }
+    if (s.email && String(s.email).trim()) {
+      const e = document.getElementById('cEmail');
+      if (e) { e.textContent = s.email; e.setAttribute('href', 'mailto:' + s.email); }
+    }
+    if (s.address && String(s.address).trim()) {
+      const ad = document.getElementById('cAddress');
+      if (ad) ad.textContent = s.address;
+    }
   }
   function toggle(){
     const isOpen = document.getElementById('kleverFab').classList.toggle('open');

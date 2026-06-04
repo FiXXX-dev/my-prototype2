@@ -491,9 +491,10 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 
 <script>
 const CART_KEY = 'klever_cart';
-const MIN_ORDER = 5000;
-const DELIVERY_FREE_FROM = 0;
-const DELIVERY_COST = 0;
+// Значения по умолчанию; перезаписываются из настроек админки (settings.json).
+let MIN_ORDER = 5000;
+let DELIVERY_FREE_FROM = 0;
+let DELIVERY_COST = 0;
 
 let deliveryMethod = 'courier';
 let paymentMethod = 'cash';
@@ -535,6 +536,13 @@ function getSelectedPickup() {
 
 function applyPickupSettings() {
   const s = (typeof getSettingsSync === 'function') ? getSettingsSync() : {};
+  // Финансовые параметры из настроек админки.
+  if (s) {
+    if (s.minOrder != null && !isNaN(Number(s.minOrder)))         MIN_ORDER = Number(s.minOrder);
+    if (s.freeDelivery != null && !isNaN(Number(s.freeDelivery))) DELIVERY_FREE_FROM = Number(s.freeDelivery);
+    if (s.deliveryCost != null && !isNaN(Number(s.deliveryCost))) DELIVERY_COST = Number(s.deliveryCost);
+    if (typeof updateSummary === 'function') updateSummary();
+  }
   const locs = (s && Array.isArray(s.pickupLocations)) ? s.pickupLocations.filter(p => p && p.address) : [];
   pickupLocations = locs.length ? locs : PICKUP_FALLBACK.slice();
   if (!pickupLocations.some(p => p.id === selectedPickupId)) selectedPickupId = pickupLocations[0].id;
@@ -689,11 +697,11 @@ function updateSummary() {
 
   // Цена доставки курьером
   const courierLabel = document.getElementById('courierPriceLabel');
-  if (subtotal >= DELIVERY_FREE_FROM) {
+  if (DELIVERY_COST <= 0 || (DELIVERY_FREE_FROM > 0 && subtotal >= DELIVERY_FREE_FROM)) {
     courierLabel.textContent = 'Бесплатно';
     courierLabel.style.color = '#1aab58';
   } else {
-    courierLabel.textContent = '500 ₽';
+    courierLabel.textContent = DELIVERY_COST + ' ₽';
     courierLabel.style.color = '#1aab58';
   }
 
