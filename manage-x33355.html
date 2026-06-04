@@ -3163,6 +3163,8 @@ async function saveSubcategory(){
       window.supaDeleteSubcategory(catId, editingSubcategoryId).catch(()=>{});
     }
   }
+  // Пересобрать статические JSON, чтобы изменение увидели другие устройства.
+  if (typeof supaRequestSync === 'function') supaRequestSync();
   closeSubcategoryModal();
   renderCategoriesAdmin();
   toast(editingSubcategoryId ? '✓ Подкатегория обновлена' : '✓ Подкатегория создана');
@@ -3190,6 +3192,7 @@ function deleteSubcategory(catId, subId){
   if (typeof window.supaDeleteSubcategory === 'function') {
     idsToRemove.forEach(rid => window.supaDeleteSubcategory(catId, rid).catch(()=>{}));
   }
+  if (typeof supaRequestSync === 'function') supaRequestSync();
   renderCategoriesAdmin();
   toast('Подкатегория удалена');
 }
@@ -3216,6 +3219,7 @@ function moveSubcategory(catId, subId, delta){
   if (typeof window.supaUpsertSubcategory === 'function') {
     sorted.forEach((s, i) => _syncSubToSupabase(catId, s, i + 1));
   }
+  if (typeof supaRequestSync === 'function') supaRequestSync();
   renderCategoriesAdmin();
 }
 
