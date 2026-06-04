@@ -74,7 +74,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     // Таймаут 8с: если соединение зависло (DPI), обрываем и даём слою выше
     // повторить, а не ждём минутами OS-таймаут TCP.
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), 15000);
     try {
       const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: ctrl.signal });
       if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });

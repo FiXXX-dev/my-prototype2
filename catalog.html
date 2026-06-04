@@ -900,6 +900,12 @@ if (document.readyState === 'loading') {
   loadAndInitCatalog();
 }
 
+// Фоновое обновление товаров (stale-while-revalidate из data-loader.js):
+// когда из Supabase пришли свежие данные — перерисовываем текущий вид.
+window.addEventListener('kleverProductsLoaded', function () {
+  if (typeof getProductsSync === 'function') _applyCatalogProducts(getProductsSync());
+});
+
 // Re-render dynamic catalog content when the language changes.
 // Sync favorites from Supabase on page load so hearts reflect the real state.
 (function _syncFavoritesFromSupabase(){

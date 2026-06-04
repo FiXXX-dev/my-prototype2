@@ -18,7 +18,7 @@
 // Поэтому подключается ПОСЛЕ них.
 
 (function () {
-  console.log('%c[Clever] data-loader v3 — plain fetch + retry + timeout', 'color:#2ECC71;font-weight:bold');
+  console.log('%c[Clever] data-loader v4 — instant cache + background refresh', 'color:#2ECC71;font-weight:bold');
   let _products = null;        // загруженный и нормализованный массив (кэш)
   let _loadingPromise = null;  // текущий запрос, чтобы не дублировать
 
@@ -70,18 +70,55 @@
       const result = await _fetch();
       if (result !== null) return result; // успех
     }
-    return []; // все три попытки провалились — возвращаем пустой список
+    return null; // все попытки провалились — НЕ затираем кэш
+  }
+
+  // ── Кэш в localStorage (stale-while-revalidate) ──────────────────────────
+  // На медленной/throttled сети первый запрос к Supabase идёт несколько секунд.
+  // Чтобы повторные заходы были мгновенными: сохраняем последний успешный
+  // список в localStorage, показываем его сразу, а свежие данные тянем в фоне
+  // и обновляем экран по событию. Supabase остаётся источником истины —
+  // localStorage лишь кэш для скорости.
+  const _CACHE_KEY = 'klever_products_cache_v1';
+  function _readCache() {
+    try { const a = JSON.parse(localStorage.getItem(_CACHE_KEY) || 'null'); return Array.isArray(a) ? a : null; }
+    catch (e) { return null; }
+  }
+  function _writeCache(list) {
+    try { localStorage.setItem(_CACHE_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function _fire() { try { window.dispatchEvent(new Event('kleverProductsLoaded')); } catch (e) {} }
+
+  // Фоновое обновление: тихо тянем свежие товары и обновляем экран, если пришли.
+  function _refreshInBackground() {
+    if (_loadingPromise) return;
+    _loadingPromise = _fetchWithRetry().then(function (list) {
+      _loadingPromise = null;
+      if (Array.isArray(list) && list.length) { _products = list; _writeCache(list); _fire(); }
+    });
   }
 
   // Возвращает Promise с массивом товаров. Конкурентные вызовы получают
   // один и тот же выполняющийся запрос (без дублирования сетевых обращений).
   window.getProducts = function () {
-    if (_products !== null) return Promise.resolve(_products); // null = ещё не загружено
+    if (_products !== null) return Promise.resolve(_products);
+
+    // 1) Есть кэш → показываем мгновенно, обновляем в фоне.
+    const cached = _readCache();
+    if (cached && cached.length) {
+      _products = cached;
+      _fire();
+      _refreshInBackground();
+      return Promise.resolve(_products);
+    }
+
+    // 2) Кэша нет (первый заход) → ждём сеть.
     if (_loadingPromise) return _loadingPromise;
     _loadingPromise = _fetchWithRetry().then(function (list) {
-      _products = list;
       _loadingPromise = null;
-      try { window.dispatchEvent(new Event('kleverProductsLoaded')); } catch (e) {}
+      if (Array.isArray(list) && list.length) { _products = list; _writeCache(list); }
+      else _products = [];
+      _fire();
       return _products;
     });
     return _loadingPromise;
