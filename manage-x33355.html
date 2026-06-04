@@ -734,8 +734,14 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       </div>
       <div class="form-grp">
         <label>Подкатегория</label>
-        <select id="prodSubcat">
+        <select id="prodSubcat" onchange="onProductSubcatChange()">
           <option value="">— Без подкатегории —</option>
+        </select>
+      </div>
+      <div class="form-grp" id="prodSubsubGrp" style="display:none;">
+        <label>Под-подкатегория</label>
+        <select id="prodSubsub">
+          <option value="">— Без под-подкатегории —</option>
         </select>
       </div>
       <div class="form-grp">
@@ -1668,6 +1674,7 @@ function openProductModal() {
   populateProdCatSelect();
   if (typeof onProductCatChange === 'function') onProductCatChange();
   document.getElementById('prodSubcat').value = '';
+  onProductSubcatChange();
   refreshProdImgPreview();
   document.getElementById('productModal').classList.add('open');
   document.getElementById('prodName').focus();
@@ -1732,14 +1739,14 @@ function editProduct(sku) {
   document.getElementById('prodDesc').value = p.desc || '';
   populateProdCatSelect(cid);
   if (typeof onProductCatChange === 'function') onProductCatChange();
-  document.getElementById('prodSubcat').value = p.subcategory || '';
+  setProductSubSelection(cid, p.subcategory || '');
   refreshProdImgPreview();
   document.getElementById('productModal').classList.add('open');
   // Догружаем дерево из БД и восстанавливаем выбор категории/подкатегории.
   ensureCategoriesLoaded().then(function(){
     populateProdCatSelect(cid);
     if (typeof onProductCatChange === 'function') onProductCatChange();
-    document.getElementById('prodSubcat').value = p.subcategory || '';
+    setProductSubSelection(cid, p.subcategory || '');
   });
 }
 
@@ -1757,7 +1764,10 @@ async function saveProduct() {
   const _catObj = (typeof getCategoryById === 'function') ? getCategoryById(categoryId) : null;
   const cat = _catObj ? _catObj.name
     : (getCategories().find(c => c.id === categoryId) || {}).name || categoryId || '';
-  const subcategory = document.getElementById('prodSubcat').value || undefined;
+  // Листовая (под)категория товара: если выбрана под-подкатегория (уровень-3) —
+  // сохраняем её id; иначе — id подкатегории уровня-2.
+  const _subsubVal = document.getElementById('prodSubsub').value || '';
+  const subcategory = _subsubVal || document.getElementById('prodSubcat').value || undefined;
   const badge = document.getElementById('prodBadge').value;
   const img = document.getElementById('prodImg').value.trim();
   const desc = document.getElementById('prodDesc').value.trim();
@@ -3194,17 +3204,54 @@ function onProductCatChange(){
   const sel = document.getElementById('prodSubcat');
   sel.innerHTML = '<option value="">— Без подкатегории —</option>';
   if (cat && cat.subcategories) {
+    // В этом списке — только подкатегории уровня-2.
     cat.subcategories.slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(s => {
       const o = document.createElement('option');
       o.value = s.id; o.textContent = s.name;
       sel.appendChild(o);
-      // Под-подкатегории уровня-3 — с отступом
-      (s.children||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(k => {
-        const ko = document.createElement('option');
-        ko.value = k.id; ko.textContent = '  ↳ ' + k.name;
-        sel.appendChild(ko);
-      });
     });
+  }
+  // Смена категории сбрасывает выбор под-подкатегории.
+  onProductSubcatChange();
+}
+
+// Каскад: при выборе подкатегории уровня-2 с детьми показываем
+// третий список «Под-подкатегория» с её под-подкатегориями (уровень-3).
+function onProductSubcatChange(){
+  const catId = document.getElementById('prodCat').value;
+  const subId = document.getElementById('prodSubcat').value;
+  const grp = document.getElementById('prodSubsubGrp');
+  const sel = document.getElementById('prodSubsub');
+  sel.innerHTML = '<option value="">— Без под-подкатегории —</option>';
+  let kids = [];
+  if (subId && typeof getSubChildren === 'function') {
+    kids = getSubChildren(catId, subId) || [];
+  }
+  if (kids.length) {
+    kids.slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(k => {
+      const o = document.createElement('option');
+      o.value = k.id; o.textContent = k.name;
+      sel.appendChild(o);
+    });
+    grp.style.display = '';
+  } else {
+    grp.style.display = 'none';
+  }
+}
+
+// Восстановить выбор подкатегории/под-подкатегории по сохранённому листовому id.
+// Если leaf — это уровень-3, выставляем родителя уровня-2 + сам лист в 3-й список.
+function setProductSubSelection(catId, leafSubId){
+  const subSel = document.getElementById('prodSubcat');
+  if (!leafSubId) { subSel.value = ''; onProductSubcatChange(); return; }
+  const parentId = (typeof getSubParentId === 'function') ? getSubParentId(catId, leafSubId) : null;
+  if (parentId) {
+    subSel.value = parentId;
+    onProductSubcatChange();
+    document.getElementById('prodSubsub').value = leafSubId;
+  } else {
+    subSel.value = leafSubId;
+    onProductSubcatChange();
   }
 }
 
