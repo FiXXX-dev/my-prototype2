@@ -344,6 +344,21 @@
     return {};
   }
 
+  // Обновляет общие для всех страниц элементы из настроек: телефон в шапке
+  // (.btn-phone). Так номер меняется сайт-wide без правки каждой страницы.
+  function _applyGlobalSettingsToDom() {
+    if (!_settings) return;
+    const phone = (_settings.phone1 || '').trim();
+    if (!phone) return;
+    const tel = 'tel:+' + phone.replace(/[^\d]/g, '');
+    document.querySelectorAll('a.btn-phone').forEach(function (a) {
+      // Сохраняем иконку, меняем только href и текст номера.
+      const icon = a.querySelector('.icon');
+      a.setAttribute('href', tel);
+      a.innerHTML = (icon ? icon.outerHTML : '') + ' ' + phone;
+    });
+  }
+
   window.getSettings = function () {
     if (_settings) return Promise.resolve(_settings);
     if (_settingsLoading) return _settingsLoading;
@@ -351,10 +366,18 @@
       _settingsLoading = null;
       _settings = _normalizeSettings(obj);
       try { window.dispatchEvent(new Event('kleverSettingsLoaded')); } catch (e) {}
+      try { _applyGlobalSettingsToDom(); } catch (e) {}
       return _settings;
     });
     return _settingsLoading;
   };
+
+  // Если настройки успели загрузиться до готовности DOM — применим повторно.
+  if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', function () {
+      try { _applyGlobalSettingsToDom(); } catch (e) {}
+    });
+  }
 
   window.getSettingsSync = function () { return _settings || {}; };
 
