@@ -160,9 +160,17 @@ function sortedCategories() {
 // Источник — товары из Supabase, загруженные data-loader.js в память
 // (window.getProductsSync). Никакого localStorage.
 function _liveProducts() {
-  return (typeof window !== 'undefined' && typeof window.getProductsSync === 'function')
-    ? (window.getProductsSync() || [])
-    : [];
+  if (typeof window === 'undefined') return [];
+  // Клиентские страницы: товары из data-loader (products.json) в памяти.
+  if (typeof window.getProductsSync === 'function') {
+    const live = window.getProductsSync() || [];
+    if (live.length) return live;
+  }
+  // Админка: data-loader не подключён — берём её собственный источник товаров.
+  if (typeof window.getProducts === 'function') {
+    try { return window.getProducts() || []; } catch (e) {}
+  }
+  return [];
 }
 function productCountByCategory() {
   const products = _liveProducts();
