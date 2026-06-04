@@ -792,8 +792,8 @@ function subRollup(node, counts){
   return n;
 }
 
-// Левый сайдбар подкатегорий. Под активной подкатегорией уровня-2
-// раскрывается список её под-подкатегорий (уровень-3), как у конкурента.
+// Левый сайдбар подкатегорий. Под каждой подкатегорией уровня-2 с детьми
+// всегда показываются под-подкатегории (уровень-3), активная — подсвечена.
 function subSidebarHtml(catId, subs, counts, activeId){
   let activeTop = activeId;
   const pid = activeId && (typeof getSubParentId === 'function') ? getSubParentId(catId, activeId) : null;
@@ -804,7 +804,7 @@ function subSidebarHtml(catId, subs, counts, activeId){
     const kids = (s.children || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
     let html = `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="${isTop && !pid ? 'active' : ''}">
       <span>${escHtml(subDisplayName(catId, s))}</span><span class="sub-list-count">${n}</span></a>`;
-    if (kids.length && isTop) {
+    if (kids.length) {
       html += `<ul class="sub-list-children">` + kids.map(k => {
         const kn = counts[k.id] || 0;
         return `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(k.id)}" class="${k.id===activeId?'active':''}">
