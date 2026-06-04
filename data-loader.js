@@ -47,25 +47,37 @@
   async function _fetch() {
     if (typeof window.supaGetProducts !== 'function') {
       console.error('[data-loader] supaGetProducts недоступен — проверьте порядок подключения скриптов');
-      return [];
+      return null; // null = ошибка, не кэшировать
     }
     try {
       const data = await window.supaGetProducts();
       if (Array.isArray(data)) return data.filter(p => p.is_active !== false).map(_normalize);
       console.error('[data-loader] Supabase вернул не массив товаров:', data);
-      return [];
+      return null; // null = ошибка, не кэшировать
     } catch (e) {
       console.error('[data-loader] ошибка загрузки товаров:', e);
-      return [];
+      return null; // null = ошибка, не кэшировать
     }
+  }
+
+  // Три попытки с задержкой 1 с и 2 с: если первый запрос упал (сеть/DPI),
+  // второй или третий обычно проходит.
+  async function _fetchWithRetry() {
+    const delays = [0, 1000, 2000];
+    for (let i = 0; i < delays.length; i++) {
+      if (delays[i]) await new Promise(r => setTimeout(r, delays[i]));
+      const result = await _fetch();
+      if (result !== null) return result; // успех
+    }
+    return []; // все три попытки провалились — возвращаем пустой список
   }
 
   // Возвращает Promise с массивом товаров. Конкурентные вызовы получают
   // один и тот же выполняющийся запрос (без дублирования сетевых обращений).
   window.getProducts = function () {
-    if (_products) return Promise.resolve(_products);
+    if (_products !== null) return Promise.resolve(_products); // null = ещё не загружено
     if (_loadingPromise) return _loadingPromise;
-    _loadingPromise = _fetch().then(function (list) {
+    _loadingPromise = _fetchWithRetry().then(function (list) {
       _products = list;
       _loadingPromise = null;
       try { window.dispatchEvent(new Event('kleverProductsLoaded')); } catch (e) {}
@@ -156,7 +168,7 @@
     if (_catTree) return Promise.resolve(_catTree);
     if (_catTreeLoading) return _catTreeLoading;
     _catTreeLoading = _buildTree().then(function (tree) {
-      _catTree = tree; // может быть null — тогда используется дефолт в categories.js
+      _catTree = tree; // null если Supabase недоступен — используется дефолт в categories.js
       _catTreeLoading = null;
       try { window.dispatchEvent(new Event('kleverCategoriesLoaded')); } catch (e) {}
       return _catTree;
