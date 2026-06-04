@@ -126,6 +126,46 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     throw lastErr || new Error('request failed');
   }
 
+  // ─── Универсальные write-хелперы (plain fetch + retry, без SDK-заголовков) ──
+  // Переносят надёжность fix'а заказов на все операции записи в админке:
+  // лёгкий запрос (нет Authorization/x-client-info) + повтор при обрыве (DPI).
+  // filter — это «сырая» query-строка PostgREST, напр. 'id=eq.5' или 'num=eq.7'.
+
+  function _writeErr(e) { return { ok: false, error: (e && e.supaError) || e }; }
+
+  async function _pgInsert(table, rows) {
+    try {
+      const data = await _pgPostRetry(table, Array.isArray(rows) ? rows : [rows], 'POST',
+        { Prefer: 'return=representation' });
+      return { ok: true, data: Array.isArray(data) ? data[0] : data, all: data || [] };
+    } catch (e) { return _writeErr(e); }
+  }
+
+  async function _pgUpsert(table, rows, onConflict) {
+    const path = table + (onConflict ? ('?on_conflict=' + encodeURIComponent(onConflict)) : '');
+    try {
+      const data = await _pgPostRetry(path, Array.isArray(rows) ? rows : [rows], 'POST',
+        { Prefer: 'resolution=merge-duplicates,return=representation' });
+      return { ok: true, data: Array.isArray(data) ? data[0] : data, all: data || [] };
+    } catch (e) { return _writeErr(e); }
+  }
+
+  async function _pgUpdate(table, filter, fields) {
+    try {
+      const data = await _pgPostRetry(table + '?' + filter, fields, 'PATCH',
+        { Prefer: 'return=representation' });
+      return { ok: true, data: Array.isArray(data) ? data[0] : data, all: data || [] };
+    } catch (e) { return _writeErr(e); }
+  }
+
+  async function _pgDelete(table, filter, returnRep) {
+    try {
+      const data = await _pgPostRetry(table + '?' + filter, undefined, 'DELETE',
+        returnRep ? { Prefer: 'return=representation' } : undefined);
+      return { ok: true, all: Array.isArray(data) ? data : [] };
+    } catch (e) { return _writeErr(e); }
+  }
+
   // _pgGet с повтором: на сетях с DPI первая попытка иногда обрывается даже
   // у «простого» запроса. Делаем до 3 попыток с задержкой 0/0.8/1.6с.
   async function _pgGetRetry(table, qp, tries) {
@@ -258,12 +298,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // Returns orders mapped to the legacy admin shape so existing renderers work.
   window.supaListOrders = async function(){
-    const sb = getClient();
-    if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
-      const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
-      if (error) { console.error('[supabase] list error', error); return null; }
-      return (data || []).map(r => ({
+      const data = await _pgGetRetry('orders', { select: '*', order: 'created_at.desc' });
+      if (!Array.isArray(data)) return null;
+      return data.map(r => ({
         // Display id: prefer the supplied "num" column, fall back to the
         // Supabase row id so admin never shows "#undefined". This also makes
         // bare-minimal schemas (only id+5 fields) display nicely as #1, #2…
@@ -300,62 +339,43 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // Also retries by id when num exists but no row matched (e.g. the order
   // was inserted without a num value and the admin is holding the UUID).
   window.supaUpdateOrder = async function(numOrId, fields){
-    const sb = getClient();
-    if (!sb) return { ok: false, reason: 'unconfigured' };
+    if (!isConfigured()) return { ok: false, reason: 'unconfigured' };
     function missing(error){
       const m = (error?.message||'') + ' ' + (error?.details||'');
       return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
           || error?.code === '42703' || error?.code === 'PGRST204';
     }
-    try {
-      let { data, error } = await sb.from('orders').update(fields).eq('num', numOrId).select();
-      // Retry by id when: num column missing (error) OR num matched 0 rows (data empty).
-      if ((error && missing(error)) || (!error && (!data || data.length === 0))) {
-        ({ data, error } = await sb.from('orders').update(fields).eq('id', numOrId).select());
-      }
-      if (error) { console.error('[supabase] update error', error); return { ok: false, error }; }
-      return { ok: true, data };
-    } catch (e) {
-      console.error('[supabase] update exception', e);
-      return { ok: false, error: e };
+    // Update by num first; retry by id if num column missing OR 0 rows matched.
+    let r = await _pgUpdate('orders', 'num=eq.' + encodeURIComponent(numOrId), fields);
+    if ((!r.ok && missing(r.error)) || (r.ok && (!r.all || r.all.length === 0))) {
+      r = await _pgUpdate('orders', 'id=eq.' + encodeURIComponent(numOrId), fields);
     }
+    if (!r.ok) console.error('[supabase] update error', r.error);
+    return r.ok ? { ok: true, data: r.all } : { ok: false, error: r.error };
   };
 
   window.supaDeleteOrder = async function(numOrId){
-    const sb = getClient();
-    if (!sb) return { ok: false, reason: 'unconfigured' };
+    if (!isConfigured()) return { ok: false, reason: 'unconfigured' };
     function missing(error){
       const m = (error?.message||'') + ' ' + (error?.details||'');
       return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
           || error?.code === '42703' || error?.code === 'PGRST204';
     }
-    try {
-      // Use .select() so we know whether any row was actually deleted.
-      let { data, error } = await sb.from('orders').delete().eq('num', numOrId).select();
-      // Retry by id when: num column missing (error) OR num matched 0 rows.
-      if ((error && missing(error)) || (!error && (!data || data.length === 0))) {
-        ({ data, error } = await sb.from('orders').delete().eq('id', numOrId).select());
-      }
-      if (error) { console.error('[supabase] delete error', error); return { ok: false, error }; }
-      return { ok: true };
-    } catch (e) {
-      console.error('[supabase] delete exception', e);
-      return { ok: false, error: e };
+    // return=representation lets us know whether a row was actually deleted.
+    let r = await _pgDelete('orders', 'num=eq.' + encodeURIComponent(numOrId), true);
+    if ((!r.ok && missing(r.error)) || (r.ok && (!r.all || r.all.length === 0))) {
+      r = await _pgDelete('orders', 'id=eq.' + encodeURIComponent(numOrId), true);
     }
+    if (!r.ok) console.error('[supabase] delete error', r.error);
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   };
 
   window.supaDeleteAllOrders = async function(){
-    const sb = getClient();
-    if (!sb) return { ok: false, reason: 'unconfigured' };
-    try {
-      // Delete all orders — neq on a column that's always set ensures no-WHERE-clause error.
-      const { error } = await sb.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (error) { console.error('[supabase] delete-all error', error); return { ok: false, error }; }
-      return { ok: true };
-    } catch (e) {
-      console.error('[supabase] delete-all exception', e);
-      return { ok: false, error: e };
-    }
+    if (!isConfigured()) return { ok: false, reason: 'unconfigured' };
+    // neq on an always-set column avoids PostgREST's no-WHERE-clause guard.
+    const r = await _pgDelete('orders', 'id=neq.00000000-0000-0000-0000-000000000000');
+    if (!r.ok) console.error('[supabase] delete-all error', r.error);
+    return r;
   };
 
   // Returns orders for a specific user (for account history page).
@@ -555,41 +575,37 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // Accepts a bare sku string OR a product object { sku, name, price, img }.
   window.supaAddFavorite = async function(skuOrObj){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const key = resolveUserKey();
-      if (!key) return { ok:false, reason:'no_identity' };
-      const idn = currentUserIdentity();
-      const isObj = skuOrObj && typeof skuOrObj === 'object';
-      const sku = String(isObj ? skuOrObj.sku : skuOrObj);
-      if (!sku) return { ok:false, reason:'no_sku' };
-      const full = {
-        user_email: key,
-        user_phone: (idn && idn.phone10) || null,
-        product_sku: sku,
-        product_name: isObj ? (skuOrObj.name || null) : null,
-        product_price: isObj && skuOrObj.price != null ? Number(skuOrObj.price) : null,
-        product_img: isObj ? (skuOrObj.img || null) : null,
-      };
-      let { error } = await sb.from('favorites').upsert(full, { onConflict: 'user_email,product_sku' });
-      // If the cache columns don't exist yet (SQL not run), retry with the minimal row.
-      if (error && _isMissingColErr(error)) {
-        ({ error } = await sb.from('favorites').upsert(
-          { user_email: key, user_phone: full.user_phone, product_sku: sku },
-          { onConflict: 'user_email,product_sku' }));
-      }
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const key = resolveUserKey();
+    if (!key) return { ok:false, reason:'no_identity' };
+    const idn = currentUserIdentity();
+    const isObj = skuOrObj && typeof skuOrObj === 'object';
+    const sku = String(isObj ? skuOrObj.sku : skuOrObj);
+    if (!sku) return { ok:false, reason:'no_sku' };
+    const full = {
+      user_email: key,
+      user_phone: (idn && idn.phone10) || null,
+      product_sku: sku,
+      product_name: isObj ? (skuOrObj.name || null) : null,
+      product_price: isObj && skuOrObj.price != null ? Number(skuOrObj.price) : null,
+      product_img: isObj ? (skuOrObj.img || null) : null,
+    };
+    let r = await _pgUpsert('favorites', full, 'user_email,product_sku');
+    // If the cache columns don't exist yet (SQL not run), retry with the minimal row.
+    if (!r.ok && _isMissingColErr(r.error)) {
+      r = await _pgUpsert('favorites',
+        { user_email: key, user_phone: full.user_phone, product_sku: sku },
+        'user_email,product_sku');
+    }
+    return r.ok ? { ok:true } : { ok:false, error:r.error };
   };
 
   window.supaRemoveFavorite = async function(sku){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const key = resolveUserKey();
-      if (!key || sku == null) return { ok:false, reason:'no_identity' };
-      const { error } = await sb.from('favorites').delete().match({ user_email: key, product_sku: String(sku) });
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const key = resolveUserKey();
+    if (!key || sku == null) return { ok:false, reason:'no_identity' };
+    return _pgDelete('favorites',
+      'user_email=eq.' + encodeURIComponent(key) + '&product_sku=eq.' + encodeURIComponent(String(sku)));
   };
 
   // ===== addresses (email-keyed, table: public.user_addresses) =====
@@ -607,42 +623,31 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // addr = { label, address, is_default, email? }
   window.supaSaveAddress = async function(addr){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const key = resolveUserKey(addr && addr.email);
-      if (!key) return { ok:false, reason:'no_identity' };
-      if (addr.is_default) {
-        await sb.from('user_addresses').update({ is_default: false }).eq('user_email', key);
-      }
-      const { data, error } = await sb.from('user_addresses')
-        .insert([{ user_email: key, label: addr.label, address: addr.address, is_default: !!addr.is_default }])
-        .select();
-      if (error) return { ok:false, error };
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const key = resolveUserKey(addr && addr.email);
+    if (!key) return { ok:false, reason:'no_identity' };
+    if (addr.is_default) {
+      await _pgUpdate('user_addresses', 'user_email=eq.' + encodeURIComponent(key), { is_default: false });
+    }
+    const r = await _pgInsert('user_addresses',
+      { user_email: key, label: addr.label, address: addr.address, is_default: !!addr.is_default });
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaUpdateAddressById = async function(id, addr){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const key = resolveUserKey(addr && addr.email);
-      if (addr.is_default && key) {
-        await sb.from('user_addresses').update({ is_default: false }).eq('user_email', key);
-      }
-      const { data, error } = await sb.from('user_addresses')
-        .update({ label: addr.label, address: addr.address, is_default: !!addr.is_default })
-        .eq('id', id).select();
-      if (error) return { ok:false, error };
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const key = resolveUserKey(addr && addr.email);
+    if (addr.is_default && key) {
+      await _pgUpdate('user_addresses', 'user_email=eq.' + encodeURIComponent(key), { is_default: false });
+    }
+    const r = await _pgUpdate('user_addresses', 'id=eq.' + encodeURIComponent(id),
+      { label: addr.label, address: addr.address, is_default: !!addr.is_default });
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaDeleteAddressById = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('user_addresses').delete().eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('user_addresses', 'id=eq.' + encodeURIComponent(id));
   };
 
   // ===== profile (table: public.user_profiles, keyed by user_id text) =====
@@ -658,25 +663,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // p = { user_id, email, phone, first_name, last_name, middle_name, user_type, company, inn }
   window.supaUpsertProfile = async function(p){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      if (!p || !p.user_id) return { ok:false, reason:'no_user_id' };
-      const row = {
-        user_id: String(p.user_id),
-        email: p.email || null,
-        phone: p.phone || null,
-        first_name: p.first_name || null,
-        last_name: p.last_name || null,
-        middle_name: p.middle_name || null,
-        user_type: p.user_type || 'individual',
-        company: p.company || null,
-        inn: p.inn || null,
-        updated_at: new Date().toISOString(),
-      };
-      const { data, error } = await sb.from('user_profiles').upsert(row, { onConflict: 'user_id' }).select();
-      if (error) return { ok:false, error };
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    if (!p || !p.user_id) return { ok:false, reason:'no_user_id' };
+    const row = {
+      user_id: String(p.user_id),
+      email: p.email || null,
+      phone: p.phone || null,
+      first_name: p.first_name || null,
+      last_name: p.last_name || null,
+      middle_name: p.middle_name || null,
+      user_type: p.user_type || 'individual',
+      company: p.company || null,
+      inn: p.inn || null,
+      updated_at: new Date().toISOString(),
+    };
+    const r = await _pgUpsert('user_profiles', row, 'user_id');
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   // Subscribe to auth state changes (login/logout) — pages can re-render on transitions.
@@ -702,43 +704,34 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaUpsertBanner = async function(banner){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      if (banner.id) {
-        const fields = Object.assign({}, banner);
-        delete fields.id; delete fields.created_at;
-        const { data, error } = await sb.from('banners').update(fields).eq('id', banner.id).select();
-        if (error) return { ok:false, error };
-        return { ok:true, data: data && data[0] };
-      } else {
-        const fields = Object.assign({}, banner);
-        delete fields.id; delete fields.created_at;
-        const { data, error } = await sb.from('banners').insert([fields]).select();
-        if (error) return { ok:false, error };
-        return { ok:true, data: data && data[0] };
-      }
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const fields = Object.assign({}, banner);
+    delete fields.created_at;
+    let r;
+    if (banner.id) {
+      const id = fields.id; delete fields.id;
+      r = await _pgUpdate('banners', 'id=eq.' + encodeURIComponent(id), fields);
+    } else {
+      delete fields.id;
+      r = await _pgInsert('banners', fields);
+    }
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaDeleteBanner = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('banners').delete().eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('banners', 'id=eq.' + encodeURIComponent(id));
   };
 
   window.supaInsertDefaultBanners = async function(){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const defaults = [
       { title:'Бесплатная доставка по СПб', subtitle:'На следующий рабочий день при заказе до 18:00', bg_color:'#2ECC71', text_color:'#ffffff', link_url:'delivery.html', link_text:'Подробнее', is_active:true, sort_order:0 },
       { title:'Скидки для постоянных клиентов', subtitle:'Индивидуальные условия для HoReCa', bg_color:'#FF6B35', text_color:'#ffffff', link_url:'wholesale.html', link_text:'Узнать условия', is_active:true, sort_order:1 },
       { title:'Более 2000 наименований', subtitle:'Всё для ресторанов, кафе и отелей', bg_color:'#0f1a14', text_color:'#ffffff', link_url:'catalog.html', link_text:'Смотреть каталог', is_active:true, sort_order:2 },
     ];
-    try {
-      const { error } = await sb.from('banners').insert(defaults);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    const r = await _pgInsert('banners', defaults);
+    return r.ok ? { ok:true } : { ok:false, error:r.error };
   };
 
   // ===== news / новости (table: public.news) =====
@@ -757,30 +750,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaUpsertNews = async function(item){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const fields = Object.assign({}, item);
-      delete fields.created_at;
-      if (item.id) {
-        const id = fields.id; delete fields.id;
-        const { data, error } = await sb.from('news').update(fields).eq('id', id).select();
-        if (error) return { ok:false, error };
-        return { ok:true, data: data && data[0] };
-      } else {
-        delete fields.id;
-        const { data, error } = await sb.from('news').insert([fields]).select();
-        if (error) return { ok:false, error };
-        return { ok:true, data: data && data[0] };
-      }
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const fields = Object.assign({}, item);
+    delete fields.created_at;
+    let r;
+    if (item.id) {
+      const id = fields.id; delete fields.id;
+      r = await _pgUpdate('news', 'id=eq.' + encodeURIComponent(id), fields);
+    } else {
+      delete fields.id;
+      r = await _pgInsert('news', fields);
+    }
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaDeleteNews = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('news').delete().eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('news', 'id=eq.' + encodeURIComponent(id));
   };
 
   // ===== settings / настройки (table: public.settings, singleton row id=1) =====
@@ -792,14 +778,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaUpsertSettings = async function(s){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const row = Object.assign({ id: 1 }, s);
-      delete row.updated_at;
-      const { data, error } = await sb.from('settings').upsert([row], { onConflict: 'id' }).select();
-      if (error) return { ok:false, error };
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const row = Object.assign({ id: 1 }, s);
+    delete row.updated_at;
+    const r = await _pgUpsert('settings', row, 'id');
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   // ===== promotions / акции (table: public.promotions) =====
@@ -818,30 +801,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaUpsertPromotion = async function(promo){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const fields = Object.assign({}, promo);
-      delete fields.created_at;
-      if (promo.id) {
-        delete fields.id;
-        const { data, error } = await sb.from('promotions').update(fields).eq('id', promo.id).select();
-        if (error) return { ok:false, error };
-        return { ok:true, data: data && data[0] };
-      } else {
-        delete fields.id;
-        const { data, error } = await sb.from('promotions').insert([fields]).select();
-        if (error) return { ok:false, error };
-        return { ok:true, data: data && data[0] };
-      }
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const fields = Object.assign({}, promo);
+    delete fields.created_at;
+    let r;
+    if (promo.id) {
+      delete fields.id;
+      r = await _pgUpdate('promotions', 'id=eq.' + encodeURIComponent(promo.id), fields);
+    } else {
+      delete fields.id;
+      r = await _pgInsert('promotions', fields);
+    }
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaDeletePromotion = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('promotions').delete().eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('promotions', 'id=eq.' + encodeURIComponent(id));
   };
 
   window.supaGetHomepageCategories = async function(){
@@ -859,19 +835,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaUpsertCategory = async function(cat){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { data, error } = await sb.from('categories').upsert([cat], { onConflict: 'id' }).select();
-      return error ? { ok:false, error } : { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgUpsert('categories', cat, 'id');
   };
 
   window.supaDeleteCategory = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('categories').delete().eq('id', String(id));
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('categories', 'id=eq.' + encodeURIComponent(String(id)));
   };
 
   // ===== subcategories (table: public.subcategories, PK (category_id, id)) =====
@@ -887,84 +857,65 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaUpsertSubcategory = async function(sub){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const row = {
-        category_id: sub.category_id,
-        id: sub.id,
-        name: sub.name,
-        image_url: sub.image_url || null,
-        sort_order: sub.sort_order != null ? sub.sort_order : 0,
-      };
-      const { data, error } = await sb.from('subcategories').upsert([row], { onConflict: 'category_id,id' }).select();
-      return error ? { ok:false, error } : { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const row = {
+      category_id: sub.category_id,
+      id: sub.id,
+      name: sub.name,
+      image_url: sub.image_url || null,
+      sort_order: sub.sort_order != null ? sub.sort_order : 0,
+    };
+    return _pgUpsert('subcategories', row, 'category_id,id');
   };
 
   window.supaDeleteSubcategory = async function(categoryId, id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('subcategories').delete()
-        .match({ category_id: String(categoryId), id: String(id) });
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('subcategories',
+      'category_id=eq.' + encodeURIComponent(String(categoryId)) + '&id=eq.' + encodeURIComponent(String(id)));
   };
 
   // Bulk upsert subcategories (used by the admin "sync tree to Supabase" seed).
   window.supaBulkUpsertSubcategories = async function(subs){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const rows = (subs || []).map(s => ({
-        category_id: s.category_id,
-        id: s.id,
-        name: s.name,
-        image_url: s.image_url || null,
-        sort_order: s.sort_order != null ? s.sort_order : 0,
-      }));
-      if (!rows.length) return { ok:true };
-      const CHUNK = 50;
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await sb.from('subcategories').upsert(rows.slice(i, i + CHUNK), { onConflict: 'id' });
-        if (error) { console.error('[supabase] bulk upsert subcategories', error); return { ok:false, error }; }
-      }
-      return { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const rows = (subs || []).map(s => ({
+      category_id: s.category_id,
+      id: s.id,
+      name: s.name,
+      image_url: s.image_url || null,
+      sort_order: s.sort_order != null ? s.sort_order : 0,
+    }));
+    if (!rows.length) return { ok:true };
+    const CHUNK = 50;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const r = await _pgUpsert('subcategories', rows.slice(i, i + CHUNK), 'category_id,id');
+      if (!r.ok) { console.error('[supabase] bulk upsert subcategories', r.error); return { ok:false, error:r.error }; }
+    }
+    return { ok:true };
   };
 
   window.supaInsertContact = async function(contact){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const fields = { name: contact.name, phone: contact.phone, message: contact.message };
-      const { data, error } = await sb.from('contacts').insert([fields]).select();
-      if (error) { console.error('[supabase] insert contact', error); return { ok:false, error }; }
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const r = await _pgInsert('contacts', { name: contact.name, phone: contact.phone, message: contact.message });
+    if (!r.ok) console.error('[supabase] insert contact', r.error);
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaGetContacts = async function(){
-    const sb = getClient(); if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
-      const { data, error } = await sb.from('contacts').select('*')
-        .order('created_at', { ascending: false });
-      if (error) { console.error('[supabase] get contacts', error); return null; }
-      return data || [];
-    } catch(e) { return null; }
+      const data = await _pgGetRetry('contacts', { select:'*', order:'created_at.desc' });
+      return Array.isArray(data) ? data : null;
+    } catch(e) { console.error('[supabase] get contacts', e); return null; }
   };
 
   window.supaDeleteContact = async function(id){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('contacts').delete().eq('id', id);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('contacts', 'id=eq.' + encodeURIComponent(id));
   };
 
   window.supaDeleteAllContacts = async function(){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('contacts').delete().neq('id', 0);
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('contacts', 'id=neq.0');
   };
 
   // ===== products (table: public.products) =====
@@ -976,12 +927,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaGetProductBySku = async function(sku){
-    const sb = getClient(); if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
-      const { data, error } = await sb.from('products').select('*').eq('sku', String(sku)).maybeSingle();
-      if (error) { console.error('[supabase] get product by sku', error); return null; }
-      return data || null;
-    } catch(e) { return null; }
+      const data = await _pgGetRetry('products', { select:'*', sku:'eq.' + String(sku), limit:'1' });
+      return (Array.isArray(data) && data.length) ? data[0] : null;
+    } catch(e) { console.error('[supabase] get product by sku', e); return null; }
   };
 
   window.supaGetHits = async function(){
@@ -991,61 +941,44 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return null; }
   };
 
+  function _productRow(p){
+    return {
+      sku: p.sku,
+      name: p.name,
+      price: Number(p.price) || 0,
+      img: p.img || '',
+      cat: p.cat || '',
+      category_id: p.categoryId || '',
+      subcategory: p.subcategory || '',
+      badge: p.badge || '',
+      is_hit: !!p.isHit,
+      description: p.desc || '',
+      emoji: p.emoji || '📦',
+      is_active: true,
+    };
+  }
+
   window.supaUpsertProduct = async function(p){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const row = {
-        sku: p.sku,
-        name: p.name,
-        price: Number(p.price) || 0,
-        img: p.img || '',
-        cat: p.cat || '',
-        category_id: p.categoryId || '',
-        subcategory: p.subcategory || '',
-        badge: p.badge || '',
-        is_hit: !!p.isHit,
-        description: p.desc || '',
-        emoji: p.emoji || '📦',
-        is_active: true,
-      };
-      const { data, error } = await sb.from('products').upsert([row], { onConflict: 'sku' }).select();
-      if (error) { console.error('[supabase] upsert product', error); return { ok:false, error }; }
-      return { ok:true, data: data && data[0] };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const r = await _pgUpsert('products', _productRow(p), 'sku');
+    if (!r.ok) console.error('[supabase] upsert product', r.error);
+    return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
   window.supaDeleteProduct = async function(sku){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const { error } = await sb.from('products').delete().eq('sku', String(sku));
-      return error ? { ok:false, error } : { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    return _pgDelete('products', 'sku=eq.' + encodeURIComponent(String(sku)));
   };
 
   window.supaBulkUpsertProducts = async function(products){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try {
-      const rows = products.map(p => ({
-        sku: p.sku,
-        name: p.name,
-        price: Number(p.price) || 0,
-        img: p.img || '',
-        cat: p.cat || '',
-        category_id: p.categoryId || '',
-        subcategory: p.subcategory || '',
-        badge: p.badge || '',
-        is_hit: !!p.isHit,
-        description: p.desc || '',
-        emoji: p.emoji || '📦',
-        is_active: true,
-      }));
-      const CHUNK = 50;
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await sb.from('products').upsert(rows.slice(i, i + CHUNK), { onConflict: 'sku' });
-        if (error) { console.error('[supabase] bulk upsert products', error); return { ok:false, error }; }
-      }
-      return { ok:true };
-    } catch(e) { return { ok:false, error:e }; }
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const rows = (products || []).map(_productRow);
+    const CHUNK = 50;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const r = await _pgUpsert('products', rows.slice(i, i + CHUNK), 'sku');
+      if (!r.ok) { console.error('[supabase] bulk upsert products', r.error); return { ok:false, error:r.error }; }
+    }
+    return { ok:true };
   };
 
   // ===== storage: image uploads (bucket: product-images) =====
