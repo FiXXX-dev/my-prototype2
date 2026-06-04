@@ -1096,6 +1096,9 @@ window.addEventListener('kleverProductsLoaded', function () {
 })();
 
 // Перерисовать текущий вид каталога (плитки/подплитки/товары) по URL.
+// Важно: тот же выбор режима, что и в initFromUrl — иначе при позднем приходе
+// дерева категорий (холодный кэш на другом устройстве) подкатегория-родитель
+// с детьми ошибочно показывалась бы как список товаров вместо плиток 3-го уровня.
 function _rerenderCatalogView() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -1104,10 +1107,18 @@ function _rerenderCatalogView() {
     if (!cat) { renderCategoryTiles(); return; }
     if (cat === 'all') return;
     const c = (typeof getCategoryById === 'function') ? getCategoryById(cat) : null;
-    if (c && !sub) { renderSubcategoryTiles(cat); return; }
+    if (c && !sub) { hbrowseShow(); renderSubcategoryTiles(cat); return; }
     if (c && sub) {
-      // Refresh heading + crumb (products themselves untranslated)
-      applyCatalogForCategory(cat, sub);
+      const node = (typeof getSubcategoryById === 'function') ? getSubcategoryById(cat, sub) : null;
+      if (node && (node.children || []).length) {
+        // Родитель уровня-2 с детьми → плитки под-подкатегорий (Mode B2).
+        hbrowseShow();
+        renderSubSubcategoryTiles(cat, sub);
+      } else {
+        // Лист → товары (Mode C).
+        hbrowseHide();
+        applyCatalogForCategory(cat, sub);
+      }
     }
   } catch(e){}
 }
