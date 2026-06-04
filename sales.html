@@ -167,20 +167,10 @@
 </div>
 <script id="promos-render-script">
 (function(){
-  const PROMOS_KEY = 'klever_promos';
-  const DEFAULT_PROMOS = [
-    {name:'Скидка на бытовую химию', disc:'-15%', color:'green', badge:'Хиты продаж', desc:'Белизна, жироудалители, чистящие средства — минус 15% на весь раздел', valid:'До 31 мая 2026'},
-    {name:'При заказе от 5 000 ₽', disc:'-20%', color:'accent', badge:'Оптом выгоднее', desc:'Закажите на сумму от 5 000 рублей и получите скидку 20% на весь заказ', valid:'Постоянная акция'},
-    {name:'Скидка на первый заказ', disc:'-10%', color:'lime', badge:'Новым клиентам', desc:'Скидка 10% для новых покупателей при оформлении первого заказа', valid:'Бессрочно'},
-  ];
-  function getPromos(){
-    try{
-      const raw = localStorage.getItem(PROMOS_KEY);
-      if (raw === null) return DEFAULT_PROMOS;
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : DEFAULT_PROMOS;
-    }catch(e){ return DEFAULT_PROMOS; }
-  }
+  // Источник акций — Supabase (через быстрый статический promotions.json),
+  // см. data-loader.js → window.getPromotions(). Никакого localStorage/хардкода,
+  // чтобы у всех клиентов был один и тот же актуальный список.
+  function getPromos(){ return (typeof getPromotionsSync === 'function') ? getPromotionsSync() : []; }
   function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function render(){
     const grid = document.getElementById('salesGrid');
@@ -213,8 +203,12 @@
         + '</div>';
     }).join('');
   }
-  document.addEventListener('DOMContentLoaded', render);
-  window.addEventListener('storage', e => { if (e.key === PROMOS_KEY) render(); });
+  document.addEventListener('DOMContentLoaded', function(){
+    render();
+    if (typeof getPromotions === 'function') getPromotions().then(render);
+  });
+  // Когда акции догрузились (или обновились в фоне) — перерисовываем.
+  window.addEventListener('kleverPromotionsLoaded', render);
 })();
 </script>
 <footer>
