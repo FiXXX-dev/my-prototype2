@@ -212,6 +212,10 @@
   @media(max-width:360px){
     .prod-grid{grid-template-columns:1fr;gap:12px;}
   }
+  /* Mode C: sidebar back-link header */
+  .sidebar-back-link{color:var(--text);font-size:14px;font-weight:700;text-decoration:none;font-family:'Unbounded',sans-serif;display:flex;align-items:center;gap:6px;letter-spacing:-0.5px;}
+  .sidebar-back-link::before{content:"←";color:var(--green-dark);}
+  .sidebar-back-link:hover{color:var(--green-dark);}
 </style>
 
 
@@ -416,6 +420,7 @@ let currentCatId = null;     // id выбранной категории (null =
 let currentSub = null;
 let currentPage = 1;
 let filteredProducts = [];
+let _catSubSidebarState = null; // {catId,subId} when sidebar shows subcats in Mode C
 
 // Совпадение товара с категорией по её id. Для старых товаров без category_id
 // есть мягкий откат на совпадение по названию категории.
@@ -944,7 +949,40 @@ function applyCatalogForCategory(catId, subId) {
       (parent ? `<span>→</span><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(parent.id)}">${escHtml(subDisplayName(catId, parent))}</a>` : '') +
       (sub ? `<span>→</span><span>${escHtml(subDisplayName(catId, sub))}</span>` : '');
   }
+  // Replace main sidebar with subcategory navigation (like competitor site).
+  showCatSubSidebar(catId, subId || null);
   applyFilters();
+}
+
+// Mode C: swap the main sidebar from top-level category list to subcategory navigation.
+function showCatSubSidebar(catId, subId) {
+  var cat = (typeof getCategoryById === 'function') ? getCategoryById(catId) : null;
+  if (!cat) return;
+  var subs = (cat.subcategories || []).slice().sort(function(a,b){ return (a.order||0)-(b.order||0); });
+  if (!subs.length) return; // no subcategories — keep default top-level sidebar
+  _catSubSidebarState = { catId: catId, subId: subId || null };
+  var counts = (typeof productCountBySubcategory === 'function') ? productCountBySubcategory(catId) : {};
+  // Sidebar title becomes a back-link showing the category name.
+  var titleEl = document.querySelector('.sidebar-title');
+  if (titleEl) {
+    titleEl.innerHTML = '<a href="catalog.html?cat=' + escHtml(catId) + '" class="sidebar-back-link">' + escHtml(catDisplayName(cat)) + '</a>';
+  }
+  // Replace top-level category list with subcategory nav.
+  var listEl = document.getElementById('sidebarCats');
+  if (listEl) {
+    listEl.innerHTML = subSidebarHtml(catId, subs, counts, subId || null);
+  }
+  // Mobile: replace top-level category chips with subcategory chips.
+  var chipsEl = document.querySelector('.cat-chips');
+  if (chipsEl) {
+    var pid2 = subId && (typeof getSubParentId === 'function') ? getSubParentId(catId, subId) : null;
+    var chHtml = '<a href="catalog.html?cat=' + escHtml(catId) + '" class="sub-chip" style="color:var(--green-dark);border-color:var(--green-dark);">&#8592; Все</a>';
+    chHtml += subs.map(function(s) {
+      var isActive = s.id === subId || s.id === pid2 || (s.children||[]).some(function(k){ return k.id === subId; });
+      return '<a href="catalog.html?cat=' + escHtml(catId) + '&sub=' + escHtml(s.id) + '" class="sub-chip' + (isActive ? ' active' : '') + '">' + escHtml(subDisplayName(catId, s)) + '</a>';
+    }).join('');
+    chipsEl.innerHTML = chHtml;
+  }
 }
 
 function initFromUrl() {
