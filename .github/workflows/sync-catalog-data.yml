@@ -1,0 +1,64 @@
+name: Sync catalog data from Supabase
+
+# Выгружает товары/категории/подкатегории из Supabase в статические JSON-файлы
+# в репозитории. Их отдаёт быстрый github.io — клиенту не нужно ходить в
+# медленный (throttled провайдером) supabase.co. Раннеры GitHub не throttled,
+# поэтому здесь запрос к Supabase быстрый.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # каждые 10 минут
+  workflow_dispatch: {}        # + ручной запуск кнопкой в Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-catalog-data
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch data from Supabase
+        env:
+          SUPABASE_URL: https://fquhoxxcucgesxrexsjn.supabase.co
+          # Публичный anon-ключ (он и так открыт в supabase-client.js).
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxdWhveHhjdWNnZXN4cmV4c2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NzM5MDYsImV4cCI6MjA5NTQ0OTkwNn0.z09KuaZ1ybuURb46iWl9Ef-HT2gbecw8Wjw3oFJl9wI
+        run: |
+          set -euo pipefail
+          curl -fsS "$SUPABASE_URL/rest/v1/products?select=*&order=sort_order.asc,id.asc" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o products.json
+          curl -fsS "$SUPABASE_URL/rest/v1/categories?select=id,name,show_on_homepage,sort_order,image_url,color,product_count&order=sort_order.asc,id.asc" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o categories.json
+          curl -fsS "$SUPABASE_URL/rest/v1/subcategories?select=*&order=category_id.asc,sort_order.asc,id.asc" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o subcategories.json
+
+      - name: Validate JSON (must be arrays)
+        run: |
+          set -e
+          for f in products.json categories.json subcategories.json; do
+            if ! jq -e 'type == "array"' "$f" >/dev/null 2>&1; then
+              echo "ERROR: $f is not a JSON array — aborting (no commit)."
+              head -c 500 "$f" || true
+              exit 1
+            fi
+          done
+          echo "products:     $(jq 'length' products.json)"
+          echo "categories:   $(jq 'length' categories.json)"
+          echo "subcategories:$(jq 'length' subcategories.json)"
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add products.json categories.json subcategories.json
+          if git diff --staged --quiet; then
+            echo "No changes — nothing to commit."
+          else
+            git commit -m "chore: sync catalog data from Supabase [skip ci]"
+            git push
+          fi

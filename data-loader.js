@@ -18,7 +18,7 @@
 // Поэтому подключается ПОСЛЕ них.
 
 (function () {
-  console.log('%c[Clever] data-loader v4 — instant cache + background refresh', 'color:#2ECC71;font-weight:bold');
+  console.log('%c[Clever] data-loader v5 — static JSON (github.io) + cache', 'color:#2ECC71;font-weight:bold');
   let _products = null;        // загруженный и нормализованный массив (кэш)
   let _loadingPromise = null;  // текущий запрос, чтобы не дублировать
 
@@ -45,20 +45,24 @@
     });
   }
 
-  async function _fetch() {
-    if (typeof window.supaGetProducts !== 'function') {
-      console.error('[data-loader] supaGetProducts недоступен — проверьте порядок подключения скриптов');
-      return null; // null = ошибка, не кэшировать
-    }
+  // Грузим статический JSON с github.io (быстро). Supabase — только fallback,
+  // если файла ещё нет (первый деплой до первого запуска Action).
+  async function _getJson(path, supaFn) {
     try {
-      const data = await window.supaGetProducts();
-      if (Array.isArray(data)) return data.filter(p => p.is_active !== false).map(_normalize);
-      console.error('[data-loader] Supabase вернул не массив товаров:', data);
-      return null; // null = ошибка, не кэшировать
-    } catch (e) {
-      console.error('[data-loader] ошибка загрузки товаров:', e);
-      return null; // null = ошибка, не кэшировать
+      const resp = await fetch(path, { cache: 'no-cache' });
+      if (resp.ok) { const a = await resp.json(); if (Array.isArray(a)) return a; }
+    } catch (e) {}
+    if (typeof supaFn === 'function') {
+      try { const d = await supaFn(); if (Array.isArray(d)) return d; }
+      catch (e) { console.error('[data-loader] supabase fallback failed', e); }
     }
+    return null;
+  }
+
+  async function _fetch() {
+    const raw = await _getJson('products.json', window.supaGetProducts);
+    if (!Array.isArray(raw)) return null; // null = ошибка, не кэшировать
+    return raw.filter(p => p.is_active !== false).map(_normalize);
   }
 
   // Три попытки с задержкой 1 с и 2 с: если первый запрос упал (сеть/DPI),
@@ -152,13 +156,9 @@
   }
 
   async function _buildTree() {
-    let supaCats = null, supaSubs = null;
-    try {
-      if (typeof window.supaGetAllCategoriesHP === 'function') supaCats = await window.supaGetAllCategoriesHP();
-    } catch (e) { console.error('[data-loader] categories fetch failed', e); }
-    try {
-      if (typeof window.supaGetSubcategories === 'function') supaSubs = await window.supaGetSubcategories();
-    } catch (e) { console.error('[data-loader] subcategories fetch failed', e); }
+    // Категории и подкатегории — тоже из статических JSON (быстро), Supabase fallback.
+    const supaCats = await _getJson('categories.json', window.supaGetAllCategoriesHP);
+    const supaSubs = await _getJson('subcategories.json', window.supaGetSubcategories);
 
     // Если Supabase недоступен/без категорий — пусть getCategories() возьмёт
     // локальный/дефолтный вариант (возвращаем null).
