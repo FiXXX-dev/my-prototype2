@@ -1675,7 +1675,7 @@ function closeProductModal() {
   document.getElementById('productModal').classList.remove('open');
 }
 
-function saveProduct() {
+async function saveProduct() {
   const name = document.getElementById('prodName').value.trim();
   const sku = document.getElementById('prodSku').value.trim();
   const price = parseFloat(document.getElementById('prodPrice').value);
@@ -1706,15 +1706,23 @@ function saveProduct() {
     products.unshift({name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, img, desc, emoji:'📦'});
   }
 
+  // Сначала пишем в Supabase (источник истины) и проверяем результат —
+  // иначе правка осталась бы только в этом браузере и пропала после F5.
+  const saved = products.find(p => p.sku === sku);
+  if (saved && typeof window.supaUpsertProduct === 'function') {
+    const r = await window.supaUpsertProduct(saved);
+    if (!r || !r.ok) {
+      const msg = r && r.error && r.error.message ? r.error.message : JSON.stringify(r && r.error);
+      alert('Не удалось сохранить в базу:\n' + msg + '\n\nИзменение НЕ сохранено (после перезагрузки пропадёт).');
+      return;
+    }
+  }
+
   setProducts(products);
   closeProductModal();
   renderProducts();
   updateCounts();
   toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
-  const saved = products.find(p => p.sku === sku);
-  if (saved && typeof window.supaUpsertProduct === 'function') {
-    window.supaUpsertProduct(saved).catch(e => console.error('[admin] saveProduct supabase', e));
-  }
 }
 
 function deleteProduct(sku) {
