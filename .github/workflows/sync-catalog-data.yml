@@ -40,10 +40,23 @@ jobs:
             -H "apikey: $SUPABASE_ANON_KEY" -o categories.json
           curl -fsS "$SUPABASE_URL/rest/v1/subcategories?select=*&order=category_id.asc,sort_order.asc,id.asc" \
             -H "apikey: $SUPABASE_ANON_KEY" -o subcategories.json
-          # Акции: если таблицы ещё нет в Supabase — не валим весь job, кладём [].
+          # Акции: мягкий fallback если таблицы нет.
           curl -fsS "$SUPABASE_URL/rest/v1/promotions?select=*&order=sort_order.asc,id.asc" \
             -H "apikey: $SUPABASE_ANON_KEY" -o promotions.json || echo '[]' > promotions.json
           if ! jq -e 'type == "array"' promotions.json >/dev/null 2>&1; then echo '[]' > promotions.json; fi
+          # Новости: мягкий fallback если таблицы нет.
+          curl -fsS "$SUPABASE_URL/rest/v1/news?select=*&order=sort_order.asc,id.asc" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o news.json || echo '[]' > news.json
+          if ! jq -e 'type == "array"' news.json >/dev/null 2>&1; then echo '[]' > news.json; fi
+          # Настройки: singleton-строка — берём первый элемент массива.
+          curl -fsS "$SUPABASE_URL/rest/v1/settings?select=*&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" -o _settings_arr.json || echo '{}' > settings.json
+          if jq -e 'type == "array" and length > 0' _settings_arr.json >/dev/null 2>&1; then
+            jq '.[0]' _settings_arr.json > settings.json
+          else
+            echo '{}' > settings.json
+          fi
+          rm -f _settings_arr.json
 
       - name: Validate JSON (must be arrays)
         run: |
@@ -59,12 +72,14 @@ jobs:
           echo "categories:   $(jq 'length' categories.json)"
           echo "subcategories:$(jq 'length' subcategories.json)"
           echo "promotions:   $(jq 'length' promotions.json)"
+          echo "news:         $(jq 'length' news.json)"
+          echo "settings keys:$(jq 'keys | length' settings.json)"
 
       - name: Commit if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add products.json categories.json subcategories.json promotions.json
+          git add products.json categories.json subcategories.json promotions.json news.json settings.json
           if git diff --staged --quiet; then
             echo "No changes — nothing to commit."
           else

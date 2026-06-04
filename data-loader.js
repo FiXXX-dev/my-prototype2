@@ -261,9 +261,113 @@
     _promosLoading = null;
   };
 
+  // ===== Новости (news из Supabase / статический news.json) =====
+  let _news = null;
+  let _newsLoading = null;
+
+  function _normalizeNewsItem(n) {
+    return {
+      id: n.id,
+      title: n.title || '',
+      text: n.text || '',
+      color: ['green', 'orange', 'blue'].includes(n.color) ? n.color : 'green',
+      is_active: n.is_active !== false,
+      active: n.is_active !== false,
+      created: n.created_at ? new Date(n.created_at).getTime() : 0,
+      sort_order: n.sort_order != null ? n.sort_order : 0,
+    };
+  }
+
+  window.getNews = function () {
+    if (_news) return Promise.resolve(_news);
+    if (_newsLoading) return _newsLoading;
+    _newsLoading = _getJson('news.json', window.supaGetNews).then(function (arr) {
+      _newsLoading = null;
+      _news = Array.isArray(arr) ? arr.filter(function (n) { return n.is_active !== false; }).map(_normalizeNewsItem) : [];
+      try { window.dispatchEvent(new Event('kleverNewsLoaded')); } catch (e) {}
+      return _news;
+    });
+    return _newsLoading;
+  };
+
+  window.getNewsSync = function () { return _news || []; };
+
+  window.invalidateNewsCache = function () {
+    _news = null;
+    _newsLoading = null;
+  };
+
+  // ===== Настройки (settings из Supabase / статический settings.json) =====
+  let _settings = null;
+  let _settingsLoading = null;
+
+  // Приводим строку настроек (snake_case из БД ИЛИ legacy camelCase из
+  // localStorage) к единой форме, которую читают клиентские страницы.
+  function _normalizeSettings(s) {
+    s = s || {};
+    function pick() { for (let i = 0; i < arguments.length; i++) { if (arguments[i] != null && arguments[i] !== '') return arguments[i]; } return arguments[arguments.length - 1]; }
+    let pickups = s.pickup_locations != null ? s.pickup_locations : s.pickupLocations;
+    if (typeof pickups === 'string') { try { pickups = JSON.parse(pickups); } catch (e) { pickups = []; } }
+    if (!Array.isArray(pickups)) pickups = [];
+    const out = {
+      phone1: s.phone1 || '',
+      phone2: s.phone2 || '',
+      email: s.email || '',
+      address: s.address || '',
+      minOrder: Number(pick(s.min_order, s.minOrder, 0)) || 0,
+      freeDelivery: Number(pick(s.free_delivery, s.freeDelivery, 0)) || 0,
+      deliveryCost: Number(pick(s.delivery_cost, s.deliveryCost, 0)) || 0,
+      pickupLocations: pickups,
+    };
+    // Мессенджеры включаем только если значение реально задано (включая
+    // пустую строку = «скрыть кнопку»). Если поле никогда не сохранялось
+    // (null), не добавляем ключ — тогда страница применит свой URL по умолчанию.
+    const maxv = s.max_link != null ? s.max_link : s.max;
+    if (s.whatsapp != null) out.whatsapp = s.whatsapp;
+    if (s.telegram != null) out.telegram = s.telegram;
+    if (maxv != null) out.max = maxv;
+    return out;
+  }
+
+  async function _fetchSettings() {
+    try {
+      const resp = await fetch('settings.json', { cache: 'no-cache' });
+      if (resp.ok) {
+        const obj = await resp.json();
+        if (obj && typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length) return obj;
+      }
+    } catch (e) {}
+    if (typeof window.supaGetSettings === 'function') {
+      try { const d = await window.supaGetSettings(); if (d && typeof d === 'object') return d; }
+      catch (e) { console.error('[data-loader] settings fallback failed', e); }
+    }
+    return {};
+  }
+
+  window.getSettings = function () {
+    if (_settings) return Promise.resolve(_settings);
+    if (_settingsLoading) return _settingsLoading;
+    _settingsLoading = _fetchSettings().then(function (obj) {
+      _settingsLoading = null;
+      _settings = _normalizeSettings(obj);
+      try { window.dispatchEvent(new Event('kleverSettingsLoaded')); } catch (e) {}
+      return _settings;
+    });
+    return _settingsLoading;
+  };
+
+  window.getSettingsSync = function () { return _settings || {}; };
+
+  window.invalidateSettingsCache = function () {
+    _settings = null;
+    _settingsLoading = null;
+  };
+
   // Запускаем загрузку сразу при подключении скрипта — к моменту рендера
   // данные уже в пути (или готовы).
   window.getProducts();
   window.getCategoryTree();
   window.getPromotions();
+  window.getNews();
+  window.getSettings();
 })();
