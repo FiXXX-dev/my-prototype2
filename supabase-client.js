@@ -71,9 +71,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const url = new URL(SUPABASE_URL + '/rest/v1/' + table);
     url.searchParams.set('apikey', SUPABASE_ANON_KEY);
     Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
-    const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
-    if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
-    return resp.json();
+    // Таймаут 8с: если соединение зависло (DPI), обрываем и даём слою выше
+    // повторить, а не ждём минутами OS-таймаут TCP.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: ctrl.signal });
+      if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
+      return await resp.json();
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // Быстрая диагностика: await window.supaPing()

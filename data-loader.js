@@ -18,6 +18,7 @@
 // Поэтому подключается ПОСЛЕ них.
 
 (function () {
+  console.log('%c[Clever] data-loader v3 — plain fetch + retry + timeout', 'color:#2ECC71;font-weight:bold');
   let _products = null;        // загруженный и нормализованный массив (кэш)
   let _loadingPromise = null;  // текущий запрос, чтобы не дублировать
 
