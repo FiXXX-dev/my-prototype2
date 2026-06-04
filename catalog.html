@@ -407,10 +407,32 @@ function normalizeProd(p) {
 
 
 const PER_PAGE = 9;
-let currentCat = 'все';
+let currentCat = 'все';      // legacy ru-key (оставлен для совместимости)
+let currentCatId = null;     // id выбранной категории (null = все); основной фильтр
 let currentSub = null;
 let currentPage = 1;
 let filteredProducts = [];
+
+// Совпадение товара с категорией по её id. Для старых товаров без category_id
+// есть мягкий откат на совпадение по названию категории.
+function catProductMatch(p, id){
+  if (!id || id === 'all') return true;
+  if (p.categoryId && p.categoryId === id) return true;
+  const cat = (typeof getCategoryById === 'function') ? getCategoryById(id) : null;
+  if (cat && p.cat){
+    const a = String(p.cat).toLowerCase().trim();
+    const b = String(cat.name || '').toLowerCase().trim();
+    if (b && (a === b || a.includes(b) || b.includes(a))) return true;
+  }
+  return false;
+}
+
+// Подсветить активную категорию в сайдбаре и чипах по её id.
+function setActiveCatNav(id){
+  const key = id || 'all';
+  document.querySelectorAll('.cat-list li a').forEach(a => a.classList.toggle('active', a.getAttribute('data-catid') === key));
+  document.querySelectorAll('.cat-chips .chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-catid') === key));
+}
 
 function img(url) {
   return url
@@ -490,9 +512,8 @@ function applyFilters() {
   document.getElementById('clearBtn').style.display = query ? 'block' : 'none';
 
   filteredProducts = ALL_PRODUCTS.filter(p => {
-    const catMap = {'бумажная':'бумажная','одноразовая':'одноразовая','бытовая':'бытовая','защита':'защиты','упаковка':'упаковка','хозтовары':'хозтовары','канцелярия':'канцелярия'};
-    const catKey = catMap[currentCat] || currentCat;
-    const catMatch = currentCat === 'все' || p.cat.toLowerCase().includes(catKey);
+    // Фильтр по id категории (новые категории работают так же, как стандартные).
+    const catMatch = !currentCatId || catProductMatch(p, currentCatId);
     const subMatch = !currentSub || p.subcategory === currentSub;
     const priceMatch = p.price >= min && p.price <= max;
     const searchMatch = !query || p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query) || p.cat.toLowerCase().includes(query);
@@ -510,26 +531,53 @@ function applyFilters() {
   renderGrid();
 }
 
-function filterCat(e, cat) {
-  e.preventDefault();
-  currentCat = cat;
-
-  document.querySelectorAll('.cat-list li a').forEach(a => a.classList.remove('active'));
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-
-  const catNames = {'все':'Все товары','бумажная':'Бумажная продукция','одноразовая':'Одноразовая посуда','бытовая':'Бытовая химия','защита':'Средства защиты','упаковка':'Упаковка','хозтовары':'Хозтовары','канцелярия':'Канцелярия'};
-  document.getElementById('catHeading').textContent = catNames[cat] || 'Все товары';
-
-  if (e.target.closest('.cat-list li a')) {
-    e.target.closest('.cat-list li a').classList.add('active');
-    document.querySelectorAll('.chip').forEach(c => { if(c.getAttribute('onclick')?.includes(`'${cat}'`)) c.classList.add('active'); });
-  } else {
-    e.target.classList.add('active');
-    document.querySelectorAll('.cat-list li a').forEach(a => { if(a.getAttribute('onclick')?.includes(`'${cat}'`)) a.classList.add('active'); });
+// Строим список категорий в сайдбаре и чипы из общего дерева (Supabase),
+// чтобы добавленные в админке категории появлялись здесь автоматически.
+function buildCatNav(){
+  const cats = (typeof sortedCategories === 'function') ? sortedCategories() : [];
+  const counts = (typeof productCountByCategory === 'function') ? productCountByCategory() : {};
+  const totalAll = (ALL_PRODUCTS && ALL_PRODUCTS.length) || 0;
+  const ul = document.querySelector('.cat-list');
+  if (ul){
+    let html = `<li><a href="javascript:void(0)" data-catid="all" class="active" onclick="filterCatId(event,'all')"><span><span class="icon icon-clover" style="margin-right:6px;vertical-align:-0.15em;"></span>Все товары</span> <span class="cat-count-badge">${totalAll}</span></a></li>`;
+    html += cats.map(c => {
+      const n = counts[c.id] || 0;
+      const iconCls = c.icon ? 'icon icon-' + escHtml(c.icon) : 'icon icon-box';
+      return `<li><a href="javascript:void(0)" data-catid="${escHtml(c.id)}" onclick="filterCatId(event,'${escHtml(c.id)}')"><span><span class="${iconCls}" style="margin-right:6px;vertical-align:-0.15em;"></span>${escHtml(catDisplayName(c))}</span> <span class="cat-count-badge">${n}</span></a></li>`;
+    }).join('');
+    ul.innerHTML = html;
   }
+  const chipsWrap = document.querySelector('.cat-chips');
+  if (chipsWrap){
+    let html = `<span class="chip active" data-catid="all" onclick="filterCatId(event,'all')">Все</span>`;
+    html += cats.map(c => `<span class="chip" data-catid="${escHtml(c.id)}" onclick="filterCatId(event,'${escHtml(c.id)}')">${escHtml(catDisplayName(c))}</span>`).join('');
+    chipsWrap.innerHTML = html;
+  }
+  setActiveCatNav(currentCatId || 'all');
+}
 
+// Фильтр по id категории (используется сайдбаром и чипами).
+function filterCatId(e, id){
+  if (e && e.preventDefault) e.preventDefault();
+  currentCatId = (!id || id === 'all') ? null : id;
+  currentSub = null;
+  const cat = currentCatId ? getCategoryById(currentCatId) : null;
+  let allLabel = 'Все товары';
+  try {
+    const lang = (typeof getSavedLang === 'function') ? getSavedLang() : 'ru';
+    const t = (typeof TRANSLATIONS === 'object') ? TRANSLATIONS[lang] : null;
+    if (t && t['cat.all']) allLabel = t['cat.all'];
+  } catch(e2){}
+  document.getElementById('catHeading').textContent = cat ? catDisplayName(cat) : allLabel;
+  setActiveCatNav(id || 'all');
   document.getElementById('searchInput').value = '';
   applyFilters();
+}
+
+// Совместимость: старые ru-ключи (бумажная/бытовая/…) переводим в id.
+function filterCat(e, ruKey){
+  const id = (ruKey === 'все') ? 'all' : ((typeof RU_KEY_TO_ID === 'object' && RU_KEY_TO_ID[ruKey]) || ruKey);
+  filterCatId(e, id);
 }
 
 function clearSearch() {
@@ -789,10 +837,8 @@ function renderSubcategoryTiles(catId){
 function applyCatalogForCategory(catId, subId) {
   const cat = getCategoryById(catId);
   if (!cat) { renderGrid(); return; }
-  // Map new id back to legacy filter key (existing applyFilters relies on currentCat = ru-key)
-  const legacyMap = { all:'все', paper:'бумажная', disposable:'одноразовая', chemistry:'бытовая',
-                      protection:'защита', packaging:'упаковка', household:'хозтовары', stationery:'канцелярия' };
-  currentCat = legacyMap[catId] || 'все';
+  // Фильтруем по реальному id категории (работает и для новых категорий).
+  currentCatId = catId;
   currentSub = subId || null;
   // Heading
   const heading = document.getElementById('catHeading');
@@ -804,15 +850,8 @@ function applyCatalogForCategory(catId, subId) {
     heading.textContent = catDisplayName(cat);
     heading.removeAttribute('data-i18n');
   }
-  // Activate sidebar item + chip
-  document.querySelectorAll('.cat-list li a').forEach(a => a.classList.remove('active'));
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  document.querySelectorAll('.cat-list li a').forEach(a => {
-    if (a.getAttribute('onclick')?.includes(`'${currentCat}'`)) a.classList.add('active');
-  });
-  document.querySelectorAll('.chip').forEach(c => {
-    if (c.getAttribute('onclick')?.includes(`'${currentCat}'`)) c.classList.add('active');
-  });
+  // Подсветка в сайдбаре и чипах.
+  setActiveCatNav(catId);
   // Update breadcrumb of products view
   const oldCrumb = document.querySelector('.breadcrumb');
   if (oldCrumb) {
@@ -850,15 +889,12 @@ function initFromUrl() {
   // Legacy Russian-name URLs keep working in product-grid mode
   if (LEGACY_CAT_KEYS.includes(cat)) {
     hbrowseHide();
-    currentCat = cat;
+    const id = (cat === 'все') ? 'all' : (RU_KEY_TO_ID[cat] || null);
+    currentCatId = (!id || id === 'all') ? null : id;
+    const c = currentCatId ? getCategoryById(currentCatId) : null;
     const catNames = {'все':'Все товары','бумажная':'Бумажная продукция','одноразовая':'Одноразовая посуда','бытовая':'Бытовая химия','защита':'Средства защиты','упаковка':'Упаковка','хозтовары':'Хозтовары','канцелярия':'Канцелярия'};
-    document.getElementById('catHeading').textContent = catNames[cat];
-    document.querySelectorAll('.cat-list li a').forEach(a => {
-      if (a.getAttribute('onclick')?.includes(`'${cat}'`)) a.classList.add('active');
-    });
-    document.querySelectorAll('.chip').forEach(c => {
-      if (c.getAttribute('onclick')?.includes(`'${cat}'`)) c.classList.add('active');
-    });
+    document.getElementById('catHeading').textContent = c ? catDisplayName(c) : (catNames[cat] || 'Все товары');
+    setActiveCatNav(id || 'all');
     applyFilters();
     return;
   }
@@ -883,6 +919,7 @@ function initFromUrl() {
 function _applyCatalogProducts(arr) {
   ALL_PRODUCTS = arr;
   filteredProducts = [...ALL_PRODUCTS];
+  buildCatNav();      // сайдбар/чипы из актуального дерева категорий
   initFromUrl();
 }
 
@@ -946,8 +983,8 @@ function _rerenderCatalogView() {
 }
 // translations.js fires a custom event `kleverLangChange` after applyLanguage.
 window.addEventListener('kleverLangChange', _rerenderCatalogView);
-// Дерево категорий пришло из Supabase — обновляем плитки/подкатегории.
-window.addEventListener('kleverCategoriesLoaded', _rerenderCatalogView);
+// Дерево категорий пришло из Supabase — обновляем плитки/подкатегории и навигацию.
+window.addEventListener('kleverCategoriesLoaded', function(){ buildCatNav(); _rerenderCatalogView(); });
 </script>
 <!-- КОРЗИНА -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
