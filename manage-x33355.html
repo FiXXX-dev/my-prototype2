@@ -2936,7 +2936,9 @@ function deleteCategory(id){
   localStorage.setItem(KLEVER_PRODUCTS_KEY, JSON.stringify(products));
   setCategories(getCategories().filter(c => c.id !== id));
   if (typeof window.supaDeleteCategory === 'function') {
-    window.supaDeleteCategory(id).catch(()=>{});
+    window.supaDeleteCategory(id)
+      .then(() => supaRequestSync())
+      .catch(e => console.error('[admin] deleteCategory', e));
   }
   renderCategoriesAdmin();
   toast('Категория удалена');
