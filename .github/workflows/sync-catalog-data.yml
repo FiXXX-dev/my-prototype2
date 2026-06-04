@@ -7,10 +7,12 @@ name: Sync catalog data from Supabase
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # каждые 10 минут (страховка)
-  workflow_dispatch: {}        # + ручной запуск кнопкой в Actions
-  repository_dispatch:         # + автозапуск из Supabase при правке в админке
+    - cron: '0,15,30,45 * * * *'  # каждые 15 минут (страховка)
+  workflow_dispatch: {}             # + ручной запуск кнопкой в Actions
+  repository_dispatch:              # + автозапуск из Supabase при правке в админке
     types: [sync-catalog]
+  push:
+    branches: [main]               # + при каждом деплое кода
 
 permissions:
   contents: write

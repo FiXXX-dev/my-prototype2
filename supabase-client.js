@@ -84,6 +84,40 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
   }
 
+  // POST/PATCH/DELETE для RPC и записей — plain fetch (без SDK-заголовков).
+  async function _pgPost(path, body, method) {
+    if (!isConfigured()) return null;
+    const url = new URL(SUPABASE_URL + '/rest/v1/' + path);
+    url.searchParams.set('apikey', SUPABASE_ANON_KEY);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const resp = await fetch(url.toString(), {
+        method: method || 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw Object.assign(new Error(err.message || 'HTTP ' + resp.status), { status: resp.status, supaError: err });
+      }
+      return resp.status === 204 ? null : await resp.json().catch(() => null);
+    } finally { clearTimeout(timer); }
+  }
+
+  // Запрашивает обновление статических JSON на github.io через Supabase RPC
+  // (хранит GitHub-токен внутри БД — в браузерный код не попадает).
+  // Требует: create function public.request_catalog_sync() + grant execute to anon.
+  window.supaRequestSync = async function () {
+    try {
+      await _pgPost('rpc/request_catalog_sync', {});
+      console.log('[supabase] catalog sync triggered');
+    } catch (e) {
+      console.warn('[supabase] sync request failed (not critical)', e && e.message);
+    }
+  };
+
   // Быстрая диагностика: await window.supaPing()
   window.supaPing = async function(){
     if (!isConfigured()) return { ok:false, error:'не настроен' };

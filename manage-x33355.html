@@ -1723,6 +1723,7 @@ async function saveProduct() {
   renderProducts();
   updateCounts();
   toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
 function deleteProduct(sku) {
@@ -1732,7 +1733,9 @@ function deleteProduct(sku) {
   updateCounts();
   toast('Товар удалён');
   if (typeof window.supaDeleteProduct === 'function') {
-    window.supaDeleteProduct(sku).catch(e => console.error('[admin] deleteProduct supabase', e));
+    window.supaDeleteProduct(sku)
+      .then(() => { if (typeof supaRequestSync === 'function') supaRequestSync(); })
+      .catch(e => console.error('[admin] deleteProduct supabase', e));
   }
 }
 
@@ -2232,6 +2235,7 @@ async function savePromo() {
   closePromoModal();
   await loadPromotionsAdmin();
   toast(wasEdit ? '✓ Акция обновлена' : '✓ Акция создана');
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
 async function deletePromo(id) {
@@ -2241,6 +2245,7 @@ async function deletePromo(id) {
     if (!r.ok) { alert('Ошибка удаления'); return; }
   }
   await loadPromotionsAdmin();
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
 // ===== НОВОСТИ =====
@@ -3269,6 +3274,7 @@ async function saveBanner() {
   closeBannerModal();
   await loadBannersAdmin();
   toast('✓ Баннер сохранён');
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
 async function deleteBannerAdmin(id) {
