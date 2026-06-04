@@ -680,11 +680,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           </div>
         </div>
 
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8f4ec;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;"><span class="icon icon-store"></span> Пункты самовывоза</div>
+          <div style="font-size:13px;color:#8aaa94;margin-bottom:18px;">Адреса, из которых клиент сможет выбрать при оформлении заказа с самовывозом. Без адресов самовывоз скрывается на сайте.</div>
+          <div id="pickupList"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addPickup()" style="margin-top:6px;">+ Добавить пункт самовывоза</button>
+        </div>
+
         <div style="margin-top:24px;display:flex;gap:10px;">
           <button class="btn btn-primary" onclick="saveSettings()"><span class="icon icon-save"></span> Сохранить</button>
         </div>
-        <div style="margin-top:20px;padding:14px 18px;background:#fff3ee;border:1.5px solid #ffc4a8;border-radius:12px;font-size:13px;color:#cf7a00;">
-          <span class="icon icon-alert"></span> В демо-версии настройки сохраняются только в этом браузере. Для полной интеграции нужен сервер.
+        <div style="margin-top:20px;padding:14px 18px;background:#eafaf0;border:1.5px solid #b8e6c8;border-radius:12px;font-size:13px;color:#1aab58;">
+          <span class="icon icon-check-circle"></span> Настройки сохраняются в базе и обновляются на сайте у всех клиентов в течение ~1 минуты.
         </div>
       </div>
     </section>
@@ -1342,7 +1349,7 @@ function showTab(name, btn) {
   }
   if (name === 'contacts') loadContactsAdmin();
   if (name === 'promotions') loadPromotionsAdmin();
-  if (name === 'news') renderNews();
+  if (name === 'news') loadNewsAdmin();
   if (name === 'banners') loadBannersAdmin();
   if (name === 'products') loadProductsAdmin();
   if (name === 'dashboard') {
@@ -1405,18 +1412,20 @@ function getPromos() {
   return adminPromos;
 }
 
+// Новости теперь хранятся в Supabase (таблица public.news), а не в
+// localStorage — иначе у каждого браузера был бы свой список. adminNews —
+// кэш последней загрузки из БД (см. loadNewsAdmin).
 function getNews() {
-  try { const arr = JSON.parse(localStorage.getItem(STORAGE_NEWS)); return Array.isArray(arr) ? arr : []; }
-  catch(e) { return []; }
-}
-function setNews(arr) {
-  localStorage.setItem(STORAGE_NEWS, JSON.stringify(arr));
+  return adminNews;
 }
 
 function loadAll() {
   updateCounts();
   renderDashboard();
   if (typeof _kleverWireSupabaseOrders === 'function') _kleverWireSupabaseOrders();
+  // Подгружаем акции и новости в фоне, чтобы счётчики в сайдбаре были верны.
+  if (typeof loadPromotionsAdmin === 'function') loadPromotionsAdmin();
+  if (typeof loadNewsAdmin === 'function') loadNewsAdmin();
 }
 
 function updateCounts() {
@@ -2249,6 +2258,8 @@ async function deletePromo(id) {
 }
 
 // ===== НОВОСТИ =====
+// Источник — Supabase (таблица public.news). adminNews — кэш последней загрузки.
+let adminNews = [];
 let editingNewsId = null;
 const NEWS_COLOR_GRADIENT = {
   green: 'linear-gradient(135deg,#1aab58,#2ECC71)',
@@ -2258,6 +2269,28 @@ const NEWS_COLOR_GRADIENT = {
 const NEWS_COLOR_LABEL = { green: '● Зелёный', orange: '● Оранжевый', blue: '● Синий' };
 
 function escNews(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Приводим строку из Supabase к форме, которую ждут рендеры админки.
+function _mapNewsRow(r) {
+  return {
+    id: r.id,
+    title: r.title || '',
+    text: r.text || '',
+    color: ['green','orange','blue'].includes(r.color) ? r.color : 'green',
+    active: r.is_active !== false,
+    created: r.created_at ? new Date(r.created_at).getTime() : 0,
+    sort_order: r.sort_order != null ? r.sort_order : 0,
+  };
+}
+
+async function loadNewsAdmin() {
+  if (typeof supaGetAllNews === 'function') {
+    const data = await supaGetAllNews();
+    if (Array.isArray(data)) adminNews = data.map(_mapNewsRow);
+  }
+  renderNews();
+  updateCounts();
+}
 
 function renderNews() {
   const list = getNews().slice().reverse();
@@ -2317,43 +2350,55 @@ function closeNewsModal() {
   document.getElementById('newsModal').classList.remove('open');
 }
 
-function saveNews() {
+async function saveNews() {
   const title = document.getElementById('newsTitle').value.trim();
   const text = document.getElementById('newsText').value.trim();
   const color = document.getElementById('newsColor').value;
   const active = document.getElementById('newsActive').value === 'true';
   if (!title || !text) { alert('Заполните заголовок и текст'); return; }
-  const news = getNews();
-  if (editingNewsId !== null) {
-    const idx = news.findIndex(n => n.id === editingNewsId);
-    if (idx >= 0) news[idx] = { ...news[idx], title, text, color, active };
-  } else {
-    news.push({ id: Date.now(), title, text, color, active, created: Date.now() });
+  const row = { title, text, color, is_active: active };
+  if (editingNewsId !== null) row.id = editingNewsId;
+  if (typeof supaUpsertNews === 'function') {
+    const r = await supaUpsertNews(row);
+    if (!r.ok) {
+      alert('Ошибка сохранения новости: ' + ((r.error && (r.error.message || r.error.details)) || 'неизвестная ошибка'));
+      return;
+    }
   }
-  setNews(news);
+  const wasEdit = editingNewsId !== null;
   closeNewsModal();
-  renderNews();
-  updateCounts();
-  toast(editingNewsId !== null ? '✓ Новость обновлена' : '✓ Новость создана');
+  await loadNewsAdmin();
+  toast(wasEdit ? '✓ Новость обновлена' : '✓ Новость создана');
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
-function toggleNewsActive(id) {
-  const news = getNews().map(n => n.id === id ? { ...n, active: !n.active } : n);
-  setNews(news);
-  renderNews();
-  updateCounts();
+async function toggleNewsActive(id) {
+  const n = adminNews.find(x => x.id === id);
+  if (!n) return;
+  if (typeof supaUpsertNews === 'function') {
+    const r = await supaUpsertNews({ id: id, is_active: !n.active });
+    if (!r.ok) { alert('Ошибка изменения статуса'); return; }
+  }
+  await loadNewsAdmin();
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
-function deleteNews(id) {
+async function deleteNews(id) {
   if (!confirm('Удалить новость?')) return;
-  setNews(getNews().filter(n => n.id !== id));
-  renderNews();
-  updateCounts();
+  if (typeof supaDeleteNews === 'function') {
+    const r = await supaDeleteNews(id);
+    if (!r.ok) { alert('Ошибка удаления'); return; }
+  }
+  await loadNewsAdmin();
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
 // ===== НАСТРОЙКИ =====
-function loadSettings() {
-  const s = JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || '{}');
+// Источник — Supabase (таблица public.settings, singleton-строка id=1).
+// adminPickups — рабочий список адресов самовывоза (редактируется в форме).
+let adminPickups = [];
+
+function _applySettingsToForm(s) {
   document.getElementById('setPhone1').value = s.phone1 || '8 (812) 922-86-77';
   document.getElementById('setPhone2').value = s.phone2 || '+7 911 236-82-77';
   document.getElementById('setEmail').value = s.email || '9112368277@mail.ru';
@@ -2361,12 +2406,97 @@ function loadSettings() {
   document.getElementById('setMinOrder').value = s.minOrder || 5000;
   document.getElementById('setFreeDelivery').value = s.freeDelivery || 0;
   document.getElementById('setDeliveryCost').value = s.deliveryCost || 0;
-  document.getElementById('setWhatsApp').value = s.whatsapp !== undefined ? s.whatsapp : 'https://wa.me/79119228677';
-  document.getElementById('setTelegram').value = s.telegram !== undefined ? s.telegram : 'https://t.me/cleverspb';
+  document.getElementById('setWhatsApp').value = s.whatsapp !== undefined && s.whatsapp !== '' ? s.whatsapp : 'https://wa.me/79119228677';
+  document.getElementById('setTelegram').value = s.telegram !== undefined && s.telegram !== '' ? s.telegram : 'https://t.me/cleverspb';
   document.getElementById('setMax').value = s.max || '';
+  adminPickups = Array.isArray(s.pickupLocations) ? s.pickupLocations.map(p => ({
+    id: p.id || ('p' + Date.now() + Math.random().toString(36).slice(2,6)),
+    name: p.name || '',
+    address: p.address || '',
+    hours: p.hours || '',
+  })) : [];
+  renderPickups();
 }
 
-function saveSettings() {
+async function loadSettings() {
+  // Сначала показываем localStorage-кэш (мгновенно), затем обновляем из Supabase.
+  let cached = {};
+  try { cached = JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || '{}'); } catch(e) {}
+  _applySettingsToForm(cached);
+  if (typeof supaGetSettings === 'function') {
+    const row = await supaGetSettings();
+    if (row && typeof row === 'object' && Object.keys(row).length) {
+      const norm = _normalizeSettingsRow(row);
+      _applySettingsToForm(norm);
+      try { localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(norm)); } catch(e) {}
+    }
+  }
+}
+
+// Маппинг snake_case строки Supabase в camelCase форму формы админки.
+function _normalizeSettingsRow(s) {
+  s = s || {};
+  let pickups = s.pickup_locations != null ? s.pickup_locations : s.pickupLocations;
+  if (typeof pickups === 'string') { try { pickups = JSON.parse(pickups); } catch(e) { pickups = []; } }
+  if (!Array.isArray(pickups)) pickups = [];
+  return {
+    phone1: s.phone1 || '',
+    phone2: s.phone2 || '',
+    email: s.email || '',
+    address: s.address || '',
+    minOrder: s.min_order != null ? s.min_order : (s.minOrder || 0),
+    freeDelivery: s.free_delivery != null ? s.free_delivery : (s.freeDelivery || 0),
+    deliveryCost: s.delivery_cost != null ? s.delivery_cost : (s.deliveryCost || 0),
+    whatsapp: s.whatsapp != null ? s.whatsapp : '',
+    telegram: s.telegram != null ? s.telegram : '',
+    max: s.max_link != null ? s.max_link : (s.max || ''),
+    pickupLocations: pickups,
+  };
+}
+
+function renderPickups() {
+  const c = document.getElementById('pickupList');
+  if (!c) return;
+  if (!adminPickups.length) {
+    c.innerHTML = '<div style="padding:16px;border:1.5px dashed #d0e8d8;border-radius:12px;color:#8aaa94;font-size:13px;text-align:center;">Пунктов самовывоза пока нет. Добавьте первый адрес ниже.</div>';
+    return;
+  }
+  c.innerHTML = adminPickups.map((p, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:start;padding:14px;border:1.5px solid #e8f4ec;border-radius:12px;margin-bottom:10px;">
+      <div class="form-grp" style="margin:0;">
+        <label style="font-size:12px;">Название пункта</label>
+        <input type="text" value="${escH(p.name)}" placeholder="Например: Магазин на Софийской" oninput="updatePickupField(${i},'name',this.value)">
+      </div>
+      <div class="form-grp" style="margin:0;">
+        <label style="font-size:12px;">Адрес</label>
+        <input type="text" value="${escH(p.address)}" placeholder="ул. Софийская 4 к 3, пав. 29/8" oninput="updatePickupField(${i},'address',this.value)">
+      </div>
+      <button type="button" class="btn btn-danger btn-sm" style="margin-top:22px;" onclick="removePickup(${i})"><span class="icon icon-trash"></span></button>
+      <div class="form-grp full" style="margin:0;grid-column:1 / -1;">
+        <label style="font-size:12px;">Часы работы</label>
+        <input type="text" value="${escH(p.hours)}" placeholder="Пн–Пт 9:00–18:00, Сб 10:00–16:00" oninput="updatePickupField(${i},'hours',this.value)">
+      </div>
+    </div>`).join('');
+}
+
+function updatePickupField(i, field, val) {
+  if (adminPickups[i]) adminPickups[i][field] = val;
+}
+
+function addPickup() {
+  adminPickups.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2,6), name: '', address: '', hours: '' });
+  renderPickups();
+}
+
+function removePickup(i) {
+  adminPickups.splice(i, 1);
+  renderPickups();
+}
+
+async function saveSettings() {
+  const pickups = adminPickups
+    .map(p => ({ id: p.id, name: (p.name||'').trim(), address: (p.address||'').trim(), hours: (p.hours||'').trim() }))
+    .filter(p => p.address);
   const s = {
     phone1: document.getElementById('setPhone1').value,
     phone2: document.getElementById('setPhone2').value,
@@ -2378,9 +2508,25 @@ function saveSettings() {
     whatsapp: document.getElementById('setWhatsApp').value.trim(),
     telegram: document.getElementById('setTelegram').value.trim(),
     max: document.getElementById('setMax').value.trim(),
+    pickupLocations: pickups,
   };
   localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(s));
+  if (typeof supaUpsertSettings === 'function') {
+    const row = {
+      id: 1,
+      phone1: s.phone1, phone2: s.phone2, email: s.email, address: s.address,
+      min_order: s.minOrder, free_delivery: s.freeDelivery, delivery_cost: s.deliveryCost,
+      whatsapp: s.whatsapp, telegram: s.telegram, max_link: s.max,
+      pickup_locations: pickups,
+    };
+    const r = await supaUpsertSettings(row);
+    if (!r.ok) {
+      alert('Настройки сохранены локально, но не отправлены на сервер: ' + ((r.error && (r.error.message || r.error.details)) || 'неизвестная ошибка'));
+      return;
+    }
+  }
   toast('✓ Настройки сохранены');
+  if (typeof supaRequestSync === 'function') supaRequestSync();
 }
 
 // ===== TOAST =====

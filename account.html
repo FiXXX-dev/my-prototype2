@@ -1706,7 +1706,13 @@ document.addEventListener('DOMContentLoaded', updateCartBadge);
     max: '<span class="max-letter">M</span>'
   };
   const LABELS = { whatsapp: 'WhatsApp', telegram: 'Telegram', max: 'Max' };
-  function getSettings(){
+  // Источник настроек — Supabase (через settings.json), см. data-loader.js
+  // → window.getSettings(). localStorage остаётся запасным вариантом.
+  function readSettings(){
+    if (typeof getSettingsSync === 'function') {
+      const s = getSettingsSync();
+      if (s && Object.keys(s).length) return s;
+    }
     try { return JSON.parse(localStorage.getItem('klever_settings') || '{}') || {}; } catch(e) { return {}; }
   }
   function defaults(){
@@ -1715,7 +1721,7 @@ document.addEventListener('DOMContentLoaded', updateCartBadge);
   function render(){
     const wrap = document.getElementById('kleverFabItems');
     if (!wrap) return;
-    const s = Object.assign({}, defaults(), getSettings());
+    const s = Object.assign({}, defaults(), readSettings());
     const order = ['whatsapp','telegram','max'];
     wrap.innerHTML = order.filter(k => (s[k]||'').trim()).map(k => {
       const url = s[k];
@@ -1741,6 +1747,8 @@ document.addEventListener('DOMContentLoaded', updateCartBadge);
     document.getElementById('kleverFabOverlay').addEventListener('click', closeFab);
   });
   window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+  window.addEventListener('kleverSettingsLoaded', render);
+  if (typeof getSettings === 'function') getSettings().then(render);
 })();
 </script>
 

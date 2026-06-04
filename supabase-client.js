@@ -706,6 +706,67 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { return { ok:false, error:e }; }
   };
 
+  // ===== news / новости (table: public.news) =====
+  window.supaGetNews = async function(){
+    try {
+      const data = await _pgGet('news', { select:'*', 'is_active':'eq.true', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get news', e); return null; }
+  };
+
+  window.supaGetAllNews = async function(){
+    try {
+      const data = await _pgGet('news', { select:'*', order:'sort_order.asc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get all news', e); return null; }
+  };
+
+  window.supaUpsertNews = async function(item){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const fields = Object.assign({}, item);
+      delete fields.created_at;
+      if (item.id) {
+        const id = fields.id; delete fields.id;
+        const { data, error } = await sb.from('news').update(fields).eq('id', id).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      } else {
+        delete fields.id;
+        const { data, error } = await sb.from('news').insert([fields]).select();
+        if (error) return { ok:false, error };
+        return { ok:true, data: data && data[0] };
+      }
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  window.supaDeleteNews = async function(id){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { error } = await sb.from('news').delete().eq('id', id);
+      return error ? { ok:false, error } : { ok:true };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
+  // ===== settings / настройки (table: public.settings, singleton row id=1) =====
+  window.supaGetSettings = async function(){
+    try {
+      const data = await _pgGet('settings', { select:'*', limit:'1' });
+      return Array.isArray(data) && data.length ? data[0] : {};
+    } catch(e) { console.error('[supabase] get settings', e); return null; }
+  };
+
+  window.supaUpsertSettings = async function(s){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const row = Object.assign({ id: 1 }, s);
+      delete row.updated_at;
+      const { data, error } = await sb.from('settings').upsert([row], { onConflict: 'id' }).select();
+      if (error) return { ok:false, error };
+      return { ok:true, data: data && data[0] };
+    } catch(e) { return { ok:false, error:e }; }
+  };
+
   // ===== promotions / акции (table: public.promotions) =====
   window.supaGetPromotions = async function(){
     try {

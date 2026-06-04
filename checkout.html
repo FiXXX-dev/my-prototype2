@@ -66,6 +66,11 @@ nav a:hover{color:var(--lime);}
 /* ADDRESS FORM */
 .address-form{margin-top:24px;display:none;}
 .address-form.visible{display:block;}
+/* PICKUP LOCATION CARDS */
+.pickup-card{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1.5px solid #e0ece4;border-radius:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,background .15s;}
+.pickup-card:hover{border-color:#bfe3cd;}
+.pickup-card.selected{border-color:var(--green,#2ECC71);background:#f1fbf5;}
+.pickup-card input{accent-color:var(--green,#2ECC71);cursor:pointer;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .form-row-3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:16px;}
 .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
@@ -324,6 +329,13 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
           </select>
         </div>
       </div>
+
+      <!-- ВЫБОР ПУНКТА САМОВЫВОЗА (только для самовывоза) -->
+      <div class="address-form" id="pickupForm">
+        <hr class="section-divider">
+        <div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text);"><span class="icon icon-store" style="margin-right:6px;vertical-align:-0.1em;"></span><span data-i18n="checkout.pickup_pick">Выберите пункт самовывоза</span></div>
+        <div id="pickupOptions"></div>
+      </div>
     </div>
 
     <!-- ШАГ 2 — ДАННЫЕ КЛИЕНТА -->
@@ -487,6 +499,56 @@ let deliveryMethod = 'courier';
 let paymentMethod = 'cash';
 let _checkoutUserId = null;
 
+// ===== Пункты самовывоза (из настроек: settings.pickupLocations) =====
+// Запасной вариант на случай, если в админке адреса ещё не заданы.
+const PICKUP_FALLBACK = [{ id: 'default', name: 'Магазин «Клевер»', address: 'ул. Софийская 4 к 3, павильон 29/8', hours: 'Пн–Пт 9:00–18:00, Сб 10:00–16:00, Вс 10:00–17:00' }];
+let pickupLocations = PICKUP_FALLBACK.slice();
+let selectedPickupId = pickupLocations[0].id;
+
+function _escPickup(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderPickupOptions() {
+  const box = document.getElementById('pickupOptions');
+  if (!box) return;
+  if (!pickupLocations.some(p => p.id === selectedPickupId)) {
+    selectedPickupId = pickupLocations.length ? pickupLocations[0].id : null;
+  }
+  box.innerHTML = pickupLocations.map(p => {
+    const sel = p.id === selectedPickupId;
+    return '<label class="pickup-card' + (sel ? ' selected' : '') + '" onclick="selectPickup(' + JSON.stringify(p.id).replace(/"/g,'&quot;') + ')">'
+      + '<input type="radio" name="pickupLoc" value="' + _escPickup(p.id) + '"' + (sel ? ' checked' : '') + ' style="margin-top:3px;">'
+      + '<div><div style="font-weight:700;color:var(--text);">' + _escPickup(p.name || 'Пункт самовывоза') + '</div>'
+      + '<div style="font-size:13px;color:#6b8a74;margin-top:2px;"><span class="icon icon-pin" style="vertical-align:-0.1em;margin-right:4px;"></span>' + _escPickup(p.address) + '</div>'
+      + (p.hours ? '<div style="font-size:12px;color:#8aaa94;margin-top:4px;">🕒 ' + _escPickup(p.hours) + '</div>' : '')
+      + '</div></label>';
+  }).join('');
+}
+
+function selectPickup(id) {
+  selectedPickupId = id;
+  renderPickupOptions();
+}
+
+function getSelectedPickup() {
+  return pickupLocations.find(p => p.id === selectedPickupId) || pickupLocations[0] || PICKUP_FALLBACK[0];
+}
+
+function applyPickupSettings() {
+  const s = (typeof getSettingsSync === 'function') ? getSettingsSync() : {};
+  const locs = (s && Array.isArray(s.pickupLocations)) ? s.pickupLocations.filter(p => p && p.address) : [];
+  pickupLocations = locs.length ? locs : PICKUP_FALLBACK.slice();
+  if (!pickupLocations.some(p => p.id === selectedPickupId)) selectedPickupId = pickupLocations[0].id;
+  renderPickupOptions();
+  // Обновляем краткое описание в карточке «Самовывоз».
+  const desc = document.querySelector('#optPickup .delivery-option-desc');
+  if (desc) {
+    const first = pickupLocations[0];
+    desc.innerHTML = pickupLocations.length > 1
+      ? ('<span>' + pickupLocations.length + ' пункта на выбор</span>')
+      : ('<span>' + _escPickup(first.address) + '</span>' + (first.hours ? '<br><span>' + _escPickup(first.hours) + '</span>' : ''));
+  }
+}
+
 function selectPayment(method) {
   paymentMethod = method;
   document.querySelectorAll('.payment-option').forEach(el => {
@@ -550,6 +612,9 @@ function selectDelivery(method) {
 
   const addrForm = document.getElementById('addressForm');
   addrForm.classList.toggle('visible', method === 'courier');
+
+  const pickForm = document.getElementById('pickupForm');
+  if (pickForm) pickForm.classList.toggle('visible', method === 'pickup');
 
   const paymentStep = document.getElementById('paymentStep');
   if (paymentStep) {
@@ -734,9 +799,11 @@ async function submitOrder() {
   const emailClean   = clean(document.getElementById('clientEmail').value);
   const companyClean = clean(document.getElementById('company').value);
   const commentClean = clean(document.getElementById('comment').value);
+  const _pickup = getSelectedPickup();
+  const _pickupAddr = 'Самовывоз: ' + (_pickup.name ? _pickup.name + ', ' : '') + _pickup.address;
   const addressClean = effectiveDelivery === 'courier'
     ? clean(document.getElementById('address').value)
-    : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
+    : _pickupAddr;
 
   const deliveryDateClean = effectiveDelivery === 'courier' ? clean(document.getElementById('delivDate').value) : null;
   const deliveryTimeClean = effectiveDelivery === 'courier' ? clean(document.getElementById('delivTime').value) || null : null;
@@ -807,7 +874,7 @@ async function submitOrder() {
 
   const methodText = effectiveDelivery === 'courier'
     ? `Доставим по адресу: ${addressClean}${deliveryDateClean ? '<br><span class="icon icon-calendar" style="font-size:12px;vertical-align:-0.1em;"></span> ' + deliveryDateClean : ''}${deliveryTimeClean ? ' ⏰ ' + deliveryTimeClean : ''}`
-    : 'Самовывоз: ул. Софийская 4 к 3, павильон 29/8';
+    : (_pickupAddr + (_pickup.hours ? '<br>🕒 ' + _pickup.hours : ''));
   const cashLabel = effectiveDelivery === 'pickup' ? 'при получении' : 'курьеру';
   const paymentLabel = {
     cash: `<span class="icon icon-coin"></span> Наличными или картой ${cashLabel}`,
@@ -858,6 +925,11 @@ document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
   r.addEventListener('change', e => selectPayment(e.target.value));
 });
 prefillInvoiceFromUser();
+
+// Пункты самовывоза: показываем из настроек (Supabase → settings.json).
+applyPickupSettings();
+if (typeof getSettings === 'function') getSettings().then(applyPickupSettings);
+window.addEventListener('kleverSettingsLoaded', applyPickupSettings);
 
 // Autofill contact fields from Supabase auth profile (user_metadata).
 // Only fills empty fields so we never clobber what the user has typed.
@@ -1323,7 +1395,13 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
     max: '<span class="max-letter">M</span>'
   };
   const LABELS = { whatsapp: 'WhatsApp', telegram: 'Telegram', max: 'Max' };
-  function getSettings(){
+  // Источник настроек — Supabase (через settings.json), см. data-loader.js
+  // → window.getSettings(). localStorage остаётся запасным вариантом.
+  function readSettings(){
+    if (typeof getSettingsSync === 'function') {
+      const s = getSettingsSync();
+      if (s && Object.keys(s).length) return s;
+    }
     try { return JSON.parse(localStorage.getItem('klever_settings') || '{}') || {}; } catch(e) { return {}; }
   }
   function defaults(){
@@ -1332,7 +1410,7 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
   function render(){
     const wrap = document.getElementById('kleverFabItems');
     if (!wrap) return;
-    const s = Object.assign({}, defaults(), getSettings());
+    const s = Object.assign({}, defaults(), readSettings());
     const order = ['whatsapp','telegram','max'];
     wrap.innerHTML = order.filter(k => (s[k]||'').trim()).map(k => {
       const url = s[k];
@@ -1358,6 +1436,8 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
     document.getElementById('kleverFabOverlay').addEventListener('click', closeFab);
   });
   window.addEventListener('storage', e => { if (e.key === 'klever_settings') render(); });
+  window.addEventListener('kleverSettingsLoaded', render);
+  if (typeof getSettings === 'function') getSettings().then(render);
 })();
 </script>
 
