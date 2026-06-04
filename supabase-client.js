@@ -106,6 +106,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } finally { clearTimeout(timer); }
   }
 
+  // _pgGet с повтором: на сетях с DPI первая попытка иногда обрывается даже
+  // у «простого» запроса. Делаем до 3 попыток с задержкой 0/0.8/1.6с.
+  async function _pgGetRetry(table, qp, tries) {
+    const max = tries || 3;
+    let lastErr = null;
+    for (let i = 0; i < max; i++) {
+      if (i) await new Promise(r => setTimeout(r, i * 800));
+      try { return await _pgGet(table, qp); }
+      catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('request failed');
+  }
+
   // Запрашивает обновление статических JSON на github.io через Supabase RPC
   // (хранит GitHub-токен внутри БД — в браузерный код не попадает).
   // Требует: create function public.request_catalog_sync() + grant execute to anon.
@@ -322,14 +335,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // Returns orders for a specific user (for account history page).
   // opts = { phone, email } — matched alongside user_id in a single OR query.
-  // Phone is matched with ilike+% so +7/8/no-code formats all hit.
+  // Phone is matched with ilike+* so +7/8/no-code formats all hit.
+  // ВАЖНО: читаем через _pgGet (простой GET, без CORS preflight) — иначе на
+  // сетях с DPI (ТСПУ РФ) запрос периодически рвётся и «Личный кабинет» то
+  // грузит данные, то нет на разных устройствах.
   window.supaListOrdersByUser = async function(userId, opts){
-    const sb = getClient();
-    if (!sb) return null;
-    const isMissingCol = e => e && (
-      /column .* does not exist/i.test((e.message||'') + ' ' + (e.details||'')) ||
-      e.code === '42703' || e.code === 'PGRST204'
-    );
+    if (!isConfigured()) return null;
     const mapRow = r => ({
       num: r.num != null ? r.num : r.id,
       id: r.id,
@@ -354,45 +365,43 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       language: r.language,
       _supaId: r.id,
     });
+    // Normalize phone to last 10 digits so +7/8/no-code all match via ilike.
+    const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
+    const email = ((opts && opts.email) || '').toLowerCase().trim();
+
+    // PostgREST использует * как wildcard в ilike (в URL), а не %.
+    function buildOr(withUserId) {
+      const f = [];
+      if (withUserId && userId) f.push(`user_id.eq.${userId}`);
+      if (phone) f.push(`customer_phone.ilike.*${phone}*`);
+      if (email) f.push(`customer_email.ilike.*${email}*`);
+      return f;
+    }
+
+    async function fetchWith(withUserId) {
+      const filters = buildOr(withUserId);
+      if (!filters.length) return [];
+      return _pgGetRetry('orders', { select: '*', or: '(' + filters.join(',') + ')', order: 'created_at.desc' });
+    }
+
     try {
-      // Normalize phone to last 10 digits so +7/8/no-code all match via ilike
-      const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
-      const email = ((opts && opts.email) || '').toLowerCase().trim();
-
-      // Build a single OR filter covering all identifiers at once.
-      // This fixes the bug where the old code stopped at user_id if ≥1 row was found,
-      // missing orders stored with only phone/email.
-      const filters = [];
-      if (userId) filters.push(`user_id.eq.${userId}`);
-      if (phone)  filters.push(`customer_phone.ilike.%${phone}%`);
-      if (email)  filters.push(`customer_email.ilike.%${email}%`);
-
-      if (filters.length === 0) return [];
-
-      let { data, error } = await sb.from('orders').select('*')
-        .or(filters.join(','))
-        .order('created_at', { ascending: false });
-
-      // If user_id column is absent in old schema, retry without it
-      if (error && isMissingCol(error)) {
-        const fallback = filters.filter(f => !f.startsWith('user_id'));
-        if (fallback.length === 0) return [];
-        ({ data, error } = await sb.from('orders').select('*')
-          .or(fallback.join(','))
-          .order('created_at', { ascending: false }));
+      let data;
+      try {
+        data = await fetchWith(true);
+      } catch (e) {
+        // Если колонки user_id нет в старой схеме (400) — повторяем без неё.
+        if (e && e.status === 400 && userId) data = await fetchWith(false);
+        else throw e;
       }
-
-      if (error) { console.error('[supabase] list orders by user', error); return null; }
-
-      // Deduplicate (OR can theoretically return duplicates if multiple filters hit one row)
+      // Deduplicate (OR may return duplicates if multiple filters hit one row).
       const seen = new Set();
       const rows = [];
-      for (const r of (data || [])) {
+      for (const r of (Array.isArray(data) ? data : [])) {
         if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); }
       }
       return rows.map(mapRow);
     } catch (e) {
-      console.error('[supabase] list orders by user exception', e);
+      console.error('[supabase] list orders by user', e);
       return null;
     }
   };
@@ -496,27 +505,27 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         || (e && (e.code === '42703' || e.code === 'PGRST204'));
   }
 
+  // Чтения избранного — через _pgGet (без CORS preflight), чтобы DPI не рвал
+  // загрузку «Личного кабинета».
   window.supaGetFavorites = async function(email){
-    const sb = getClient(); if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
       const key = resolveUserKey(email);
       if (!key) return [];
-      const { data, error } = await sb.from('favorites').select('product_sku').eq('user_email', key);
-      if (error) { console.error('[supabase] get favorites', error); return null; }
-      return (data || []).map(r => r.product_sku);
-    } catch(e) { console.error('[supabase] get favorites exception', e); return null; }
+      const data = await _pgGetRetry('favorites', { select: 'product_sku', user_email: 'eq.' + key });
+      return (Array.isArray(data) ? data : []).map(r => r.product_sku);
+    } catch(e) { console.error('[supabase] get favorites', e); return null; }
   };
   window.supaListFavorites = window.supaGetFavorites;
 
   window.supaGetFavoritesFull = async function(email){
-    const sb = getClient(); if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
       const key = resolveUserKey(email);
       if (!key) return [];
-      const { data, error } = await sb.from('favorites').select('*').eq('user_email', key).order('id', { ascending: false });
-      if (error) { console.error('[supabase] get favorites full', error); return null; }
-      return data || [];
-    } catch(e) { console.error('[supabase] get favorites full exception', e); return null; }
+      const data = await _pgGetRetry('favorites', { select: '*', user_email: 'eq.' + key, order: 'id.desc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] get favorites full', e); return null; }
   };
 
   // Accepts a bare sku string OR a product object { sku, name, price, img }.
@@ -559,16 +568,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== addresses (email-keyed, table: public.user_addresses) =====
+  // Чтение — через _pgGet (без CORS preflight), чтобы адреса грузились
+  // стабильно на всех устройствах/сетях.
   window.supaListAddressesByEmail = async function(email){
-    const sb = getClient(); if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
       const key = resolveUserKey(email);
       if (!key) return [];
-      const { data, error } = await sb.from('user_addresses').select('*')
-        .eq('user_email', key).order('is_default', { ascending: false }).order('id', { ascending: true });
-      if (error) { console.error('[supabase] list addresses by email', error); return null; }
-      return data || [];
-    } catch(e) { return null; }
+      const data = await _pgGetRetry('user_addresses', { select: '*', user_email: 'eq.' + key, order: 'is_default.desc,id.asc' });
+      return Array.isArray(data) ? data : [];
+    } catch(e) { console.error('[supabase] list addresses by email', e); return null; }
   };
 
   // addr = { label, address, is_default, email? }
@@ -612,13 +621,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== profile (table: public.user_profiles, keyed by user_id text) =====
+  // Чтение — через _pgGet (без CORS preflight): имя/телефон профиля должны
+  // подтягиваться на любом устройстве, а не «иногда».
   window.supaGetProfile = async function(userId){
-    const sb = getClient(); if (!sb) return null;
+    if (!isConfigured()) return null;
     try {
-      const { data, error } = await sb.from('user_profiles').select('*').eq('user_id', String(userId)).maybeSingle();
-      if (error) { console.error('[supabase] get profile', error); return null; }
-      return data || null;
-    } catch(e) { return null; }
+      const data = await _pgGetRetry('user_profiles', { select: '*', user_id: 'eq.' + String(userId), limit: '1' });
+      return (Array.isArray(data) && data.length) ? data[0] : null;
+    } catch(e) { console.error('[supabase] get profile', e); return null; }
   };
 
   // p = { user_id, email, phone, first_name, last_name, middle_name, user_type, company, inn }

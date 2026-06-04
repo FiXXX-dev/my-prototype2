@@ -819,17 +819,28 @@ async function loadAccountData(){
 
   accountDataLoading = (async () => {
     try {
-      const [orders, favs, addrs] = await Promise.all([
+      // allSettled (а не all): если один запрос сорвётся (DPI/сеть), остальные
+      // всё равно применятся — раньше любой сбой обнулял сразу всё.
+      const results = await Promise.allSettled([
         (typeof supaListOrdersByUser === 'function')
           ? supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' }) : Promise.resolve(null),
         (typeof supaGetFavoritesFull === 'function') ? supaGetFavoritesFull() : Promise.resolve(null),
         (typeof supaListAddressesByEmail === 'function') ? supaListAddressesByEmail() : Promise.resolve(null),
       ]);
-      myOrders    = Array.isArray(orders) ? orders : [];
-      myFavorites = Array.isArray(favs)   ? favs   : [];
-      myAddresses = Array.isArray(addrs)  ? addrs.map(mapAddrRow) : [];
-      updateCurrentUser({ addresses: myAddresses });   // keep local user in sync for edit/delete-by-index
-      accountDataLoaded = true; accountDataLoadedFor = u.id;
+      const val = i => (results[i].status === 'fulfilled' ? results[i].value : null);
+      const orders = val(0), favs = val(1), addrs = val(2);
+      // Применяем только успешные ответы; неуспешные оставляют прежние данные
+      // (или [] при первой загрузке), но не затирают валидные.
+      if (Array.isArray(orders)) myOrders = orders;
+      if (Array.isArray(favs))   myFavorites = favs;
+      if (Array.isArray(addrs)) {
+        myAddresses = addrs.map(mapAddrRow);
+        updateCurrentUser({ addresses: myAddresses });   // keep local user in sync for edit/delete-by-index
+      }
+      // Считаем загрузку успешной, только если хоть один запрос дошёл —
+      // иначе оставляем accountDataLoaded=false, чтобы повторить позже.
+      const anyOk = [orders, favs, addrs].some(Array.isArray);
+      if (anyOk) { accountDataLoaded = true; accountDataLoadedFor = u.id; }
     } catch(e) {
       console.warn('[account] loadAccountData failed', e);
     } finally {
