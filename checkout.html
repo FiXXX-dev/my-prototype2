@@ -858,8 +858,10 @@ async function submitOrder() {
       finalNum = supaRes.data.id;
       console.log('[order] saved to Supabase, id:', finalNum);
     } else if (supaRes && !supaRes.ok && supaRes.reason !== 'unconfigured') {
-      const msg = (supaRes.error && (supaRes.error.message || supaRes.error.details)) || 'Неизвестная ошибка от сервера';
-      alert('Ошибка при оформлении заказа: ' + msg);
+      const e = supaRes.error || {};
+      const msg = e.message || e.hint || e.details
+        || (e.status ? ('код ' + e.status) : 'нет связи с сервером — проверьте интернет и попробуйте ещё раз');
+      alert('Не удалось отправить заказ: ' + msg + '\n\nЕсли ошибка повторяется — позвоните нам, мы примем заказ по телефону.');
       _unlockBtn();
       return;
     }

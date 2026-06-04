@@ -60,6 +60,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     return _client;
   }
 
+  // Обрыв зависшего fetch с понятной причиной. Некоторые браузеры не
+  // поддерживают abort(reason) — тогда обычный abort() (message будет родной).
+  function _abort(ctrl) {
+    try { ctrl.abort(new Error('Сервер не ответил вовремя (медленный интернет). Повторите попытку.')); }
+    catch (e) { try { ctrl.abort(); } catch (e2) {} }
+  }
+
   // ─── _pgGet: простой GET без CORS preflight ──────────────────────────────
   // Supabase JS SDK добавляет заголовки apikey / Authorization / x-client-info,
   // из-за которых браузер отправляет OPTIONS preflight. В сетях с DPI (ТСПУ РФ)
@@ -71,10 +78,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const url = new URL(SUPABASE_URL + '/rest/v1/' + table);
     url.searchParams.set('apikey', SUPABASE_ANON_KEY);
     Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
-    // Таймаут 8с: если соединение зависло (DPI), обрываем и даём слою выше
-    // повторить, а не ждём минутами OS-таймаут TCP.
+    // Таймаут: если соединение зависло (DPI/медленная сеть), обрываем и даём
+    // слою выше повторить, а не ждём минутами OS-таймаут TCP. На мобильных и
+    // throttled-сетях запросы к *.supabase.co идут медленно — берём 25с.
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
+    const timer = setTimeout(() => _abort(ctrl), 25000);
     try {
       const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: ctrl.signal });
       if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
@@ -91,7 +99,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const url = new URL(SUPABASE_URL + '/rest/v1/' + path);
     url.searchParams.set('apikey', SUPABASE_ANON_KEY);
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
+    const timer = setTimeout(() => _abort(ctrl), 30000);
     try {
       const resp = await fetch(url.toString(), {
         method: method || 'POST',
@@ -104,18 +112,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw Object.assign(new Error(err.message || 'HTTP ' + resp.status), { status: resp.status, supaError: err });
+        const m = err.message || err.hint || err.details || ('Ошибка сервера (код ' + resp.status + ')');
+        throw Object.assign(new Error(m), { status: resp.status, supaError: err });
       }
       return resp.status === 204 ? null : await resp.json().catch(() => null);
     } finally { clearTimeout(timer); }
   }
 
-  // _pgPost с повтором — на DPI-сетях первый POST тоже может оборваться.
+  // _pgPost с повтором — на DPI/медленных сетях первый POST часто обрывается.
   async function _pgPostRetry(path, body, method, extraHeaders, tries) {
-    const max = tries || 3;
+    const max = tries || 4;
     let lastErr = null;
     for (let i = 0; i < max; i++) {
-      if (i) await new Promise(r => setTimeout(r, i * 800));
+      if (i) await new Promise(r => setTimeout(r, i * 1000));
       try { return await _pgPost(path, body, method, extraHeaders); }
       catch (e) {
         lastErr = e;
@@ -169,12 +178,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // _pgGet с повтором: на сетях с DPI первая попытка иногда обрывается даже
   // у «простого» запроса. Делаем до 3 попыток с задержкой 0/0.8/1.6с.
   async function _pgGetRetry(table, qp, tries) {
-    const max = tries || 3;
+    const max = tries || 4;
     let lastErr = null;
     for (let i = 0; i < max; i++) {
-      if (i) await new Promise(r => setTimeout(r, i * 800));
+      if (i) await new Promise(r => setTimeout(r, i * 1000));
       try { return await _pgGet(table, qp); }
-      catch (e) { lastErr = e; }
+      catch (e) {
+        lastErr = e;
+        // Ответ сервера с кодом 4xx (кроме сетевых обрывов) повторять не нужно.
+        if (e && e.status && e.status >= 400 && e.status < 500) throw e;
+      }
     }
     throw lastErr || new Error('request failed');
   }
