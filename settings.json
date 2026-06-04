@@ -1,15 +1,15 @@
 {
   "id": 1,
-  "phone1": null,
-  "phone2": null,
-  "email": null,
-  "address": null,
-  "min_order": 5000,
+  "phone1": "+7(995) 889 12 80",
+  "phone2": "+7 911 236-82-77",
+  "email": "nurmuhamedovsa@gmail.com",
+  "address": "",
+  "min_order": 5500,
   "free_delivery": 0,
   "delivery_cost": 0,
-  "whatsapp": null,
-  "telegram": null,
-  "max_link": null,
+  "whatsapp": "https://wa.me/79119228677",
+  "telegram": "https://t.me/cleverspb",
+  "max_link": "",
   "pickup_locations": [],
   "updated_at": "2026-06-04T12:24:41.67007+00:00"
 }
