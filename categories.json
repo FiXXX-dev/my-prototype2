@@ -4,5 +4,4 @@
  {"id":"protection","name":"Средства защиты","show_on_homepage":true,"sort_order":4,"image_url":null,"color":"#2ECC71","product_count":0}, 
  {"id":"packaging","name":"Упаковка","show_on_homepage":true,"sort_order":5,"image_url":null,"color":"#2ECC71","product_count":0}, 
  {"id":"household","name":"Хозтовары","show_on_homepage":true,"sort_order":6,"image_url":null,"color":"#2ECC71","product_count":0}, 
- {"id":"stationery","name":"Канцелярия","show_on_homepage":true,"sort_order":7,"image_url":"https://main-cdn.sbermegamarket.ru/mid9/hlr-system/209/828/866/462/817/10/2463684633899199t.jpg","color":"#2ECC71","product_count":0}, 
- {"id":"products","name":"Продукты питания","show_on_homepage":true,"sort_order":9,"image_url":"https://myfin.by/source/thumb_720_1280/1/1lmtFSQWevRgqxcGJ4B476UoURt3Vikp.jpg","color":"#2ECC71","product_count":0}]
+ {"id":"stationery","name":"Канцелярия","show_on_homepage":true,"sort_order":7,"image_url":"https://main-cdn.sbermegamarket.ru/mid9/hlr-system/209/828/866/462/817/10/2463684633899199t.jpg","color":"#2ECC71","product_count":0}]
