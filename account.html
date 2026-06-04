@@ -102,6 +102,8 @@ nav a:hover{color:var(--lime);}
 .status-new{background:#fff3ee;color:var(--accent);}
 .status-assembling{background:#fffbe8;color:#a07800;}
 .status-courier{background:#e8f0ff;color:#3b5bdb;}
+.status-ready{background:#d1fae5;color:#047857;}
+.status-issued{background:#e8faf0;color:var(--green-dark);}
 .status-cancelled{background:#ffe8ee;color:#FF3B6B;}
 .status-done{background:#e8faf0;color:var(--green-dark);}
 .order-items{display:flex;flex-direction:column;gap:6px;}
@@ -990,7 +992,7 @@ function renderMyOrders(){
           <div class="order-num">Заказ #${o.num}</div>
           <div class="order-date">${o.date}</div>
         </div>
-        <span class="order-status status-${({assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'}[o.status]||'new')}">${{new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'✕ Отменён'}[o.status]||'В обработке'}</span>
+        <span class="order-status status-${({assembling:'assembling',courier:'courier',ready:'ready',done:'done',issued:'issued',cancelled:'cancelled'}[o.status]||'new')}">${{new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'✓ Доставлен',issued:'✓ Выдан',cancelled:'✕ Отменён'}[o.status]||'В обработке'}</span>
         <div class="order-total">${(o.total || 0).toLocaleString('ru-RU')} ₽</div>
       </div>
       <div class="order-items">

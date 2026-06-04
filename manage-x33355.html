@@ -168,6 +168,8 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .order-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #e8f4ec;flex-wrap:wrap;align-items:center;}
 .status-assembling{background:#fffbe8;color:#a07800;}
 .status-courier{background:#e8f0ff;color:#3b5bdb;}
+.status-ready{background:#d1fae5;color:#047857;}
+.status-issued{background:#e8faf0;color:var(--green-dark);}
 .status-cancelled{background:#ffe8ee;color:#FF3B6B;}
 /* Status dropdown widget */
 .status-select-wrap{position:relative;display:inline-flex;align-items:center;}
@@ -1438,7 +1440,7 @@ function updateCounts() {
   const cntCatsEl = document.getElementById('cntCategories');
   if (cntCatsEl && typeof getCategories === 'function') cntCatsEl.textContent = getCategories().length;
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
-  document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done').length;
+  document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done' && o.status !== 'issued').length;
   document.getElementById('cntContacts').textContent = _contactsCache.length || getContacts().length;
   document.getElementById('cntPromos').textContent = adminPromos.length;
   const newsCount = getNews().filter(n => n.active).length;
@@ -1450,8 +1452,8 @@ function updateCounts() {
 // ===== ДАШБОРД =====
 function renderDashboard() {
   const allOrders = getOrders();
-  const newOrders = allOrders.filter(o => o.status !== 'done');
-  const doneOrders = allOrders.filter(o => o.status === 'done');
+  const newOrders = allOrders.filter(o => o.status !== 'done' && o.status !== 'issued');
+  const doneOrders = allOrders.filter(o => o.status === 'done' || o.status === 'issued');
 
   document.getElementById('dashProducts').textContent = getProducts().length;
   // Количество зарегистрированных пользователей
@@ -1850,8 +1852,8 @@ function setOrdersFilter(f, el) {
 
 function updateOrderFilterCounts() {
   const all = getOrders();
-  const active = all.filter(o => o.status !== 'done').length;
-  const done = all.filter(o => o.status === 'done').length;
+  const active = all.filter(o => o.status !== 'done' && o.status !== 'issued').length;
+  const done = all.filter(o => o.status === 'done' || o.status === 'issued').length;
   const elA = document.getElementById('cntFilterActive');
   const elD = document.getElementById('cntFilterDone');
   const elAll = document.getElementById('cntFilterAll');
@@ -1875,8 +1877,8 @@ function toggleOrderCard(btn, num) {
 
 function renderOrders() {
   let orders = sortOrdersDesc(getOrders());
-  if (ordersFilter === 'active') orders = orders.filter(o => o.status !== 'done');
-  else if (ordersFilter === 'done') orders = orders.filter(o => o.status === 'done');
+  if (ordersFilter === 'active') orders = orders.filter(o => o.status !== 'done' && o.status !== 'issued');
+  else if (ordersFilter === 'done') orders = orders.filter(o => o.status === 'done' || o.status === 'issued');
   const list = document.getElementById('ordersList');
   updateOrderFilterCounts();
   if (orders.length === 0) {
@@ -1890,10 +1892,11 @@ function renderOrders() {
 function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
-  const STATUS_CLASS = {assembling:'assembling',courier:'courier',done:'done',cancelled:'cancelled'};
-  const STATUS_LABEL = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'✓ Доставлен',cancelled:'✕ Отменён'};
+  const isPickup = o.method === 'pickup';
+  const STATUS_CLASS = {assembling:'assembling',courier:'courier',ready:'ready',done:'done',issued:'issued',cancelled:'cancelled'};
+  const STATUS_LABEL = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'✓ Доставлен',issued:'✓ Выдан',cancelled:'✕ Отменён'};
   const sClass = STATUS_CLASS[o.status] || 'new';
-  const sLabel = STATUS_LABEL[o.status] || 'Новый';
+  const sLabel = STATUS_LABEL[o.status] || 'В обработке';
   const isCur = s => ((!o.status || o.status==='new') && s==='new') || o.status===s;
   return `
     <div class="order-card" data-num="${o.num}" data-expanded="${expanded}">
@@ -1942,8 +1945,9 @@ function orderCardHtml(o) {
             <div class="status-drop-menu">
               <button class="status-drop-item${isCur('new')?' cur':''}" onclick="pickStatus(this,'${o.num}','new')"><span class="icon icon-clipboard"></span> В обработке</button>
               <button class="status-drop-item${isCur('assembling')?' cur':''}" onclick="pickStatus(this,'${o.num}','assembling')"><span class="icon icon-package"></span> В сборке</button>
-              <button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus(this,'${o.num}','courier')"><span class="icon icon-truck"></span> Передан курьеру</button>
-              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus(this,'${o.num}','done')"><span class="icon icon-check-circle"></span> Доставлен</button>
+              ${isPickup ? `<button class="status-drop-item${isCur('ready')?' cur':''}" onclick="pickStatus(this,'${o.num}','ready')"><span class="icon icon-store"></span> Готов к выдаче</button>
+              <button class="status-drop-item${isCur('issued')?' cur':''}" onclick="pickStatus(this,'${o.num}','issued')"><span class="icon icon-check-circle"></span> Выдан</button>` : `<button class="status-drop-item${isCur('courier')?' cur':''}" onclick="pickStatus(this,'${o.num}','courier')"><span class="icon icon-truck"></span> Передан курьеру</button>
+              <button class="status-drop-item${isCur('done')?' cur':''}" onclick="pickStatus(this,'${o.num}','done')"><span class="icon icon-check-circle"></span> Доставлен</button>`}
               <button class="status-drop-item${isCur('cancelled')?' cur':''}" onclick="pickStatus(this,'${o.num}','cancelled')"><span class="icon icon-close"></span> Отменён</button>
             </div>
           </div>
@@ -2045,7 +2049,7 @@ function buildPrintSlip(o) {
       <td style="text-align:right;">${(i.price || 0).toLocaleString('ru-RU')} ₽</td>
       <td style="text-align:right;">${((i.qty||1)*(i.price||0)).toLocaleString('ru-RU')} ₽</td>
     </tr>`).join('');
-  const statusLabel = {new:'Новый',assembling:'В сборке',courier:'Передан курьеру',done:'Доставлен'}[o.status] || o.status;
+  const statusLabel = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Доставлен',issued:'Выдан',cancelled:'Отменён'}[o.status] || o.status;
   const methodLabel = o.method === 'pickup' ? 'Самовывоз' : 'Курьерская доставка';
   const paymentLabel = {cash: o.method==='pickup'?'Наличными / картой при получении':'Наличными / картой курьеру', invoice:'Безналичный расчёт (счёт)', transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
   const safeComment = o.comment ? String(o.comment).replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;') : '';
