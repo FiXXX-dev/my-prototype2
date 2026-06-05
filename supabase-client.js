@@ -734,6 +734,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 
+  // Список всех профилей (для админки — счётчик «Зарегистрированных клиентов»).
+  // Плоский GET без preflight; возвращает массив строк user_profiles или null.
+  window.supaListProfiles = async function(){
+    if (!isConfigured()) return null;
+    try {
+      const data = await _pgGetRetry('user_profiles', { select: '*', order: 'id.asc' });
+      return Array.isArray(data) ? data : null;
+    } catch(e) { console.error('[supabase] list profiles', e); return null; }
+  };
+
   // Subscribe to auth state changes (login/logout) — pages can re-render on transitions.
   window.supaOnAuthChange = function(cb){
     const sb = getClient(); if (!sb) return null;
