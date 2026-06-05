@@ -579,7 +579,7 @@ function prefillInvoiceFromUser() {
       user = users.find(u => u.id === id || u.id === Number(id));
     }
   } catch(e) {}
-  if (user && user.userType === 'company') {
+  if (user && (user.type === 'company' || user.userType === 'company')) {
     const c = document.getElementById('invoiceCompany');
     const inn = document.getElementById('invoiceInn');
     if (c && !c.value) c.value = user.company || '';
@@ -587,6 +587,19 @@ function prefillInvoiceFromUser() {
     const hint = document.getElementById('invoiceUserHint');
     if (hint && (user.company || user.inn)) hint.style.display = 'block';
   }
+}
+
+// На странице оформления нет выезжающей корзины — её содержимое показано в
+// блоке «Ваш заказ». Поэтому кнопки «Корзина» (бургер-меню и нижняя панель на
+// мобильных) прокручивают к этому блоку и кратко подсвечивают его.
+function openCart() {
+  const el = document.querySelector('.order-summary');
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.style.transition = 'box-shadow .3s';
+  const prev = el.style.boxShadow;
+  el.style.boxShadow = '0 0 0 3px rgba(46,204,113,0.45)';
+  setTimeout(function(){ el.style.boxShadow = prev; }, 1100);
 }
 
 function getCart() {
@@ -1061,15 +1074,17 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
 </div>
 <script id="news-modal-script">
 (function(){
-  const NEWS_KEY = 'klever_news';
+  // Источник новостей — Supabase (через быстрый news.json), см. data-loader.js
+  // → window.getNews(). Состояние «прочитано» (seen) храним per-browser локально.
   const SEEN_KEY = 'klever_news_seen';
-  function getNews(){ try{ const a=JSON.parse(localStorage.getItem(NEWS_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function newsList(){ return (typeof getNewsSync === 'function') ? getNewsSync() : []; }
   function getSeen(){ try{ const a=JSON.parse(localStorage.getItem(SEEN_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
   function setSeen(a){ localStorage.setItem(SEEN_KEY, JSON.stringify(a)); }
   let currentNews = null;
+  let _shown = false;
   function pickNext(){
     const seen = getSeen();
-    return getNews().find(n => n.active && !seen.includes(n.id));
+    return newsList().find(n => n.active && !seen.includes(n.id));
   }
   function show(n){
     currentNews = n;
@@ -1092,12 +1107,16 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
       if (next) show(next);
     }, 400);
   };
+  function maybeShow(){
+    if (_shown) return;
+    const n = pickNext();
+    if (n) { _shown = true; show(n); }
+  }
   document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(function(){
-      const n = pickNext();
-      if (n) show(n);
-    }, 800);
+    if (typeof getNews === 'function') getNews().then(function(){ setTimeout(maybeShow, 600); });
+    else setTimeout(maybeShow, 800);
   });
+  window.addEventListener('kleverNewsLoaded', function(){ setTimeout(maybeShow, 200); });
 })();
 </script>
 

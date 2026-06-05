@@ -251,15 +251,17 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
 </div>
 <script id="news-modal-script">
 (function(){
-  const NEWS_KEY = 'klever_news';
+  // Источник новостей — Supabase (через быстрый news.json), см. data-loader.js
+  // → window.getNews(). Состояние «прочитано» (seen) храним per-browser локально.
   const SEEN_KEY = 'klever_news_seen';
-  function getNews(){ try{ const a=JSON.parse(localStorage.getItem(NEWS_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function newsList(){ return (typeof getNewsSync === 'function') ? getNewsSync() : []; }
   function getSeen(){ try{ const a=JSON.parse(localStorage.getItem(SEEN_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
   function setSeen(a){ localStorage.setItem(SEEN_KEY, JSON.stringify(a)); }
   let currentNews = null;
+  let _shown = false;
   function pickNext(){
     const seen = getSeen();
-    return getNews().find(n => n.active && !seen.includes(n.id));
+    return newsList().find(n => n.active && !seen.includes(n.id));
   }
   function show(n){
     currentNews = n;
@@ -282,12 +284,16 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
       if (next) show(next);
     }, 400);
   };
+  function maybeShow(){
+    if (_shown) return;
+    const n = pickNext();
+    if (n) { _shown = true; show(n); }
+  }
   document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(function(){
-      const n = pickNext();
-      if (n) show(n);
-    }, 800);
+    if (typeof getNews === 'function') getNews().then(function(){ setTimeout(maybeShow, 600); });
+    else setTimeout(maybeShow, 800);
   });
+  window.addEventListener('kleverNewsLoaded', function(){ setTimeout(maybeShow, 200); });
 })();
 </script>
 
