@@ -516,9 +516,26 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   window.supaSignOut = async function(){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
-    try { const { error } = await sb.auth.signOut(); return error ? { ok:false, error } : { ok:true }; }
-    catch(e) { return { ok:false, error:e }; }
+    // ВАЖНО: scope:'local' — выход без сетевого запроса к серверу. Глобальный
+    // signOut() шлёт POST на /auth/v1/logout, который на DPI/ТСПУ-сетях рвётся,
+    // и сессия остаётся в localStorage → пользователь «не может выйти».
+    const sb = getClient();
+    let ok = false;
+    if (sb) {
+      try { const { error } = await sb.auth.signOut({ scope: 'local' }); ok = !error; }
+      catch(e) {}
+    }
+    // Подчищаем токен Supabase из localStorage напрямую — на случай, если SDK
+    // по какой-то причине его не удалил (тогда boot снова бы залогинил).
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && /^sb-.*-auth-token/.test(k)) keys.push(k);
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+    } catch(e) {}
+    return { ok: true };
   };
 
   window.supaGetCurrentUser = async function(){
