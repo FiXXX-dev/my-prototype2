@@ -1610,13 +1610,21 @@ function goPage(n) {
 }
 
 function toggleHit(sku) {
-  const products = getProducts().map(p => p.sku === sku ? {...p, isHit: !p.isHit} : p);
+  const products = getProducts().map(p => {
+    if (p.sku !== sku) return p;
+    const newIsHit = !p.isHit;
+    // badge и isHit всегда синхронизируем: 'hit' ↔ isHit, остальные бейджи не трогаем
+    const newBadge = newIsHit ? 'hit' : (p.badge === 'hit' ? '' : (p.badge || ''));
+    return { ...p, isHit: newIsHit, badge: newBadge };
+  });
   setProducts(products);
   renderProducts();
   const p = products.find(x => x.sku === sku);
   toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
   if (p && typeof window.supaUpsertProduct === 'function') {
-    window.supaUpsertProduct(p).catch(e => console.error('[admin] toggleHit supabase', e));
+    window.supaUpsertProduct(p)
+      .then(() => { if (typeof supaRequestSync === 'function') supaRequestSync(); })
+      .catch(e => console.error('[admin] toggleHit supabase', e));
   }
 }
 

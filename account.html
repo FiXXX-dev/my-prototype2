@@ -958,6 +958,28 @@ function updateAccountBadges(){
 // Back-compat alias (old callers).
 function updateBadges(){ updateAccountBadges(); }
 
+// ── localStorage-кеш данных ЛК (stale-while-revalidate) ─────────────────────
+// Первый заход: данные грузятся с сети. Повторные заходы: мгновенно из кеша,
+// свежие данные тянутся в фоне и обновляют экран, если что-то изменилось.
+// Кеш живёт 30 минут. Ключ включает userId, чтобы не перемешивать аккаунты.
+const _ACCT_CACHE_VER = 'v2';
+function _acctCacheKey(uid){ return 'klever_acct_' + _ACCT_CACHE_VER + '_' + uid; }
+function _acctReadCache(uid){
+  try {
+    const c = JSON.parse(localStorage.getItem(_acctCacheKey(uid)));
+    if (c && c.uid === uid && (Date.now() - (c.ts || 0)) < 30 * 60 * 1000) return c;
+  } catch(e) {}
+  return null;
+}
+function _acctWriteCache(uid, orders, favs, addrs){
+  try {
+    localStorage.setItem(_acctCacheKey(uid), JSON.stringify({
+      uid, ts: Date.now(), orders, favs, addrs,
+    }));
+  } catch(e) {}
+}
+function _acctClearCache(uid){ try { if (uid) localStorage.removeItem(_acctCacheKey(uid)); } catch(e) {} }
+
 // Reset the cache so the next loadAccountData() re-fetches. Call after the user
 // changes data we did NOT mirror locally, or when switching users.
 function invalidateAccountCache(){
@@ -967,6 +989,26 @@ function invalidateAccountCache(){
   myOrders = [];
   myFavorites = [];
   myAddresses = [];
+  const u = getCurrentUser();
+  if (u) _acctClearCache(u.id);
+}
+
+// Применяет готовые массивы данных в память и перерисовывает активную вкладку.
+function _applyAccountData(orders, favs, addrs, uid){
+  if (Array.isArray(orders)) myOrders = orders;
+  if (Array.isArray(favs))   myFavorites = favs;
+  if (Array.isArray(addrs)) {
+    myAddresses = addrs.map(mapAddrRow);
+    updateCurrentUser({ addresses: myAddresses });
+  }
+  if ([orders, favs, addrs].some(Array.isArray)) {
+    accountDataLoaded = true; accountDataLoadedFor = uid;
+  }
+  updateAccountBadges();
+  const active = document.querySelector('.acc-tab.active');
+  if (active && active.id === 'accTab-favorites') renderMyFavorites();
+  else if (active && active.id === 'accTab-addresses') renderMyAddresses();
+  else renderMyOrders();
 }
 
 // Fetch orders + favorites + addresses in ONE parallel batch. Guarded so it
@@ -974,11 +1016,10 @@ function invalidateAccountCache(){
 async function loadAccountData(){
   const u = getCurrentUser();
   if (!u) return;
-  if (accountDataLoaded && accountDataLoadedFor === u.id) return;   // already have this user's data
-  if (accountDataLoading) return accountDataLoading;                // dedupe concurrent calls
+  if (accountDataLoaded && accountDataLoadedFor === u.id) return;
+  if (accountDataLoading) return accountDataLoading;
 
   if (!(window.kleverSupabase && window.kleverSupabase.isConfigured())) {
-    // No backend → use whatever is in localStorage.
     const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
     myOrders = allOrders.filter(o => o.userId === u.id || o.phone === u.phone).reverse();
     myFavorites = [];
@@ -988,30 +1029,55 @@ async function loadAccountData(){
     return;
   }
 
+  // ── Stale-while-revalidate ────────────────────────────────────────────────
+  // Есть кеш → показываем мгновенно, затем всё равно тянем свежие данные
+  // в фоне и перерисовываем, если они изменились.
+  const cached = _acctReadCache(u.id);
+  if (cached) {
+    _applyAccountData(cached.orders, cached.favs, cached.addrs, u.id);
+    // Фоновое обновление: не блокирует UI, обновит экран тихо.
+    (async () => {
+      try {
+        const results = await Promise.allSettled([
+          (typeof supaListOrdersByUser === 'function')
+            ? supaListOrdersByUser(u.id, { phone: u.phone||'', email: u.email||'' }) : Promise.resolve(null),
+          (typeof supaGetFavoritesFull === 'function') ? supaGetFavoritesFull() : Promise.resolve(null),
+          (typeof supaListAddressesByEmail === 'function') ? supaListAddressesByEmail() : Promise.resolve(null),
+        ]);
+        const val = i => (results[i].status==='fulfilled' ? results[i].value : null);
+        const [orders, favs, addrs] = [val(0), val(1), val(2)];
+        if ([orders, favs, addrs].some(Array.isArray)) {
+          _acctWriteCache(u.id, orders||myOrders, favs||myFavorites,
+            (addrs||myAddresses.map(a=>({id:a.id,label:a.label,address:a.address,is_default:a.isDefault}))));
+          _applyAccountData(orders, favs, addrs, u.id);
+        }
+      } catch(e) { console.warn('[account] bg refresh failed', e); }
+    })();
+    return;
+  }
+
+  // Первый заход — ждём сеть, показываем скелетон пока грузится.
   accountDataLoading = (async () => {
     try {
-      // allSettled (а не all): если один запрос сорвётся (DPI/сеть), остальные
-      // всё равно применятся — раньше любой сбой обнулял сразу всё.
       const results = await Promise.allSettled([
         (typeof supaListOrdersByUser === 'function')
-          ? supaListOrdersByUser(u.id, { phone: u.phone || '', email: u.email || '' }) : Promise.resolve(null),
+          ? supaListOrdersByUser(u.id, { phone: u.phone||'', email: u.email||'' }) : Promise.resolve(null),
         (typeof supaGetFavoritesFull === 'function') ? supaGetFavoritesFull() : Promise.resolve(null),
         (typeof supaListAddressesByEmail === 'function') ? supaListAddressesByEmail() : Promise.resolve(null),
       ]);
-      const val = i => (results[i].status === 'fulfilled' ? results[i].value : null);
-      const orders = val(0), favs = val(1), addrs = val(2);
-      // Применяем только успешные ответы; неуспешные оставляют прежние данные
-      // (или [] при первой загрузке), но не затирают валидные.
+      const val = i => (results[i].status==='fulfilled' ? results[i].value : null);
+      const [orders, favs, addrs] = [val(0), val(1), val(2)];
       if (Array.isArray(orders)) myOrders = orders;
       if (Array.isArray(favs))   myFavorites = favs;
       if (Array.isArray(addrs)) {
         myAddresses = addrs.map(mapAddrRow);
-        updateCurrentUser({ addresses: myAddresses });   // keep local user in sync for edit/delete-by-index
+        updateCurrentUser({ addresses: myAddresses });
       }
-      // Считаем загрузку успешной, только если хоть один запрос дошёл —
-      // иначе оставляем accountDataLoaded=false, чтобы повторить позже.
       const anyOk = [orders, favs, addrs].some(Array.isArray);
-      if (anyOk) { accountDataLoaded = true; accountDataLoadedFor = u.id; }
+      if (anyOk) {
+        accountDataLoaded = true; accountDataLoadedFor = u.id;
+        _acctWriteCache(u.id, orders||[], favs||[], addrs||[]);
+      }
     } catch(e) {
       console.warn('[account] loadAccountData failed', e);
     } finally {

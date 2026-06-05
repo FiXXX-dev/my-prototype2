@@ -452,8 +452,8 @@ function img(url) {
     : '<span style="font-size:48px">📦</span>';
 }
 
-function badgeHtml(b) {
-  if (b==='hit') return '<div class="prod-badge badge-hit">ХИТ</div>';
+function badgeHtml(b, isHit) {
+  if (b==='hit' || isHit) return '<div class="prod-badge badge-hit">ХИТ</div>';
   if (b==='new') return '<div class="prod-badge badge-new">НОВИНКА</div>';
   if (b==='sale') return '<div class="prod-badge badge-sale">-20%</div>';
   return '';
@@ -477,7 +477,7 @@ function renderGrid() {
   const favs = getMyFavorites();
   grid.innerHTML = page.map(p => `
     <a href="product.html?sku=${p.sku}" class="prod-card" data-sku="${p.sku}">
-      <div class="prod-img">${img(p.img)}${badgeHtml(p.badge)}${favBtnHtml(p.sku, favs.has(p.sku))}</div>
+      <div class="prod-img">${img(p.img)}${badgeHtml(p.badge, p.isHit)}${favBtnHtml(p.sku, favs.has(p.sku))}</div>
       <div class="prod-info">
         <div class="prod-cat">${p.cat}</div>
         <div class="prod-name">${p.name}</div>
