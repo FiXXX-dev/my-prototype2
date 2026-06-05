@@ -793,8 +793,9 @@ function doRegister(){
   if (email && typeof supaSignUp === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     showMsg('regMsg', 'Создаём аккаунт…', 'info');
-    // После подтверждения email Supabase вернёт пользователя на эту же страницу.
-    const _redirectTo = new URL('account.html', window.location.href).href;
+    // После клика по ссылке из письма Supabase вернёт пользователя на отдельную
+    // страницу confirm.html («Email подтверждён! Теперь можете войти»).
+    const _redirectTo = new URL('confirm.html', window.location.href).href;
     const _regBtn = document.querySelector('#registerForm .btn-submit');
     if (_regBtn) _regBtn.disabled = true;
     // Жёсткий таймаут 15 с: на медленной сети signUp мог зависать, и сообщение
