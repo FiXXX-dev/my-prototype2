@@ -844,14 +844,27 @@ async function doLogout(){
     danger: true,
   });
   if (!ok) return;
-  // Чистим локальную сессию СРАЗУ (не дожидаясь сети), затем по возможности
-  // гасим сессию Supabase. Даже если сеть оборвётся — выход уже состоялся.
+  // Выход обязан быть мгновенным и надёжным. Чистим всё СИНХРОННО и сразу
+  // перезагружаем. НЕ ждём supaSignOut() через await — его внутренний auth-lock
+  // (getSession/signOut) может зависнуть на медленной сети и заблокировать
+  // reload, из-за чего «ничего не происходит».
+  const uid = getCurrentUserId();
   clearCurrentUser();
+  if (uid) _acctClearCache(uid);
   invalidateAccountCache();
   sessionStorage.setItem('klever_logged_out', '1');
-  if (typeof supaSignOut === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    try { await supaSignOut(); } catch(e) {}
-  }
+  // Удаляем токен Supabase напрямую из localStorage (без SDK-локов) — это и есть
+  // то, что реально разлогинивает; boot после reload не найдёт сессию.
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && /^sb-.*-auth-token/.test(k)) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch(e) {}
+  // Фоновый вызов SDK signOut (fire-and-forget) — не блокирует reload.
+  if (typeof supaSignOut === 'function') { try { supaSignOut(); } catch(e) {} }
   location.reload();
 }
 
