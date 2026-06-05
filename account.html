@@ -825,6 +825,7 @@ async function doLogout(){
   // гасим сессию Supabase. Даже если сеть оборвётся — выход уже состоялся.
   clearCurrentUser();
   invalidateAccountCache();
+  sessionStorage.setItem('klever_logged_out', '1');
   if (typeof supaSignOut === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     try { await supaSignOut(); } catch(e) {}
   }
@@ -836,6 +837,12 @@ async function doLogout(){
 (function bootSupabaseSession(){
   if (typeof supaGetCurrentUser !== 'function') return;
   if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
+  // If the user explicitly logged out this session, don't auto-restore from Supabase token.
+  if (sessionStorage.getItem('klever_logged_out')) {
+    sessionStorage.removeItem('klever_logged_out');
+    if (typeof supaSignOut === 'function') { try { supaSignOut(); } catch(e) {} }
+    return;
+  }
   supaGetCurrentUser().then(async u => {
     if (!u) return;
     const m = u.user_metadata || {};
@@ -1996,7 +2003,7 @@ document.addEventListener('DOMContentLoaded', updateCartBadge);
 
 /* ===== MOBILE FIX — FORCED ===== */
 @media (max-width: 768px) {
-  .account-wrap, .account-wrap.visible {
+  .account-wrap.visible {
     display: block !important;
     grid-template-columns: 1fr !important;
     padding: 0 12px !important;
