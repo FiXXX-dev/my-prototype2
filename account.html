@@ -41,6 +41,10 @@ nav a:hover{color:var(--lime);}
 .auth-tab{flex:1;padding:10px 6px;border:none;background:none;border-radius:11px;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;color:#6b8a74;cursor:pointer;transition:all .2s;}
 .auth-tab.active{background:white;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.05);}
 .auth-msg.info{background:#e8f4ff;color:#1e6fb8;}
+.modal-bg{align-items:center;}
+.confirm-icon{width:64px;height:64px;border-radius:50%;background:#ffe8ee;color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;}
+#confirmModal .modal-box{animation:confirmPop .25s ease;}
+@keyframes confirmPop{from{transform:scale(.92);opacity:0;}to{transform:scale(1);opacity:1;}}
 .auth-form{display:flex;flex-direction:column;gap:14px;}
 .form-grp{display:flex;flex-direction:column;gap:6px;}
 .form-grp label{font-size:13px;font-weight:600;color:var(--text);}
@@ -453,6 +457,19 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
   <button class="acc-logout acc-logout-bottom" onclick="doLogout()">Выйти из аккаунта</button>
 </div>
 
+<!-- Стилизованное окно подтверждения (вместо системного confirm) -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div class="confirm-icon" id="confirmIcon"><span class="icon icon-alert"></span></div>
+    <div class="modal-title" id="confirmTitle" style="text-align:center;">Выйти из аккаунта?</div>
+    <div class="modal-sub" id="confirmSub" style="text-align:center;margin-bottom:0;">Вы сможете войти снова в любой момент</div>
+    <div class="modal-actions" style="justify-content:center;border-top:none;padding-top:24px;">
+      <button class="btn btn-secondary" onclick="closeConfirm(false)">Отмена</button>
+      <button class="btn btn-danger" id="confirmOkBtn" onclick="closeConfirm(true)" style="font-weight:700;">Выйти</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="addrModal">
   <div class="modal-box">
     <button class="modal-close" onclick="closeAddrModal()"><span class="icon icon-close"></span></button>
@@ -778,14 +795,40 @@ function _doRegisterLocal(meta, email, phone, pass){
   showAccount();
 }
 
-function doLogout(){
-  if (!confirm('Выйти из аккаунта?')) return;
+// ===== Стилизованное подтверждение (замена системного confirm) =====
+let _confirmResolve = null;
+function kleverConfirm(opts){
+  opts = opts || {};
+  document.getElementById('confirmTitle').textContent = opts.title || 'Подтвердите действие';
+  document.getElementById('confirmSub').textContent = opts.sub || '';
+  const okBtn = document.getElementById('confirmOkBtn');
+  okBtn.textContent = opts.okText || 'OK';
+  okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+  okBtn.style.fontWeight = '700';
+  document.getElementById('confirmModal').classList.add('open');
+  return new Promise(resolve => { _confirmResolve = resolve; });
+}
+function closeConfirm(result){
+  document.getElementById('confirmModal').classList.remove('open');
+  if (_confirmResolve){ const r = _confirmResolve; _confirmResolve = null; r(result); }
+}
+
+async function doLogout(){
+  const ok = await kleverConfirm({
+    title: 'Выйти из аккаунта?',
+    sub: 'Вы сможете войти снова в любой момент',
+    okText: 'Выйти',
+    danger: true,
+  });
+  if (!ok) return;
+  // Чистим локальную сессию СРАЗУ (не дожидаясь сети), затем по возможности
+  // гасим сессию Supabase. Даже если сеть оборвётся — выход уже состоялся.
+  clearCurrentUser();
+  invalidateAccountCache();
   if (typeof supaSignOut === 'function' && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
-    supaSignOut().finally(() => { clearCurrentUser(); location.reload(); });
-  } else {
-    clearCurrentUser();
-    location.reload();
+    try { await supaSignOut(); } catch(e) {}
   }
+  location.reload();
 }
 
 // On boot: if a Supabase session exists, sync it into local current-user state
