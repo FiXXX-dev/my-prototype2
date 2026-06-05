@@ -1,0 +1,84 @@
+<!--
+  ШАБЛОН ПИСЬМА ПОДТВЕРЖДЕНИЯ EMAIL — «Клевер» (на русском)
+  ────────────────────────────────────────────────────────────────────────
+  Куда вставить:
+    Дашборд Supabase → Authentication → Emails → вкладка "Confirm signup"
+    1) В поле "Subject" впишите:   Подтвердите регистрацию в Клевер
+    2) Переключите на "Source"/HTML и вставьте ВЕСЬ код ниже (без этого комментария).
+    3) Save changes.
+
+  Переменные Supabase (не удалять {{ }}):
+    {{ .ConfirmationURL }} — ссылка подтверждения (главная кнопка)
+    {{ .Email }}          — email получателя
+  ────────────────────────────────────────────────────────────────────────
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fbf9;margin:0;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06);">
+
+        <!-- Шапка -->
+        <tr>
+          <td style="background:#0f1a14;padding:26px 32px;">
+            <span style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
+              🍀 Кле<span style="color:#C8F135;">вер</span>
+            </span>
+          </td>
+        </tr>
+
+        <!-- Тело -->
+        <tr>
+          <td style="padding:36px 32px 8px;">
+            <h1 style="margin:0 0 14px;font-size:24px;font-weight:800;color:#1a2e22;">
+              Спасибо за регистрацию! 🎉
+            </h1>
+            <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#4a5e52;">
+              Здравствуйте! Остался один шаг, чтобы завершить создание аккаунта в магазине
+              <strong>«Клевер»</strong>.
+            </p>
+            <p style="margin:0 0 26px;font-size:15px;line-height:1.6;color:#4a5e52;">
+              Нажмите кнопку ниже, чтобы подтвердить ваш адрес <strong>{{ .Email }}</strong>:
+            </p>
+
+            <!-- Кнопка -->
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 26px;">
+              <tr>
+                <td align="center" style="border-radius:14px;background:#2ECC71;">
+                  <a href="{{ .ConfirmationURL }}" target="_blank"
+                     style="display:inline-block;padding:15px 38px;font-size:16px;font-weight:700;color:#0f1a14;text-decoration:none;border-radius:14px;">
+                    Подтвердить email →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8aaa94;">
+              Если кнопка не работает, скопируйте и вставьте эту ссылку в браузер:
+            </p>
+            <p style="margin:0 0 24px;font-size:12px;line-height:1.5;color:#2ECC71;word-break:break-all;">
+              {{ .ConfirmationURL }}
+            </p>
+
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#8aaa94;border-top:1px solid #e8f4ec;padding-top:18px;">
+              Если вы не регистрировались в «Клевер», просто проигнорируйте это письмо —
+              никаких действий не требуется.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Подвал -->
+        <tr>
+          <td style="padding:22px 32px 30px;">
+            <p style="margin:0 0 4px;font-size:13px;color:#4a5e52;font-weight:600;">
+              С заботой, команда «Клевер»
+            </p>
+            <p style="margin:0;font-size:12px;color:#a8bdb0;">
+              Бытовая химия, хозтовары и упаковка · 8 (812) 922-86-77
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
