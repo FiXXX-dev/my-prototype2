@@ -531,6 +531,14 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 </footer>
 
 <script>
+// Захватываем признак прихода по ссылке подтверждения email ДО того, как
+// Supabase SDK очистит токены из URL (#access_token… или ?code=… / type=signup).
+// Также чистим эти параметры из адресной строки, чтобы при F5 не «прилипали».
+const _kleverEmailConfirmLanding =
+  /[#&?](access_token|code)=|[#&?]type=(signup|recovery|magiclink|email_change)/.test(
+    (location.hash || '') + (location.search || '')
+  );
+
 const USERS_KEY = 'klever_users';
 const CURRENT_USER_KEY = 'klever_current_user';
 const ORDERS_KEY = 'klever_orders';
@@ -785,7 +793,9 @@ function doRegister(){
   if (email && typeof supaSignUp === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     showMsg('regMsg', 'Создаём аккаунт…', 'info');
-    supaSignUp(email, pass, meta).then(res => {
+    // После подтверждения email Supabase вернёт пользователя на эту же страницу.
+    const _redirectTo = new URL('account.html', window.location.href).href;
+    supaSignUp(email, pass, meta, _redirectTo).then(res => {
       if (res.ok) {
         const newUser = { id: res.user.id, ...meta, email, phone: phone||undefined, password: '*', addresses: [], favorites: [], created: new Date().toISOString() };
         const us = getUsers(); us.push(newUser); setUsers(us);
@@ -919,6 +929,11 @@ async function doLogout(){
       users.push(local); setUsers(users);
     }
     setCurrentUserId(u.id);
+    // Пришли по ссылке подтверждения email → приветствуем и чистим адресную строку.
+    if (_kleverEmailConfirmLanding) {
+      showAccountToast('Email подтверждён! Добро пожаловать 🎉');
+      try { history.replaceState(null, '', location.pathname); } catch(e) {}
+    }
     const wrap = document.getElementById('accountWrap');
     if (!wrap.classList.contains('visible')) {
       showAccount();           // рендерит профиль + запускает loadAccountData() сразу
@@ -1546,6 +1561,15 @@ function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
 function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
 function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartPanel').classList.add('open');document.body.style.overflow='hidden';renderCart();}
 function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
+// Зелёный тост-уведомление (используется при подтверждении email).
+function showAccountToast(msg){
+  let t=document.getElementById('acctToast'); if(t)t.remove();
+  t=document.createElement('div'); t.id='acctToast'; t.className='cart-toast';
+  t.innerHTML='<span class="icon icon-check" style="color:#2ECC71;font-size:18px;"></span> '+msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.classList.add('show'),10);
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},4000);
+}
 function getProdImg(sku,fallback){try{var arr=(window.getProductsSync?window.getProductsSync():[]);var p=arr.find(function(x){return x.sku===sku;});return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
 function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';if(total)total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);return '<div class="cart-item"><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div><div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)">−</button><span class="qty-val">'+i.qty+'</span><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(Math.round(i.price*i.qty*100)/100)+' ₽</div></div>';}).join('');if(total)total.textContent=getCartTotal().toLocaleString('ru-RU')+' ₽';}
 function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}window.location.href='checkout.html';}
