@@ -467,7 +467,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <div class="modal-title" id="confirmTitle" style="text-align:center;">Выйти из аккаунта?</div>
     <div class="modal-sub" id="confirmSub" style="text-align:center;margin-bottom:0;">Вы сможете войти снова в любой момент</div>
     <div class="modal-actions" style="justify-content:center;border-top:none;padding-top:24px;">
-      <button class="btn btn-secondary" onclick="closeConfirm(false)">Отмена</button>
+      <button class="btn btn-secondary" id="confirmCancelBtn" onclick="closeConfirm(false)">Отмена</button>
       <button class="btn btn-danger" id="confirmOkBtn" onclick="closeConfirm(true)" style="font-weight:700;">Выйти</button>
     </div>
   </div>
@@ -795,24 +795,45 @@ function doRegister(){
     showMsg('regMsg', 'Создаём аккаунт…', 'info');
     // После подтверждения email Supabase вернёт пользователя на эту же страницу.
     const _redirectTo = new URL('account.html', window.location.href).href;
-    supaSignUp(email, pass, meta, _redirectTo).then(res => {
+    const _regBtn = document.querySelector('#registerForm .btn-submit');
+    if (_regBtn) _regBtn.disabled = true;
+    // Жёсткий таймаут 15 с: на медленной сети signUp мог зависать, и сообщение
+    // «Создаём аккаунт…» застывало навсегда. Теперь Promise.race гарантирует
+    // выход из ожидания.
+    const _timeout = new Promise(r => setTimeout(() => r({ _timeout: true }), 15000));
+    Promise.race([ supaSignUp(email, pass, meta, _redirectTo), _timeout ]).then(res => {
+      if (_regBtn) _regBtn.disabled = false;
+      if (res && res._timeout) {
+        showMsg('regMsg', 'Долго нет ответа. Если на ' + email + ' пришло письмо — подтвердите его и войдите. Иначе обновите страницу и попробуйте ещё раз.', 'info');
+        return;
+      }
       if (res.ok) {
         const newUser = { id: res.user.id, ...meta, email, phone: phone||undefined, password: '*', addresses: [], favorites: [], created: new Date().toISOString() };
         const us = getUsers(); us.push(newUser); setUsers(us);
-        // Persist profile to Supabase so it syncs across browsers/devices AND
-        // so admin's «Зарегистрированных клиентов» counts this user.
-        // Раньше было fire-and-forget с .catch(()=>{}) → при сбое сети профиль
-        // молча терялся (юзер в Auth, но не в user_profiles). Теперь сохраняем
-        // надёжно (_pgUpsert уже делает ретраи) и повторяем при входе, если
-        // вдруг не вышло.
+        // Сохраняем профиль надёжно (для синка между устройствами и счётчика в админке).
         if (typeof supaUpsertProfile === 'function') {
           supaUpsertProfile({ user_id: newUser.id, email, phone, first_name: firstName, last_name: lastName, middle_name: middleName, user_type: currentUserType, company, inn })
             .then(r => { if (!r || !r.ok) console.warn('[reg] profile upsert failed', r && r.error); })
             .catch(e => console.warn('[reg] profile upsert error', e));
         }
-        // If session is established immediately (no email confirmation), go in.
-        if (res.session) { setCurrentUserId(newUser.id); showAccount(); }
-        else { showMsg('regMsg', 'Письмо подтверждения отправлено на ' + email, 'info'); }
+        hideMsg('regMsg');
+        if (res.session) {
+          // Email-подтверждение в проекте выключено → пользователь вошёл сразу.
+          setCurrentUserId(newUser.id);
+          kleverAlert({
+            title: 'Спасибо за регистрацию!',
+            sub: 'Аккаунт создан. Добро пожаловать в Клевер 🎉',
+          }).then(() => showAccount());
+        } else {
+          // Email-подтверждение включено → письмо отправлено, входа пока нет.
+          kleverAlert({
+            title: 'Почти готово!',
+            sub: 'Мы отправили письмо на ' + email + '. Откройте его и нажмите «Подтвердить» — после этого вы войдёте в аккаунт.',
+            okText: 'Понятно',
+            icon: '<span class="icon icon-mail"></span>',
+            iconBg: '#e8f4ff', iconColor: '#1e6fb8',
+          });
+        }
         return;
       }
       const msg = (res.error && res.error.message) || '';
@@ -858,8 +879,30 @@ function kleverConfirm(opts){
   okBtn.textContent = opts.okText || 'OK';
   okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
   okBtn.style.fontWeight = '700';
+  // Режим «уведомление» (alert): прячем кнопку «Отмена», можно задать иконку/цвет.
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  if (cancelBtn) cancelBtn.style.display = opts.hideCancel ? 'none' : '';
+  const icon = document.getElementById('confirmIcon');
+  if (icon) {
+    icon.innerHTML = opts.icon || '<span class="icon icon-alert"></span>';
+    icon.style.background = opts.iconBg || '';
+    icon.style.color = opts.iconColor || '';
+  }
   document.getElementById('confirmModal').classList.add('open');
   return new Promise(resolve => { _confirmResolve = resolve; });
+}
+// Успешное уведомление с одной кнопкой (для «Спасибо за регистрацию» и т.п.).
+function kleverAlert(opts){
+  opts = opts || {};
+  return kleverConfirm({
+    title: opts.title || 'Готово',
+    sub: opts.sub || '',
+    okText: opts.okText || 'Отлично',
+    hideCancel: true,
+    icon: opts.icon || '<span class="icon icon-check-circle"></span>',
+    iconBg: opts.iconBg || '#e8faf0',
+    iconColor: opts.iconColor || '#1aab58',
+  });
 }
 function closeConfirm(result){
   document.getElementById('confirmModal').classList.remove('open');
@@ -931,8 +974,11 @@ async function doLogout(){
     setCurrentUserId(u.id);
     // Пришли по ссылке подтверждения email → приветствуем и чистим адресную строку.
     if (_kleverEmailConfirmLanding) {
-      showAccountToast('Email подтверждён! Добро пожаловать 🎉');
       try { history.replaceState(null, '', location.pathname); } catch(e) {}
+      setTimeout(() => kleverAlert({
+        title: 'Email подтверждён!',
+        sub: 'Спасибо за регистрацию. Добро пожаловать в Клевер 🎉',
+      }), 400);
     }
     const wrap = document.getElementById('accountWrap');
     if (!wrap.classList.contains('visible')) {
