@@ -300,8 +300,8 @@ function normalizeProd(p) {
 const urlParams = new URLSearchParams(window.location.search);
 const sku = urlParams.get('sku') || '';
 
-function badgeHtml(b) {
-  if (b==='hit') return '<span class="badge badge-hit">🔥 ХИТ ПРОДАЖ</span>';
+function badgeHtml(b, isHit) {
+  if (b==='hit' || isHit) return '<span class="badge badge-hit">🔥 ХИТ ПРОДАЖ</span>';
   if (b==='new') return '<span class="badge badge-new">✨ НОВИНКА</span>';
   if (b==='sale') return '<span class="badge badge-sale">-20%</span>';
   return '';
@@ -342,7 +342,7 @@ function renderProduct() {
 
       <div class="product-info">
         <div class="prod-badges">
-          ${badgeHtml(product.badge)}
+          ${badgeHtml(product.badge, product.isHit)}
           <span class="badge badge-instock">✓ В наличии</span>
         </div>
 
