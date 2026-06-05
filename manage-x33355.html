@@ -1468,9 +1468,16 @@ function renderDashboard() {
   const doneOrders = allOrders.filter(o => o.status === 'done' || o.status === 'issued');
 
   document.getElementById('dashProducts').textContent = getProducts().length;
-  // Количество зарегистрированных пользователей
-  const users = JSON.parse(localStorage.getItem('klever_users') || '[]');
-  document.getElementById('dashUsers').textContent = users.length;
+  // Количество зарегистрированных клиентов — из таблицы user_profiles (Supabase),
+  // а не из localStorage (который device-specific и показывал неверное число).
+  const _localUsers = JSON.parse(localStorage.getItem('klever_users') || '[]');
+  const dashUsersEl = document.getElementById('dashUsers');
+  dashUsersEl.textContent = _localUsers.length;   // мгновенный фолбэк, пока грузится БД
+  if (typeof window.supaListProfiles === 'function') {
+    window.supaListProfiles().then(list => {
+      if (Array.isArray(list)) dashUsersEl.textContent = list.length;
+    }).catch(() => {});
+  }
   document.getElementById('dashOrders').textContent = newOrders.length;
   document.getElementById('dashContacts').textContent = getContacts().length;
 

@@ -683,9 +683,9 @@ function doLogin(){
         // Фоновая сверка с авторитетным профилем (телефон/имя/тип).
         if (typeof supaGetProfile === 'function') {
           supaGetProfile(res.user.id).then(prof => {
-            if (!prof) return;
             const list = getUsers();
             const me = list.find(x => x.id === res.user.id);
+            if (!prof) { _backfillProfile(me); return; }
             if (!me) return;
             let changed = false, phoneChanged = false;
             if (prof.phone       && prof.phone       !== me.phone)      { me.phone = prof.phone; changed = true; phoneChanged = true; }
@@ -789,9 +789,16 @@ function doRegister(){
       if (res.ok) {
         const newUser = { id: res.user.id, ...meta, email, phone: phone||undefined, password: '*', addresses: [], favorites: [], created: new Date().toISOString() };
         const us = getUsers(); us.push(newUser); setUsers(us);
-        // Persist profile to Supabase so it syncs across browsers/devices.
+        // Persist profile to Supabase so it syncs across browsers/devices AND
+        // so admin's «Зарегистрированных клиентов» counts this user.
+        // Раньше было fire-and-forget с .catch(()=>{}) → при сбое сети профиль
+        // молча терялся (юзер в Auth, но не в user_profiles). Теперь сохраняем
+        // надёжно (_pgUpsert уже делает ретраи) и повторяем при входе, если
+        // вдруг не вышло.
         if (typeof supaUpsertProfile === 'function') {
-          supaUpsertProfile({ user_id: newUser.id, email, phone, first_name: firstName, last_name: lastName, middle_name: middleName, user_type: currentUserType, company, inn }).catch(()=>{});
+          supaUpsertProfile({ user_id: newUser.id, email, phone, first_name: firstName, last_name: lastName, middle_name: middleName, user_type: currentUserType, company, inn })
+            .then(r => { if (!r || !r.ok) console.warn('[reg] profile upsert failed', r && r.error); })
+            .catch(e => console.warn('[reg] profile upsert error', e));
         }
         // If session is established immediately (no email confirmation), go in.
         if (res.session) { setCurrentUserId(newUser.id); showAccount(); }
@@ -816,6 +823,19 @@ function _doRegisterLocal(meta, email, phone, pass){
   const users = getUsers(); users.push(newUser); setUsers(users);
   setCurrentUserId(newUser.id);
   showAccount();
+}
+
+// Создаёт профиль в user_profiles, если его там нет (юзер зарегистрировался
+// до починки, или upsert при регистрации сорвался). Вызывается при входе —
+// так таблица профилей со временем догоняет Supabase Auth.
+function _backfillProfile(me){
+  if (!me || !me.id || typeof supaUpsertProfile !== 'function') return;
+  supaUpsertProfile({
+    user_id: me.id, email: me.email, phone: me.phone,
+    first_name: me.firstName, last_name: me.lastName, middle_name: me.middleName,
+    user_type: me.type, company: me.company, inn: me.inn,
+  }).then(r => { if (r && r.ok) console.log('[profile] backfilled for', me.id); })
+    .catch(() => {});
 }
 
 // ===== Стилизованное подтверждение (замена системного confirm) =====
@@ -917,9 +937,9 @@ async function doLogout(){
     // подгрузиться не полностью, поэтому перезапрашиваем их.
     if (typeof supaGetProfile === 'function') {
       supaGetProfile(u.id).then(prof => {
-        if (!prof) return;
         const list = getUsers();
         const me = list.find(x => x.id === u.id);
+        if (!prof) { _backfillProfile(me); return; }
         if (!me) return;
         let changed = false, phoneChanged = false;
         if (prof.phone       && prof.phone       !== me.phone)      { me.phone = prof.phone; changed = true; phoneChanged = true; }
