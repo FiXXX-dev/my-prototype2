@@ -99,7 +99,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const url = new URL(SUPABASE_URL + '/rest/v1/' + path);
     url.searchParams.set('apikey', SUPABASE_ANON_KEY);
     const ctrl = new AbortController();
-    const timer = setTimeout(() => _abort(ctrl), 30000);
+    const timer = setTimeout(() => _abort(ctrl), 10000);
     try {
       const resp = await fetch(url.toString(), {
         method: method || 'POST',
@@ -121,7 +121,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // _pgPost с повтором — на DPI/медленных сетях первый POST часто обрывается.
   async function _pgPostRetry(path, body, method, extraHeaders, tries) {
-    const max = tries || 4;
+    const max = tries || 3;
     let lastErr = null;
     for (let i = 0; i < max; i++) {
       if (i) await new Promise(r => setTimeout(r, i * 1000));

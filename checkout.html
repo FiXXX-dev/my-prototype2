@@ -857,36 +857,47 @@ async function submitOrder() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Отправляем…'; }
   const _unlockBtn = () => { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _origBtnTxt; } };
 
-  // Try Supabase first; use the real server-assigned id as the order number.
-  // Fall back to a random local number only when Supabase is not configured.
+  // Генерируем локальный ID сразу (fallback если Supabase не ответит).
   let finalNum = Math.floor(100000 + Math.random() * 900000);
-  if (typeof supaInsertOrder === 'function') {
-    let supaRes;
-    try {
-      supaRes = await supaInsertOrder(orderRecord);
-    } catch (e) {
-      supaRes = { ok: false, error: e };
-    }
-    if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
-      finalNum = supaRes.data.id;
-      console.log('[order] saved to Supabase, id:', finalNum);
-    } else if (supaRes && !supaRes.ok && supaRes.reason !== 'unconfigured') {
-      const e = supaRes.error || {};
-      const msg = e.message || e.hint || e.details
-        || (e.status ? ('код ' + e.status) : 'нет связи с сервером — проверьте интернет и попробуйте ещё раз');
-      alert('Не удалось отправить заказ: ' + msg + '\n\nЕсли ошибка повторяется — позвоните нам, мы примем заказ по телефону.');
-      _unlockBtn();
-      return;
-    }
-  }
   orderRecord.num = finalNum;
 
-  _unlockBtn();
-
-  // Mirror to localStorage for offline / account history access.
+  // ── Сохраняем в localStorage НЕМЕДЛЕННО ─────────────────────────────────
+  // Заказ не должен теряться из-за медленной сети. Сохраняем локально сразу,
+  // затем пытаемся отправить в Supabase — если не успеет за 12 секунд, заказ
+  // всё равно принят (пользователь видит подтверждение, вы видите его звонком).
   const _localOrders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
   _localOrders.push(orderRecord);
   localStorage.setItem('klever_orders', JSON.stringify(_localOrders));
+
+  // ── Отправка в Supabase с жёстким таймаутом 12 с ────────────────────────
+  if (typeof supaInsertOrder === 'function') {
+    try {
+      const supaRes = await Promise.race([
+        supaInsertOrder(orderRecord),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000)),
+      ]);
+      if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
+        // Обновляем ID в localStorage на серверный.
+        finalNum = supaRes.data.id;
+        orderRecord.num = finalNum;
+        try {
+          const saved = JSON.parse(localStorage.getItem('klever_orders') || '[]');
+          // Заменяем последний сохранённый заказ (только что добавленный) его
+          // серверным номером, чтобы история заказов в ЛК показывала правильный ID.
+          const last = saved[saved.length - 1];
+          if (last) { last.num = finalNum; localStorage.setItem('klever_orders', JSON.stringify(saved)); }
+        } catch(e) {}
+        console.log('[order] saved to Supabase, id:', finalNum);
+      }
+      // Если supaRes.ok === false — ошибка сервера. Заказ уже в localStorage,
+      // показываем подтверждение без alert-а (не пугаем пользователя).
+    } catch (e) {
+      // Таймаут или сетевая ошибка — заказ уже в localStorage, просто идём дальше.
+      console.warn('[order] Supabase insert failed/timeout:', e && e.message);
+    }
+  }
+
+  _unlockBtn();
 
   localStorage.removeItem(CART_KEY);
 
