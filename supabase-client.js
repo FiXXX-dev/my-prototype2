@@ -541,9 +541,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.supaGetCurrentUser = async function(){
     const sb = getClient(); if (!sb) return null;
     try {
-      const { data, error } = await sb.auth.getUser();
+      // getSession() читает токен из localStorage мгновенно (без сетевого
+      // запроса), в отличие от getUser(), который всегда валидирует токен на
+      // /auth/v1/user — это убирает один сетевой round-trip на старте ЛК.
+      // session.user содержит user_metadata, как и getUser().
+      const { data, error } = await sb.auth.getSession();
       if (error) return null;
-      return data && data.user ? data.user : null;
+      if (data && data.session && data.session.user) return data.session.user;
+      // Фолбэк на getUser() — на случай, если сессия в storage частична.
+      const r = await sb.auth.getUser();
+      return r && r.data && r.data.user ? r.data.user : null;
     } catch(e) { return null; }
   };
 

@@ -129,6 +129,9 @@ nav a:hover{color:var(--lime);}
 .addr-tag{background:var(--green);color:var(--dark);font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
 .addr-text{color:#6b8a74;font-size:13px;line-height:1.5;}
 .addr-actions{display:flex;flex-direction:column;gap:6px;}
+.acc-skeleton{display:flex;flex-direction:column;gap:14px;}
+.acc-skeleton .sk-row{height:96px;border-radius:16px;background:linear-gradient(90deg,#eef5f0 25%,#f7fbf9 50%,#eef5f0 75%);background-size:200% 100%;animation:skShimmer 1.2s ease-in-out infinite;}
+@keyframes skShimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .empty{text-align:center;padding:48px 20px;color:#8aaa94;}
 .empty-icon{font-size:48px;margin-bottom:12px;}
 .empty-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
@@ -642,29 +645,25 @@ function doLogin(){
   if (currentLoginMethod === 'email' && typeof supaSignIn === 'function'
       && window.kleverSupabase && window.kleverSupabase.isConfigured()) {
     showMsg('loginMsg', 'Вход…', 'info');
-    supaSignIn(id, pass).then(async res => {
+    supaSignIn(id, pass).then(res => {
       if (res.ok) {
-        // Fetch profile FIRST so phone is known before loading orders (cross-device fix)
+        // Строим локального пользователя из user_metadata СРАЗУ (без ожидания
+        // сетевого запроса профиля) и показываем ЛК. Профиль дотягиваем в фоне.
         const m = res.user.user_metadata || {};
-        let prof = null;
-        if (typeof supaGetProfile === 'function') {
-          prof = await supaGetProfile(res.user.id).catch(() => null);
-        }
-        const p = prof || {};
-        const phone      = p.phone      || m.phone      || '';
-        const firstName  = p.first_name || m.firstName  || '';
-        const lastName   = p.last_name  || m.lastName   || '';
-        const middleName = p.middle_name|| m.middleName || '';
+        const phone      = m.phone      || '';
+        const firstName  = m.firstName  || '';
+        const lastName   = m.lastName   || '';
+        const middleName = m.middleName || '';
         const fullName   = [lastName, firstName, middleName].filter(Boolean).join(' ') || m.name || id;
         const users = getUsers();
         let local = users.find(u => u.email && u.email.toLowerCase() === id.toLowerCase());
         if (!local) {
           local = {
             id: res.user.id, email: id, password: '*', addresses: [], favorites: [],
-            type: p.user_type || m.type || 'individual',
+            type: m.type || 'individual',
             name: fullName, phone, firstName, lastName, middleName,
-            company: p.company || m.company || undefined,
-            inn: p.inn || m.inn || undefined,
+            company: m.company || undefined,
+            inn: m.inn || undefined,
           };
           users.push(local); setUsers(users);
         } else {
@@ -674,13 +673,37 @@ function doLogin(){
           if (lastName)    local.lastName   = lastName;
           if (middleName)  local.middleName = middleName;
           if (fullName !== id) local.name   = fullName;
-          if (p.user_type || m.type) local.type = p.user_type || m.type || local.type;
-          if (p.company || m.company) local.company = p.company || m.company || local.company;
-          if (p.inn || m.inn) local.inn = p.inn || m.inn || local.inn;
+          if (m.type)    local.type    = m.type;
+          if (m.company) local.company = m.company;
+          if (m.inn)     local.inn     = m.inn;
           setUsers(users);
         }
         setCurrentUserId(res.user.id);
         showAccount();
+        // Фоновая сверка с авторитетным профилем (телефон/имя/тип).
+        if (typeof supaGetProfile === 'function') {
+          supaGetProfile(res.user.id).then(prof => {
+            if (!prof) return;
+            const list = getUsers();
+            const me = list.find(x => x.id === res.user.id);
+            if (!me) return;
+            let changed = false, phoneChanged = false;
+            if (prof.phone       && prof.phone       !== me.phone)      { me.phone = prof.phone; changed = true; phoneChanged = true; }
+            if (prof.first_name  && prof.first_name  !== me.firstName)  { me.firstName  = prof.first_name;  changed = true; }
+            if (prof.last_name   && prof.last_name   !== me.lastName)   { me.lastName   = prof.last_name;   changed = true; }
+            if (prof.middle_name && prof.middle_name !== me.middleName) { me.middleName = prof.middle_name; changed = true; }
+            if (prof.email       && prof.email       !== me.email)      { me.email = prof.email; changed = true; }
+            if (prof.user_type   && prof.user_type   !== me.type)       { me.type  = prof.user_type; changed = true; }
+            if (prof.company     && prof.company     !== me.company)    { me.company = prof.company; changed = true; }
+            if (prof.inn         && prof.inn         !== me.inn)        { me.inn = prof.inn; changed = true; }
+            if (changed) {
+              me.name = [me.lastName, me.firstName, me.middleName].filter(Boolean).join(' ') || me.name;
+              setUsers(list);
+              renderProfile();
+            }
+            if (phoneChanged) { invalidateAccountCache(); loadAccountData().then(() => renderMyOrders()); }
+          }).catch(() => {});
+        }
         return;
       }
       // Fall back to local check
@@ -843,57 +866,68 @@ async function doLogout(){
     if (typeof supaSignOut === 'function') { try { supaSignOut(); } catch(e) {} }
     return;
   }
-  supaGetCurrentUser().then(async u => {
+  supaGetCurrentUser().then(u => {
     if (!u) return;
     const m = u.user_metadata || {};
-    // Fetch profile FIRST so phone is known before loading orders (cross-device fix)
-    let prof = null;
-    if (typeof supaGetProfile === 'function') {
-      prof = await supaGetProfile(u.id).catch(() => null);
-    }
-    const p = prof || {};
-    const phone      = p.phone      || m.phone      || '';
-    const firstName  = p.first_name || m.firstName  || '';
-    const lastName   = p.last_name  || m.lastName   || '';
-    const middleName = p.middle_name|| m.middleName || '';
-    const fullName   = [lastName, firstName, middleName].filter(Boolean).join(' ') || m.name || u.email;
+    // ── ШАГ 1: рисуем ЛК и стартуем загрузку данных НЕМЕДЛЕННО ──────────────
+    // Строим локального пользователя из user_metadata (есть сразу в сессии),
+    // не дожидаясь сетевого запроса профиля. Заказы matched'атся по user_id и
+    // email — этого достаточно, чтобы они подгрузились без телефона из профиля.
     const users = getUsers();
     let local = users.find(x => x.id === u.id);
     if (!local) {
       local = {
-        id: u.id, email: p.email || u.email, password: '*', addresses: [], favorites: [],
-        type: p.user_type || m.type || 'individual',
-        name: fullName, phone, firstName, lastName, middleName,
-        company: p.company || m.company || undefined,
-        inn: p.inn || m.inn || undefined,
+        id: u.id, email: u.email, password: '*', addresses: [], favorites: [],
+        type: m.type || 'individual',
+        name: [m.lastName, m.firstName, m.middleName].filter(Boolean).join(' ') || m.name || u.email,
+        phone: m.phone || '', firstName: m.firstName || '', lastName: m.lastName || '', middleName: m.middleName || '',
+        company: m.company || undefined, inn: m.inn || undefined,
       };
       users.push(local); setUsers(users);
-    } else {
-      let changed = false;
-      if (phone      && phone      !== local.phone)      { local.phone      = phone;      changed = true; }
-      if (firstName  && firstName  !== local.firstName)  { local.firstName  = firstName;  changed = true; }
-      if (lastName   && lastName   !== local.lastName)   { local.lastName   = lastName;   changed = true; }
-      if (middleName && middleName !== local.middleName) { local.middleName = middleName; changed = true; }
-      if ((p.email || u.email) && (p.email || u.email) !== local.email) { local.email = p.email || u.email; changed = true; }
-      if (p.user_type  && p.user_type  !== local.type)    { local.type    = p.user_type;  changed = true; }
-      if (p.company    && p.company    !== local.company) { local.company  = p.company;   changed = true; }
-      if (p.inn        && p.inn        !== local.inn)     { local.inn      = p.inn;       changed = true; }
-      if (changed) {
-        local.name = [local.lastName, local.firstName, local.middleName].filter(Boolean).join(' ') || local.name;
-        setUsers(users);
-      }
     }
     setCurrentUserId(u.id);
     const wrap = document.getElementById('accountWrap');
     if (!wrap.classList.contains('visible')) {
-      showAccount();
+      showAccount();           // рендерит профиль + запускает loadAccountData() сразу
     } else {
       renderProfile();
-      // Phone was just loaded from DB — re-fetch orders if they came back empty without it
-      if (myOrders.length === 0 && accountDataLoaded) {
-        invalidateAccountCache();
-        loadAccountData().then(() => renderMyOrders());
-      }
+      loadAccountData().then(() => {
+        const active = document.querySelector('.acc-tab.active');
+        if (active && active.id === 'accTab-favorites') renderMyFavorites();
+        else if (active && active.id === 'accTab-addresses') renderMyAddresses();
+        else renderMyOrders();
+      });
+    }
+
+    // ── ШАГ 2: в ФОНЕ дотягиваем авторитетный профиль и сверяем поля ─────────
+    // Если в профиле обнаружился телефон, которого у нас не было, — заказы могли
+    // подгрузиться не полностью, поэтому перезапрашиваем их.
+    if (typeof supaGetProfile === 'function') {
+      supaGetProfile(u.id).then(prof => {
+        if (!prof) return;
+        const list = getUsers();
+        const me = list.find(x => x.id === u.id);
+        if (!me) return;
+        let changed = false, phoneChanged = false;
+        if (prof.phone       && prof.phone       !== me.phone)      { me.phone = prof.phone; changed = true; phoneChanged = true; }
+        if (prof.first_name  && prof.first_name  !== me.firstName)  { me.firstName  = prof.first_name;  changed = true; }
+        if (prof.last_name   && prof.last_name   !== me.lastName)   { me.lastName   = prof.last_name;   changed = true; }
+        if (prof.middle_name && prof.middle_name !== me.middleName) { me.middleName = prof.middle_name; changed = true; }
+        if (prof.email       && prof.email       !== me.email)      { me.email = prof.email; changed = true; }
+        if (prof.user_type   && prof.user_type   !== me.type)       { me.type  = prof.user_type; changed = true; }
+        if (prof.company     && prof.company     !== me.company)    { me.company = prof.company; changed = true; }
+        if (prof.inn         && prof.inn         !== me.inn)        { me.inn = prof.inn; changed = true; }
+        if (changed) {
+          me.name = [me.lastName, me.firstName, me.middleName].filter(Boolean).join(' ') || me.name;
+          setUsers(list);
+          renderProfile();
+        }
+        // Телефон появился позже — перезапрашиваем заказы (вдруг есть оформленные по телефону).
+        if (phoneChanged) {
+          invalidateAccountCache();
+          loadAccountData().then(() => renderMyOrders());
+        }
+      }).catch(() => {});
     }
   });
 })();
@@ -992,12 +1026,24 @@ async function showAccount(){
   document.getElementById('authWrap').style.display = 'none';
   document.getElementById('accountWrap').classList.add('visible');
   renderProfile();
+  // Показываем скелетон СРАЗУ, чтобы не мигало «Заказов пока нет» до загрузки.
+  if (!accountDataLoaded) renderAccountLoading();
   await loadAccountData();          // single batched load (orders + favorites + addresses)
   // Render whichever tab is active (orders by default) from the freshly loaded cache.
   const active = document.querySelector('.acc-tab.active');
   if (active && active.id === 'accTab-favorites') renderMyFavorites();
   else if (active && active.id === 'accTab-addresses') renderMyAddresses();
   else renderMyOrders();
+}
+
+// Скелетон-плейсхолдеры на время сетевой загрузки данных ЛК.
+function renderAccountLoading(){
+  const sk = `<div class="acc-skeleton">
+    <div class="sk-row"></div><div class="sk-row"></div><div class="sk-row"></div>
+  </div>`;
+  const o = document.getElementById('myOrdersList');    if (o) o.innerHTML = sk;
+  const f = document.getElementById('myFavoritesList'); if (f) f.innerHTML = sk;
+  const a = document.getElementById('myAddressesList'); if (a) a.innerHTML = sk;
 }
 
 function showAccTab(name, btn){
