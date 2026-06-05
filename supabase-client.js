@@ -52,7 +52,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       console.warn('[supabase] CDN not loaded yet');
       return null;
     }
-    _client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    _client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        // detectSessionInUrl — SDK сам подхватит токены из #hash после перехода
+        // по ссылке подтверждения email и сохранит сессию (иначе «тёмный экран»).
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+        flowType: 'implicit',   // ссылка подтверждения возвращает #access_token
+      },
+    });
     // Экспортируем живой клиент для отладки из консоли (window.supabaseClient).
     // ВНИМАНИЕ: window.supabase — это SDK-библиотека (createClient и т.п.),
     // а window.supabaseClient — уже созданный экземпляр клиента БД.
@@ -497,10 +506,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== Auth =====
-  window.supaSignUp = async function(email, password, meta){
+  window.supaSignUp = async function(email, password, meta, redirectTo){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const { data, error } = await sb.auth.signUp({ email, password, options: { data: meta || {} } });
+      const options = { data: meta || {} };
+      // Куда вернуть пользователя после клика по ссылке подтверждения email.
+      // ВАЖНО: этот URL должен быть в allowlist «Redirect URLs» в дашборде
+      // Supabase (Authentication → URL Configuration), иначе Supabase
+      // проигнорирует его и уйдёт на Site URL (часто localhost → «тёмный экран»).
+      if (redirectTo) options.emailRedirectTo = redirectTo;
+      const { data, error } = await sb.auth.signUp({ email, password, options });
       if (error) return { ok:false, error };
       return { ok:true, user: data.user, session: data.session };
     } catch(e) { return { ok:false, error:e }; }
