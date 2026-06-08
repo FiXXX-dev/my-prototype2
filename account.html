@@ -605,7 +605,7 @@ async function doLookupOrders(){
       res.innerHTML = '<div style="font-size:12px;color:#8aaa94;margin-bottom:10px;">Найдено заказов: ' + orders.length + '</div>' +
         orders.map(o => `<div class="order" style="margin-bottom:10px;">
           <div class="order-head">
-            <div><div class="order-num">Заказ #${o.num}</div><div class="order-date">${o.date}</div></div>
+            <div><div class="order-num">Заказ #${o.id || o.num}</div><div class="order-date">${o.date}</div></div>
             <span class="order-status status-${({'assembling':'assembling','courier':'courier','ready':'ready','done':'done','issued':'issued','cancelled':'cancelled'}[o.status]||'new')}">${{'new':'В обработке','assembling':'В сборке','courier':'Передан курьеру','ready':'Готов к выдаче','done':'✓ Доставлен','issued':'✓ Выдан','cancelled':'✕ Отменён'}[o.status]||'В обработке'}</span>
             <div class="order-total">${(o.total||0).toLocaleString('ru-RU')} ₽</div>
           </div>
@@ -1331,7 +1331,7 @@ function renderMyOrders(){
     <div class="order">
       <div class="order-head">
         <div>
-          <div class="order-num">Заказ #${o.num}</div>
+          <div class="order-num">Заказ #${o.id || o.num}</div>
           <div class="order-date">${o.date}</div>
         </div>
         <span class="order-status status-${({assembling:'assembling',courier:'courier',ready:'ready',done:'done',issued:'issued',cancelled:'cancelled'}[o.status]||'new')}">${{new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'✓ Доставлен',issued:'✓ Выдан',cancelled:'✕ Отменён'}[o.status]||'В обработке'}</span>
