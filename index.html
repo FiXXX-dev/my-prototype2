@@ -579,18 +579,47 @@
     .banner-arrow { width: 36px; height: 36px; font-size: 20px; }
   }
   @media (max-width: 600px) {
-    .banner-section { padding: 16px 12px 0; }
-    .banner-carousel { border-radius: 14px; }
+    .banner-section {
+      padding: 16px 12px 0;
+      width: 100%;
+      box-sizing: border-box;
+      margin-left: 0;
+      margin-right: 0;
+    }
+    .banner-carousel {
+      border-radius: 14px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      transform: translateZ(0); /* GPU-слой: fix для iOS Safari — overflow:hidden клипает корректно */
+    }
     .banner-slide {
       height: 200px;
+      min-width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       padding: 20px 20px;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
     }
-    .banner-slide-inner { max-width: 100%; }
-    .banner-title { font-size: 18px; letter-spacing: -0.5px; }
-    .banner-subtitle { font-size: 12px; margin-bottom: 12px; }
+    .banner-slide-inner {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .banner-title {
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .banner-subtitle {
+      font-size: 12px;
+      margin-bottom: 12px;
+      white-space: normal;
+      word-break: break-word;
+    }
     .banner-btn-link { padding: 8px 16px; font-size: 12px; }
     .banner-arrow { display: none; }
     .banner-dot { width: 6px; height: 6px; }
