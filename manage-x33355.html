@@ -232,7 +232,13 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .cat-admin-body{max-height:0;overflow:hidden;transition:max-height .3s ease;background:#fafbfa;border-top:1px solid transparent;}
 .cat-admin-card[data-open="true"] .cat-admin-body{max-height:1200px;border-top-color:#e0ece4;}
 .cat-admin-body-inner{padding:14px 18px 16px;}
-.sub-admin-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:white;border:1px solid #e8f4ec;border-radius:10px;margin-bottom:8px;}
+.sub-admin-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:white;border:1px solid #e8f4ec;border-radius:10px;margin-bottom:0;border-bottom:none;}
+.sub-kids-body{max-height:0;overflow:hidden;transition:max-height .35s ease;margin-bottom:8px;}
+.sub-kids-body.open{max-height:1000px;}
+.sub-kids-wrap{margin-bottom:8px;}
+.sub-kids-toggle{background:none;border:none;color:#6b8a74;font-size:11px;cursor:pointer;width:18px;height:18px;border-radius:4px;transition:transform .2s,background .15s;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;}
+.sub-kids-toggle:hover{background:#e8f4ec;}
+.sub-kids-toggle.open{transform:rotate(90deg);color:var(--green-dark);}
 .sub-admin-thumb{width:36px;height:36px;border-radius:8px;background:#f2f7f4;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .sub-admin-thumb img{width:100%;height:100%;object-fit:cover;}
 .sub-admin-name{font-size:14px;font-weight:600;}
@@ -2652,6 +2658,14 @@ if (sessionStorage.getItem('klever_admin') === '1') {
 // ===== CATEGORIES ADMIN =====
 const ADMIN_ICON_CHOICES = ['takeaway','spray','paper-roll','shield','box','broom','paperclip','flame','bag','package','star','heart','phone','mail','pin','truck','store','chat','chart','gear','lock','megaphone'];
 const _openCats = new Set();
+const _openSubs = new Set();
+function toggleSubOpen(catId, subId){
+  const key = catId+'::'+subId;
+  if(_openSubs.has(key)) _openSubs.delete(key); else _openSubs.add(key);
+  const isOpen = _openSubs.has(key);
+  document.querySelectorAll(`.sub-kids-body[data-sub-id="${subId}"]`).forEach(el => el.classList.toggle('open', isOpen));
+  document.querySelectorAll(`.sub-kids-toggle[data-sub-id="${subId}"]`).forEach(el => el.classList.toggle('open', isOpen));
+}
 let editingCategoryId = null;
 let editingSubcategoryParent = null;
 let editingSubcategoryId = null;
@@ -2690,7 +2704,7 @@ function renderCategoriesAdmin(){
         const kThumb = k.img
           ? `<img src="${escH(k.img)}" alt="" style="width:28px;height:28px;object-fit:contain;" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
           : `<span class="icon icon-box" style="font-size:14px;color:#8aaa94;"></span>`;
-        return `<div class="sub-admin-row" style="padding-left:28px;background:#f7faf8;border-top:1px solid #edf3ee;">
+        return `<div class="sub-admin-row" style="padding-left:28px;background:#f7faf8;border-top:1px solid #edf3ee;border-radius:0;margin-bottom:0;">
           <div class="sub-admin-thumb" style="width:28px;height:28px;">${kThumb}</div>
           <div><span class="sub-admin-name" style="font-size:13px;">↳ ${escH(k.name)}</span><span class="sub-admin-count">${kn} ${plural(kn,['товар','товара','товаров'])}</span></div>
           <div class="cat-admin-spacer"></div>
@@ -2702,18 +2716,27 @@ function renderCategoriesAdmin(){
           </div>
         </div>`;
       }).join('');
-      return `<div class="sub-admin-row">
-        <div class="sub-admin-thumb">${thumb}</div>
-        <div><span class="sub-admin-name">${escH(s.name)}</span><span class="sub-admin-count">${n} ${plural(n,['товар','товара','товаров'])}</span></div>
-        <div class="cat-admin-spacer"></div>
-        <div class="cat-admin-actions">
-          <button class="btn-icon" onclick="event.stopPropagation();openSubcategoryModal('${escH(c.id)}','${escH(s.id)}')" title="+ под-подкат." style="color:var(--green-dark);font-weight:700;">+</button>
-          <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',-1)" title="Вверх">↑</button>
-          <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',1)" title="Вниз">↓</button>
-          <button class="btn-icon" onclick="editSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
-          <button class="btn-icon danger" onclick="deleteSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
+      const hasKids = kidsHtml.length > 0;
+      const subKey = c.id+'::'+s.id;
+      const subOpen = _openSubs.has(subKey);
+      const toggleBtn = hasKids
+        ? `<button class="sub-kids-toggle${subOpen?' open':''}" data-sub-id="${escH(s.id)}" onclick="event.stopPropagation();toggleSubOpen('${escH(c.id)}','${escH(s.id)}')" title="Развернуть вложенные">▶</button>`
+        : '';
+      return `<div class="sub-kids-wrap">
+        <div class="sub-admin-row" style="border-radius:10px ${hasKids&&subOpen?'10px 0 0':''};">
+          <div class="sub-admin-thumb">${thumb}</div>
+          <div style="display:flex;align-items:center;gap:5px;">${toggleBtn}<span class="sub-admin-name">${escH(s.name)}</span><span class="sub-admin-count">${n} ${plural(n,['товар','товара','товаров'])}</span></div>
+          <div class="cat-admin-spacer"></div>
+          <div class="cat-admin-actions">
+            <button class="btn-icon" onclick="event.stopPropagation();openSubcategoryModal('${escH(c.id)}','${escH(s.id)}')" title="+ под-подкат." style="color:var(--green-dark);font-weight:700;">+</button>
+            <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',-1)" title="Вверх">↑</button>
+            <button class="btn-icon" onclick="moveSubcategory('${escH(c.id)}','${escH(s.id)}',1)" title="Вниз">↓</button>
+            <button class="btn-icon" onclick="editSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Изменить"><span class="icon icon-edit"></span></button>
+            <button class="btn-icon danger" onclick="deleteSubcategory('${escH(c.id)}','${escH(s.id)}')" title="Удалить"><span class="icon icon-trash"></span></button>
+          </div>
         </div>
-      </div>${kidsHtml}`;
+        ${hasKids ? `<div class="sub-kids-body${subOpen?' open':''}" data-sub-id="${escH(s.id)}" style="border:1px solid #e8f4ec;border-top:none;border-radius:0 0 10px 10px;overflow:hidden;">${kidsHtml}</div>` : ''}
+      </div>`;
     }).join('') || '<div style="font-size:13px;color:#8aaa94;padding:8px 4px;">Подкатегорий нет</div>';
     const headerThumb = c.img
       ? `<img src="${escH(c.img)}" alt="" onerror="this.outerHTML=\'<span class=icon icon-box></span>\'">`
