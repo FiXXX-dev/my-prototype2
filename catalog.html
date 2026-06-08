@@ -556,8 +556,10 @@ function buildCatNav(){
   const cats = (typeof sortedCategories === 'function') ? sortedCategories() : [];
   const counts = (typeof productCountByCategory === 'function') ? productCountByCategory() : {};
   const totalAll = (ALL_PRODUCTS && ALL_PRODUCTS.length) || 0;
-  const ul = document.querySelector('.cat-list');
+  const ul = document.getElementById('sidebarCats');
   if (ul){
+    // Восстанавливаем режим верхних категорий (мог быть заменён на .sub-list в Mode C).
+    ul.className = 'cat-list';
     let html = `<li><a href="javascript:void(0)" data-catid="all" class="active" onclick="filterCatId(event,'all')"><span><span class="icon icon-clover" style="margin-right:6px;vertical-align:-0.15em;"></span>Все товары</span> <span class="cat-count-badge">${totalAll}</span></a></li>`;
     html += cats.map(c => {
       const n = counts[c.id] || 0;
@@ -565,6 +567,15 @@ function buildCatNav(){
       return `<li><a href="javascript:void(0)" data-catid="${escHtml(c.id)}" onclick="filterCatId(event,'${escHtml(c.id)}')"><span><span class="${iconCls}" style="margin-right:6px;vertical-align:-0.15em;"></span>${escHtml(catDisplayName(c))}</span> <span class="cat-count-badge">${n}</span></a></li>`;
     }).join('');
     ul.innerHTML = html;
+  }
+  // Сброс заголовка сайдбара и флага Mode C (если Mode C активен — он
+  // переопределит их сразу после, в showCatSubSidebar).
+  var titleReset = document.querySelector('.sidebar-title');
+  if (titleReset && !_catSubSidebarState) {
+    titleReset.textContent = 'Категории';
+    titleReset.setAttribute('data-i18n', 'catalog.sidebar_categories');
+    var mainReset = document.querySelector('.catalog-main');
+    if (mainReset) mainReset.classList.remove('has-subcat-sidebar');
   }
   const chipsWrap = document.querySelector('.cat-chips');
   if (chipsWrap){
@@ -991,8 +1002,11 @@ function showCatSubSidebar(catId, subId) {
     titleEl.innerHTML = '<a href="catalog.html?cat=' + escHtml(catId) + '" class="sidebar-back-link">' + escHtml(catDisplayName(cat)) + '</a>';
   }
   // Replace top-level category list with subcategory nav.
+  // Меняем класс на .sub-list, чтобы применились стили подкатегорий и аккордеон
+  // (CSS аккордеона привязан к .sub-list, как в renderSubcategoryTiles).
   var listEl = document.getElementById('sidebarCats');
   if (listEl) {
+    listEl.className = 'sub-list';
     listEl.innerHTML = subSidebarHtml(catId, subs, counts, subId || null);
   }
   // Mobile: replace top-level category chips with subcategory chips.
