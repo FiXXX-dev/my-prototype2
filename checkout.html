@@ -877,17 +877,8 @@ async function submitOrder() {
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000)),
       ]);
       if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
-        // Обновляем ID в localStorage на серверный.
-        finalNum = supaRes.data.id;
-        orderRecord.num = finalNum;
-        try {
-          const saved = JSON.parse(localStorage.getItem('klever_orders') || '[]');
-          // Заменяем последний сохранённый заказ (только что добавленный) его
-          // серверным номером, чтобы история заказов в ЛК показывала правильный ID.
-          const last = saved[saved.length - 1];
-          if (last) { last.num = finalNum; localStorage.setItem('klever_orders', JSON.stringify(saved)); }
-        } catch(e) {}
-        console.log('[order] saved to Supabase, id:', finalNum);
+        // num уже сохранён правильно и в localStorage, и в Supabase — не перезаписываем.
+        console.log('[order] saved to Supabase, db_id:', supaRes.data.id, 'num:', finalNum);
       }
       // Если supaRes.ok === false — ошибка сервера. Заказ уже в localStorage,
       // показываем подтверждение без alert-а (не пугаем пользователя).
