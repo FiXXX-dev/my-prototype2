@@ -63,9 +63,16 @@
   .sub-list-count{background:rgba(0,0,0,0.06);padding:1px 8px;border-radius:20px;font-size:11px;}
   .sub-list a.active .sub-list-count{background:rgba(0,0,0,0.16);}
   /* Level-3 children nested under the active level-2 item */
-  .sub-list-children{list-style:none;margin:2px 0 6px;padding:0 0 0 12px;border-left:2px solid #d7ece0;}
+  .sub-list-children{list-style:none;margin:2px 0 6px;padding:0 0 0 12px;border-left:2px solid #d7ece0;display:none;}
+  .sub-list li.has-children.open>.sub-list-children{display:block;}
   .sub-list-children a{font-size:13px;padding:7px 12px;color:#5a7567;}
   .sub-list-children a.active{background:var(--green);color:var(--dark);font-weight:700;}
+  /* Accordion toggle button */
+  .sub-list li.has-children{position:relative;}
+  .sub-list li.has-children>a{padding-right:32px;}
+  .sub-acc-btn{position:absolute;top:8px;right:6px;width:22px;height:22px;background:none;border:none;cursor:pointer;color:#8aaa94;font-size:12px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:color .15s,background .15s,transform .2s;padding:0;z-index:1;line-height:1;}
+  .sub-acc-btn:hover{color:var(--green-dark);background:rgba(0,0,0,0.04);}
+  .sub-list li.has-children.open>.sub-acc-btn{transform:rotate(90deg);color:var(--green-dark);}
   /* Subcategory tiles slightly smaller */
   .sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .sub-tile{min-height:150px;}
@@ -802,9 +809,13 @@ function subSidebarHtml(catId, subs, counts, activeId){
     const n = subRollup(s, counts);
     const isTop = s.id === activeTop;
     const kids = (s.children || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
-    let html = `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="${isTop && !pid ? 'active' : ''}">
+    const hasKids = kids.length > 0;
+    const isOpen = hasKids && isTop; // открыт если этот элемент или его дочерний активен
+    const liClass = hasKids ? ` class="has-children${isOpen ? ' open' : ''}"` : '';
+    let html = `<li${liClass}><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(s.id)}" class="${isTop && !pid ? 'active' : ''}">
       <span>${escHtml(subDisplayName(catId, s))}</span><span class="sub-list-count">${n}</span></a>`;
-    if (kids.length) {
+    if (hasKids) {
+      html += `<button class="sub-acc-btn" onclick="toggleSubAcc(event,this.closest('li'))" aria-label="Развернуть">▸</button>`;
       html += `<ul class="sub-list-children">` + kids.map(k => {
         const kn = counts[k.id] || 0;
         return `<li><a href="catalog.html?cat=${escHtml(catId)}&sub=${escHtml(k.id)}" class="${k.id===activeId?'active':''}">
@@ -813,6 +824,12 @@ function subSidebarHtml(catId, subs, counts, activeId){
     }
     return html + `</li>`;
   }).join('');
+}
+
+function toggleSubAcc(e, li) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (li) li.classList.toggle('open');
 }
 
 // Плитки для массива узлов. Каждая ведёт на ?cat=catId&sub=<node.id>.
