@@ -957,7 +957,7 @@ async function doLogout(){
     if (typeof supaSignOut === 'function') { try { supaSignOut(); } catch(e) {} }
     return;
   }
-  supaGetCurrentUser().then(u => {
+  supaGetCurrentUser().then(async u => {
     if (!u) return;
     const m = u.user_metadata || {};
     // ── ШАГ 1: рисуем ЛК и стартуем загрузку данных НЕМЕДЛЕННО ──────────────
@@ -985,8 +985,34 @@ async function doLogout(){
         sub: 'Спасибо за регистрацию. Добро пожаловать в Клевер 🎉',
       }), 400);
     }
+    // Сначала подтягиваем профиль из Supabase чтобы получить актуальный телефон,
+    // затем запускаем showAccount() с полными данными
     const wrap = document.getElementById('accountWrap');
     if (!wrap.classList.contains('visible')) {
+      // Пытаемся получить профиль до показа ЛК (максимум 3 секунды)
+      if (typeof supaGetProfile === 'function') {
+        try {
+          const prof = await Promise.race([
+            supaGetProfile(u.id),
+            new Promise(resolve => setTimeout(() => resolve(null), 3000))
+          ]);
+          if (prof) {
+            const list = getUsers();
+            const me = list.find(x => x.id === u.id);
+            if (me) {
+              let changed = false;
+              if (prof.phone && prof.phone !== me.phone) { me.phone = prof.phone; changed = true; }
+              if (prof.first_name) { me.firstName = prof.first_name; changed = true; }
+              if (prof.last_name) { me.lastName = prof.last_name; changed = true; }
+              if (prof.email && prof.email !== me.email) { me.email = prof.email; changed = true; }
+              if (changed) {
+                me.name = [me.lastName, me.firstName, me.middleName].filter(Boolean).join(' ') || me.name;
+                setUsers(list);
+              }
+            }
+          }
+        } catch(e) {}
+      }
       showAccount();           // рендерит профиль + запускает loadAccountData() сразу
     } else {
       renderProfile();
@@ -1088,8 +1114,13 @@ function invalidateAccountCache(){
   myOrders = [];
   myFavorites = [];
   myAddresses = [];
-  const u = getCurrentUser();
-  if (u) _acctClearCache(u.id);
+  // очистка кэша localStorage (ключи вида klever_acct_v2_<uid>)
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('klever_acct_')) localStorage.removeItem(k);
+    }
+  } catch(e) {}
 }
 
 // Применяет готовые массивы данных в память и перерисовывает активную вкладку.
@@ -1196,9 +1227,9 @@ async function showAccount(){
   await loadAccountData();          // single batched load (orders + favorites + addresses)
   // Render whichever tab is active (orders by default) from the freshly loaded cache.
   const active = document.querySelector('.acc-tab.active');
-  if (active && active.id === 'accTab-favorites') renderMyFavorites();
-  else if (active && active.id === 'accTab-addresses') renderMyAddresses();
-  else renderMyOrders();
+  if (!active || active.id === 'accTab-orders') renderMyOrders();
+  else if (active.id === 'accTab-favorites') renderMyFavorites();
+  else if (active.id === 'accTab-addresses') renderMyAddresses();
 }
 
 // Скелетон-плейсхолдеры на время сетевой загрузки данных ЛК.
