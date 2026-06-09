@@ -829,6 +829,17 @@ async function submitOrder() {
   const deliveryDateClean = effectiveDelivery === 'courier' ? clean(document.getElementById('delivDate').value) : null;
   const deliveryTimeClean = effectiveDelivery === 'courier' ? clean(document.getElementById('delivTime').value) || null : null;
 
+  // Получаем актуальный userId из Supabase сессии прямо перед созданием заказа,
+  // чтобы не потерять его если _applyAuthAutofill ещё не успел выполниться.
+  if (window.kleverSupabase && typeof window.kleverSupabase.getClient === 'function') {
+    try {
+      const sb = window.kleverSupabase.getClient();
+      const { data: { session } } = await sb.auth.getSession();
+      if (session && session.user) _checkoutUserId = session.user.id;
+    } catch(e) {}
+  }
+  if (!_checkoutUserId) _checkoutUserId = localStorage.getItem('klever_current_user');
+
   const orderRecord = {
     num: null,    // filled below from Supabase id or random fallback
     date: new Date().toLocaleDateString('ru-RU'),
