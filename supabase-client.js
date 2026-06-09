@@ -293,7 +293,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       total_price: order.total != null ? Number(order.total) : 0,
       language: language,
       comment: order.comment || '',
-      num: order.num,
+      // num отправляем только если значение задано — null/undefined пропускаем,
+      // чтобы не конфликтовать с NOT NULL или DEFAULT в схеме Supabase.
+      // Номером заказа теперь служит поле id (автоинкремент).
+      ...(order.num != null ? { num: order.num } : {}),
       status: order.status || 'new',
       customer_email: order.email || '',
       company: order.company || '',
@@ -748,6 +751,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.supaUpsertProfile = async function(p){
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     if (!p || !p.user_id) return { ok:false, reason:'no_user_id' };
+    // Локальные аккаунты (телефон/пароль) имеют id вида "u1780688605663" — не UUID.
+    // Записывать их в user_profiles нельзя: создаётся «фантомный» пользователь в
+    // таблице и в счётчике пользователей в админке.
+    const _isUuid = v => typeof v === 'string'
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+    if (!_isUuid(p.user_id)) return { ok:false, reason:'not_uuid' };
     const row = {
       user_id: String(p.user_id),
       email: p.email || null,
