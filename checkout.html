@@ -432,6 +432,15 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
       </div>
     </div>
 
+    <!-- ПРЕДУПРЕЖДЕНИЕ: ТОВАРЫ ЗАКОНЧИЛИСЬ -->
+    <div class="min-order-warning" id="oosWarning" style="border-color:#f3b1ab;background:#fff5f5;">
+      <span class="icon icon-alert"></span>
+      <div class="text">
+        <strong style="color:#e05a4e;">Некоторые товары закончились</strong>
+        Удалите товары с пометкой «Нет в наличии», чтобы оформить заказ.
+      </div>
+    </div>
+
     <div class="order-summary">
       <div class="summary-title" data-i18n="checkout.summary_title">Ваш заказ</div>
 
@@ -688,12 +697,27 @@ function removeItem(sku) {
   }
 }
 
+// Товар закончился? По свежим данным каталога (data-loader);
+// пока каталог не загрузился — считаем, что товар есть.
+function cartItemOOS(sku) {
+  try {
+    const arr = (window.getProductsSync ? window.getProductsSync() : []);
+    const p = arr.find(x => x.sku === sku);
+    return !!p && (p.availability || 'in') === 'out';
+  } catch(e) { return false; }
+}
+
 // Обновляем правую колонку
 function updateSummary() {
   const cart = getCart();
   const subtotal = getSubtotal();
   const delivCost = getDeliveryCost();
   const total = getTotal();
+
+  // Товары, которых нет в наличии — блокируют оформление.
+  const hasOOS = cart.some(i => cartItemOOS(i.sku));
+  const oosWarning = document.getElementById('oosWarning');
+  if (oosWarning) oosWarning.classList.toggle('visible', hasOOS);
 
   // Предупреждение о минималке
   const warning = document.getElementById('minOrderWarning');
@@ -705,7 +729,7 @@ function updateSummary() {
     submitBtn.disabled = true;
   } else {
     warning.classList.remove('visible');
-    submitBtn.disabled = false;
+    submitBtn.disabled = hasOOS;
   }
 
   // Цена доставки курьером
@@ -726,13 +750,15 @@ function updateSummary() {
   // Список товаров с кнопками управления
   document.getElementById('summaryItems').innerHTML = cart.map(i => {
     const _img = getProdImg(i.sku, i.img);
+    const _oos = cartItemOOS(i.sku);
     return `
-    <div class="summary-item">
+    <div class="summary-item"${_oos ? ' style="background:#fff5f5;border-radius:12px;"' : ''}>
       <div class="summary-item-img">
         ${_img ? `<img src="${_img}" alt="" onerror="this.outerHTML='<span>📦</span>'">` : '📦'}
       </div>
       <div class="summary-item-info">
         <div class="summary-item-name">${i.name}</div>
+        ${_oos ? '<div style="color:#e05a4e;font-size:11px;font-weight:800;">Нет в наличии — удалите из заказа</div>' : ''}
         <div class="summary-item-unit-price">${i.price} ₽ за шт.</div>
         <div class="summary-item-controls">
           <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', -1)">−</button>
@@ -758,6 +784,14 @@ function updateSummary() {
 // Валидация и отправка
 async function submitOrder() {
   if (getSubtotal() < MIN_ORDER) return;
+
+  // Товары, которых нет в наличии, оформить нельзя.
+  const _oosNames = getCart().filter(i => cartItemOOS(i.sku)).map(i => i.name);
+  if (_oosNames.length) {
+    alert('Нет в наличии: ' + _oosNames.join(', ') + '.\nУдалите эти товары из заказа, чтобы оформить его.');
+    updateSummary();
+    return;
+  }
 
   // Read the authoritative delivery/payment values from the DOM.
   // The module-level variables are kept in sync by selectDelivery/selectPayment,
@@ -965,6 +999,9 @@ function checkCart() {
 setMinDate();
 checkCart();
 updateSummary();
+// Каталог (и наличие товаров) может загрузиться позже первого рендера —
+// перепроверяем корзину, когда пришли свежие данные.
+window.addEventListener('kleverProductsLoaded', function(){ try { updateSummary(); } catch(e) {} });
 document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
   r.addEventListener('change', e => selectPayment(e.target.value));
 });
@@ -1405,7 +1442,7 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
         + '<div class="klever-search-result-img">'+imgHtml+'</div>'
         + '<div><div class="klever-search-result-name">'+escHtml(p.name)+'</div><div class="klever-search-result-sku">Арт. '+escHtml(p.sku)+'</div></div>'
         + '<div class="klever-search-result-price">'+escHtml(p.price)+' ₽</div>'
-        + '<button class="klever-search-result-add" onclick="event.preventDefault();event.stopPropagation();kleverSearchAdd('+cartData+')" aria-label="В корзину">+</button>'
+        + ((p.availability||'in')==='out' ? '<span style="font-size:11px;color:#e05a4e;font-weight:800;white-space:nowrap;">Нет в наличии</span>' : '<button class="klever-search-result-add" onclick="event.preventDefault();event.stopPropagation();kleverSearchAdd('+cartData+')" aria-label="В корзину">+</button>')
         + '</a>';
     }).join('');
   }
@@ -1413,6 +1450,8 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
   window.kleverSearchAdd = function(p){
     if (typeof addToCart === 'function') { addToCart(p); return; }
     try {
+      var _pp=(window.getProductsSync?window.getProductsSync():[]).find(function(x){return x.sku===p.sku;});
+      if (_pp&&(_pp.availability||'in')==='out'){alert('«'+p.name+'» сейчас нет в наличии');return;}
       const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
       const ex = cart.find(i => i.sku === p.sku);
       if (ex) ex.qty++; else cart.push({...p, qty:1});
