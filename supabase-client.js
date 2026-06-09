@@ -306,7 +306,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     // DPI/ТСПУ networks that block the SDK's OPTIONS request ("Failed to fetch").
     async function tryInsert(row) {
       try {
-        const data = await _pgPostRetry('orders', [row], 'POST', { Prefer: 'return=representation' });
+        const data = await _pgPostRetry('orders', [row], 'POST', { Prefer: 'return=representation' }, 5);
         return { ok: true, data: Array.isArray(data) ? data[0] : data };
       } catch (e) {
         const error = (e && e.supaError) || e || {};

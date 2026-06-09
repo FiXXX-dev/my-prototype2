@@ -868,50 +868,27 @@ async function submitOrder() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Отправляем…'; }
   const _unlockBtn = () => { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _origBtnTxt; } };
 
-  // Номер заказа = реальный id из Supabase. До ответа сервера он не известен.
-  let finalNum = null;
-
   // ── Сохраняем в localStorage НЕМЕДЛЕННО ─────────────────────────────────
   // Заказ не должен теряться из-за медленной сети. Сохраняем локально сразу,
-  // затем пытаемся отправить в Supabase — если не успеет за 12 секунд, заказ
-  // всё равно принят (пользователь видит подтверждение, вы видите его звонком).
+  // затем отправляем в Supabase в ФОНЕ (полный бюджет повторов, без блокировки UI).
   const _localOrders = JSON.parse(localStorage.getItem('klever_orders') || '[]');
   _localOrders.push(orderRecord);
   localStorage.setItem('klever_orders', JSON.stringify(_localOrders));
 
-  // ── Отправка в Supabase с жёстким таймаутом 12 с ────────────────────────
-  if (typeof supaInsertOrder === 'function') {
-    try {
-      const supaRes = await Promise.race([
-        supaInsertOrder(orderRecord),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000)),
-      ]);
-      if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
-        finalNum = supaRes.data.id;
-        orderRecord.num = finalNum;
-        try {
-          const saved = JSON.parse(localStorage.getItem('klever_orders') || '[]');
-          const last = saved[saved.length - 1];
-          if (last) { last.num = finalNum; localStorage.setItem('klever_orders', JSON.stringify(saved)); }
-        } catch(e) {}
-        console.log('[order] saved to Supabase, id:', finalNum);
-      }
-      // Если supaRes.ok === false — ошибка сервера. Заказ уже в localStorage,
-      // показываем подтверждение без alert-а (не пугаем пользователя).
-    } catch (e) {
-      // Таймаут или сетевая ошибка — заказ уже в localStorage, просто идём дальше.
-      console.warn('[order] Supabase insert failed/timeout:', e && e.message);
-    }
-  }
-
   _unlockBtn();
-
   localStorage.removeItem(CART_KEY);
 
+  // ── Показываем подтверждение СРАЗУ ──────────────────────────────────────
+  // Раньше здесь был блокирующий Promise.race([insert, 12s]). На холодном
+  // DPI-соединении вставка не успевала за 12 с → экран показывал «Ваш заказ
+  // принят» без номера, а сам заказ нередко вообще не долетал до Supabase
+  // (его не было ни в админке, ни в ЛК). Теперь экран рисуем мгновенно, а
+  // номер заказа подставляем, как только Supabase вернёт реальный id.
   document.getElementById('checkoutWrap').style.display = 'none';
   const successWrap = document.getElementById('successWrap');
   successWrap.classList.add('visible');
-  document.getElementById('successOrderNum').textContent = finalNum === null ? 'Ваш заказ принят' : ('#' + finalNum);
+  const _numEl = document.getElementById('successOrderNum');
+  _numEl.textContent = 'Ваш заказ принят';
 
   const methodText = effectiveDelivery === 'courier'
     ? `Доставим по адресу: ${addressClean}${deliveryDateClean ? '<br><span class="icon icon-calendar" style="font-size:12px;vertical-align:-0.1em;"></span> ' + deliveryDateClean : ''}${deliveryTimeClean ? ' ⏰ ' + deliveryTimeClean : ''}`
@@ -926,6 +903,32 @@ async function submitOrder() {
     `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${phoneClean}</strong>`;
 
   window.scrollTo({top: 0, behavior: 'smooth'});
+
+  // ── Отправка в Supabase в ФОНЕ ──────────────────────────────────────────
+  // supaInsertOrder уже использует _pgPostRetry (повторы при обрыве на DPI),
+  // поэтому не нужен внешний таймаут — даём вставке завершиться спокойно и
+  // обновляем номер заказа на экране, как только придёт id.
+  if (typeof supaInsertOrder === 'function') {
+    supaInsertOrder(orderRecord).then(supaRes => {
+      if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
+        const finalNum = supaRes.data.id;
+        orderRecord.num = finalNum;
+        try {
+          const saved = JSON.parse(localStorage.getItem('klever_orders') || '[]');
+          const last = saved[saved.length - 1];
+          if (last) { last.num = finalNum; localStorage.setItem('klever_orders', JSON.stringify(saved)); }
+        } catch(e) {}
+        if (_numEl) _numEl.textContent = '#' + finalNum;
+        console.log('[order] saved to Supabase, id:', finalNum);
+      } else {
+        // ok:false — ошибка БД (напр. RLS, ограничение). Заказ остаётся в
+        // localStorage; логируем для диагностики, пользователя не пугаем.
+        console.error('[order] Supabase insert NOT ok:', supaRes && supaRes.error);
+      }
+    }).catch(e => {
+      console.error('[order] Supabase insert failed:', e && (e.message || e));
+    });
+  }
 }
 
 function showError(fieldId, hintId) {
