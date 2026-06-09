@@ -975,24 +975,62 @@ applyPickupSettings();
 if (typeof getSettings === 'function') getSettings().then(applyPickupSettings);
 window.addEventListener('kleverSettingsLoaded', applyPickupSettings);
 
-// Autofill contact fields from Supabase auth profile (user_metadata).
-// Only fills empty fields so we never clobber what the user has typed.
-function _applyAuthAutofill(user){
-  if (!user) return;
-  _checkoutUserId = user.id;
-  const m = user.user_metadata || {};
-  const fullName = [m.lastName, m.firstName, m.middleName].filter(Boolean).join(' ') || m.name || '';
-  const phone = m.phone || '';
-  const email = user.email || '';
+// Fills empty contact fields only — never clobbers what the user has typed.
+function _fillContactFields(data){
   const nameEl  = document.getElementById('clientName');
   const phoneEl = document.getElementById('clientPhone');
   const emailEl = document.getElementById('clientEmail');
-  if (nameEl  && !nameEl.value  && fullName) nameEl.value  = fullName;
-  if (phoneEl && !phoneEl.value && phone)    phoneEl.value = phone;
-  if (emailEl && !emailEl.value && email)    emailEl.value = email;
+  if (nameEl  && !nameEl.value  && data.name)  nameEl.value  = data.name;
+  if (phoneEl && !phoneEl.value && data.phone) phoneEl.value = data.phone;
+  if (emailEl && !emailEl.value && data.email) emailEl.value = data.email;
 }
 
-(function _autofillFromAuth(){
+// Pull contact data from the locally-stored user record (klever_users).
+// ВАЖНО: телефон, который пользователь вводит в ЛК, сохраняется именно сюда
+// (и в таблицу профилей), но НЕ в auth user_metadata — поэтому без этого шага
+// он не подставлялся при оформлении заказа.
+function _autofillFromLocalUser(){
+  try {
+    const id = localStorage.getItem('klever_current_user');
+    if (!id) return;
+    const u = (JSON.parse(localStorage.getItem('klever_users')||'[]')).find(x => x.id === id);
+    if (!u) return;
+    if (!_checkoutUserId) _checkoutUserId = u.id;
+    _fillContactFields({ name: u.name || '', phone: u.phone || '', email: u.email || '' });
+  } catch(e){}
+}
+
+// Autofill contact fields from the Supabase auth session + authoritative profile.
+function _applyAuthAutofill(user){
+  if (!user) return;
+  if (user.id) _checkoutUserId = user.id;
+  const m = user.user_metadata || {};
+  // 1) auth metadata (доступно мгновенно из сессии)
+  _fillContactFields({
+    name: [m.lastName, m.firstName, m.middleName].filter(Boolean).join(' ') || m.name || '',
+    phone: m.phone || '',
+    email: user.email || '',
+  });
+  // 2) локальная запись пользователя (хранит телефон, введённый в ЛК)
+  _autofillFromLocalUser();
+  // 3) авторитетный профиль из таблицы user_profiles (между устройствами) — async
+  if (typeof supaGetProfile === 'function' && user.id) {
+    supaGetProfile(user.id).then(prof => {
+      if (!prof) return;
+      _fillContactFields({
+        name: [prof.last_name, prof.first_name, prof.middle_name].filter(Boolean).join(' '),
+        phone: prof.phone || '',
+        email: prof.email || '',
+      });
+    }).catch(()=>{});
+  }
+}
+
+(function _autofillInit(){
+  // Сразу подставляем из локальной записи — работает и для аккаунтов по
+  // телефону/паролю (у них нет сессии Supabase).
+  _autofillFromLocalUser();
+
   if (!window.kleverSupabase || !window.kleverSupabase.isConfigured()) return;
   // 1) Immediate one-shot in case the session is already available.
   if (typeof supaGetCurrentUser === 'function') {
