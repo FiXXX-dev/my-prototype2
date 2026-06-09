@@ -42,6 +42,7 @@
       badge: p.badge || undefined,
       desc: p.description || p.desc || '',
       emoji: p.emoji || '📦',
+      availability: p.availability || 'in',
     });
   }
 

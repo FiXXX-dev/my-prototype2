@@ -99,6 +99,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .tbl .col-num{font-family:'Unbounded',sans-serif;font-weight:700;color:var(--green-dark);}
 .tbl .col-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
 .col-badge.b-hit{background:#fff3ee;color:var(--accent);}
+.avail-select{font-family:'Onest',sans-serif;font-size:12px;font-weight:600;padding:6px 8px;border:1.5px solid #d0e8d8;border-radius:9px;background:white;cursor:pointer;outline:none;max-width:130px;}
 .hit-star{background:none;border:none;cursor:pointer;font-size:22px;line-height:1;padding:4px 8px;border-radius:8px;color:#c0d0c5;transition:transform .15s,background .2s,color .2s;}
 .hit-star:hover{background:#f2f7f4;transform:scale(1.15);}
 .hit-star.on{color:#FF6B35;text-shadow:0 0 8px rgba(255,107,53,0.4);}
@@ -536,6 +537,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
               <th>Категория</th>
               <th>Цена</th>
               <th>Метка</th>
+              <th style="width:140px;">Наличие</th>
               <th style="text-align:center;width:70px;" title="Хит продаж">Хит</th>
               <th style="text-align:right;">Действия</th>
             </tr>
@@ -807,6 +809,14 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <option value="hit">★ Хит</option>
           <option value="new">Новинка</option>
           <option value="sale">% Скидка</option>
+        </select>
+      </div>
+      <div class="form-grp">
+        <label>Наличие</label>
+        <select id="prodAvailability">
+          <option value="in">✓ В наличии</option>
+          <option value="order">⏳ Под заказ</option>
+          <option value="out">✕ Нет в наличии</option>
         </select>
       </div>
       <div class="form-grp full">
@@ -1661,6 +1671,7 @@ async function loadProductsAdmin() {
           isHit: !!(p.is_hit || p.isHit),
           desc: p.description || p.desc || '',
           emoji: p.emoji || '📦',
+          availability: p.availability || 'in',
         }));
         try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
         populateFilterCat();
@@ -1694,16 +1705,17 @@ function renderProducts() {
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
   if (pageItems.length === 0) {
-    document.getElementById('productsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
     document.getElementById('productsBody').innerHTML = pageItems.map(p => `
-      <tr>
+      <tr${(p.availability || 'in') === 'out' ? ' style="background:#fff5f5;"' : ''}>
         <td><div class="prod-img-cell">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div></td>
         <td><strong>${p.name}</strong></td>
         <td><span class="col-num">${p.sku}</span></td>
         <td>${p.cat}</td>
         <td><strong>${p.price} ₽</strong></td>
         <td>${badgeHtml(p.badge)}</td>
+        <td>${availabilitySelectHtml(p)}</td>
         <td style="text-align:center;">
           <button class="hit-star ${p.isHit ? 'on' : ''}" onclick="toggleHit('${p.sku}')" title="${p.isHit ? 'Убрать из хитов' : 'Сделать хитом продаж'}">${p.isHit ? '⭐' : '☆'}</button>
         </td>
@@ -1761,6 +1773,32 @@ function toggleHit(sku) {
   }
 }
 
+// Инлайн-селект наличия в таблице — смена статуса без открытия модалки.
+function availabilitySelectHtml(p){
+  const v = p.availability || 'in';
+  const color = v === 'out' ? '#FF3B6B' : (v === 'order' ? '#a07800' : '#1aab58');
+  const opt = (val, label) => `<option value="${val}"${v === val ? ' selected' : ''}>${label}</option>`;
+  return `<select class="avail-select" style="border-color:${color};color:${color};"
+            onchange="setAvailability('${p.sku}', this.value)">
+    ${opt('in', '✓ В наличии')}${opt('order', '⏳ Под заказ')}${opt('out', '✕ Нет')}
+  </select>`;
+}
+
+function setAvailability(sku, val){
+  const products = getProducts().map(p => p.sku === sku ? {...p, availability: val} : p);
+  setProducts(products);
+  renderProducts();
+  const p = products.find(x => x.sku === sku);
+  if (p && typeof window.supaUpsertProduct === 'function') {
+    window.supaUpsertProduct(p)
+      .then(r => {
+        if (!r || !r.ok) { toast('⚠ Не удалось сохранить наличие в базу'); return; }
+        if (typeof supaRequestSync === 'function') supaRequestSync();
+      })
+      .catch(e => { console.error('[admin] setAvailability supabase', e); toast('⚠ Ошибка сохранения наличия'); });
+  }
+}
+
 function badgeHtml(b) {
   if (b==='hit') return '<span class="col-badge b-hit"><span class="icon icon-flame"></span> Хит</span>';
   if (b==='new') return '<span class="col-badge b-new">Новинка</span>';
@@ -1810,6 +1848,7 @@ function openProductModal() {
   document.getElementById('prodSku').value = '';
   document.getElementById('prodPrice').value = '';
   document.getElementById('prodBadge').value = '';
+  document.getElementById('prodAvailability').value = 'in';
   document.getElementById('prodImg').value = '';
   document.getElementById('prodDesc').value = '';
   populateProdCatSelect();
@@ -1876,6 +1915,7 @@ function editProduct(sku) {
   document.getElementById('prodSku').value = p.sku;
   document.getElementById('prodPrice').value = p.price;
   document.getElementById('prodBadge').value = p.badge || '';
+  document.getElementById('prodAvailability').value = p.availability || 'in';
   document.getElementById('prodImg').value = p.img || '';
   document.getElementById('prodDesc').value = p.desc || '';
   populateProdCatSelect(cid);
@@ -1910,6 +1950,7 @@ async function saveProduct() {
   const _subsubVal = document.getElementById('prodSubsub').value || '';
   const subcategory = _subsubVal || document.getElementById('prodSubcat').value || undefined;
   const badge = document.getElementById('prodBadge').value;
+  const availability = document.getElementById('prodAvailability').value || 'in';
   const img = document.getElementById('prodImg').value.trim();
   const desc = document.getElementById('prodDesc').value.trim();
 
@@ -1923,14 +1964,14 @@ async function saveProduct() {
 
   if (editingSku) {
     // Редактирование
-    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, img, desc} : p);
+    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc} : p);
   } else {
     // Добавление
     if (existing) {
       alert('Товар с таким артикулом уже существует!');
       return;
     }
-    products.unshift({name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, img, desc, emoji:'📦'});
+    products.unshift({name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc, emoji:'📦'});
   }
 
   // Сначала пишем в Supabase (источник истины) и проверяем результат —
