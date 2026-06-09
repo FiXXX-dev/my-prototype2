@@ -46,6 +46,11 @@ nav a:hover{color:var(--lime);}
 .badge-new{background:var(--green);color:var(--dark);}
 .badge-sale{background:#FF3B6B;color:white;}
 .badge-instock{background:#e8faf0;color:var(--green-dark);border:1px solid var(--green-light);}
+.badge-order{background:#fffbe8;color:#a07800;border:1px solid #ffe2b3;}
+.badge-oos{background:#ffe8ee;color:var(--danger);border:1px solid #ffd0d8;}
+.prod-oos-block{background:#fff5f7;border:1.5px solid #ffd0d8;border-radius:16px;padding:18px 20px;margin-bottom:20px;}
+.prod-oos-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:900;color:var(--danger);margin-bottom:6px;}
+.prod-oos-sub{font-size:13px;color:#6b8a74;line-height:1.5;}
 .prod-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;line-height:1.2;letter-spacing:-1px;margin-bottom:8px;}
 .prod-sku{color:#8aaa94;font-size:13px;margin-bottom:24px;}
 .prod-price-block{background:var(--gray);border-radius:20px;padding:24px;margin-bottom:24px;}
@@ -343,7 +348,7 @@ function renderProduct() {
       <div class="product-info">
         <div class="prod-badges">
           ${badgeHtml(product.badge, product.isHit)}
-          <span class="badge badge-instock">✓ В наличии</span>
+          ${availBadgeHtml(product.availability)}
         </div>
 
         <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -360,6 +365,11 @@ function renderProduct() {
           <div class="price-unit">за 1 штуку · от 1 шт</div>
         </div>
 
+        ${(product.availability || 'in') === 'out' ? `
+        <div class="prod-oos-block">
+          <div class="prod-oos-title">Нет в наличии</div>
+          <div class="prod-oos-sub">Этого товара сейчас нет. Свяжитесь с нами — подскажем сроки поступления.</div>
+        </div>` : `
         <div class="counter-wrap" id="counterWrap">
           <div class="counter-label" data-i18n="product.qty_label">Количество:</div>
           <div class="counter">
@@ -372,7 +382,7 @@ function renderProduct() {
         <div class="buy-btns" id="buyBtns">
           <button class="btn-buy" onclick="buyNow()" data-i18n="product.buy_now">Купить сейчас</button>
           <button class="btn-cart" onclick="addCurrentToCart()" data-i18n="product.add_to_cart">🛒 В корзину</button>
-        </div>
+        </div>`}
         <div class="cart-qty-block" id="cartQtyBlock" style="display:none;">
           <div class="cart-qty-label" data-i18n="product.in_cart">✓ В корзине</div>
           <div class="cart-qty-control">
@@ -429,8 +439,18 @@ function changeQtyLocal(delta) {
   el.value = Math.max(1, parseInt(el.value) + delta);
 }
 
+// Бейдж наличия в карточке товара.
+function availBadgeHtml(av){
+  const v = av || 'in';
+  if (v === 'out')   return '<span class="badge badge-oos">✕ Нет в наличии</span>';
+  if (v === 'order') return '<span class="badge badge-order">⏳ Под заказ</span>';
+  return '<span class="badge badge-instock">✓ В наличии</span>';
+}
+
 function addCurrentToCart() {
-  const qty = parseInt(document.getElementById('qty').value) || 1;
+  if (product && (product.availability || 'in') === 'out') return;
+  const qtyEl = document.getElementById('qty');
+  const qty = qtyEl ? (parseInt(qtyEl.value) || 1) : 1;
   for (let i = 0; i < qty; i++) {
     addToCart({name: product.name, sku: product.sku, price: product.price, img: product.img || ''});
   }
@@ -448,6 +468,14 @@ function getProductQty(){
 
 function syncCartQtyBlock(){
   if (!product) return;
+  // Нет в наличии — прячем нижнюю кнопку «В корзину», добавлять нельзя.
+  if ((product.availability || 'in') === 'out') {
+    const addBtn = document.getElementById('stickyBtnAdd');
+    if (addBtn) { addBtn.style.display = 'none'; }
+    const qtyWrap = document.getElementById('stickyQtyWrap');
+    if (qtyWrap) qtyWrap.classList.remove('show');
+    return;
+  }
   const qty = getProductQty();
   const buyBtns = document.getElementById('buyBtns');
   const qtyBlock = document.getElementById('cartQtyBlock');

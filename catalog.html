@@ -166,6 +166,8 @@
   .prod-footer{display:flex;align-items:center;justify-content:space-between;}
   .prod-price{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;color:var(--green-dark);}
   .prod-price small{font-size:12px;color:#8aaa94;font-weight:400;font-family:'Onest',sans-serif;}
+  .prod-oos{font-size:12px;font-weight:700;color:var(--danger);background:#ffe8ee;padding:6px 12px;border-radius:20px;white-space:nowrap;}
+  .prod-order-note{font-size:12px;font-weight:600;color:#a07800;margin-top:8px;}
   .btn-add{width:40px;height:40px;background:var(--green);border:none;border-radius:50%;font-size:22px;color:var(--dark);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:background .2s,transform .15s;padding:0;line-height:1;}
   .btn-add:hover{background:var(--lime);transform:scale(1.1);}
   .qty-control{display:flex;align-items:center;gap:6px;}
@@ -627,6 +629,7 @@ function addProdToCart(btn) {
   const sku = btn.dataset.sku;
   const p = ALL_PRODUCTS.find(x => x.sku === sku);
   if (!p) return;
+  if ((p.availability || 'in') === 'out') return;
   addToCart({name: p.name, sku: p.sku, price: p.price, img: p.img || ''});
   refreshCardFooter(sku);
 }
@@ -636,6 +639,12 @@ function getQtyInCart(sku){
 }
 
 function prodFooterHtml(p){
+  const avail = p.availability || 'in';
+  // Нет в наличии — добавить нельзя, показываем метку вместо кнопки.
+  if (avail === 'out') {
+    return `<div class="prod-footer"><div class="prod-price">${p.price} ₽ <small>/ шт</small></div>`
+      + `<span class="prod-oos">Нет в наличии</span></div>`;
+  }
   const qty = getQtyInCart(p.sku);
   const ctrl = qty > 0
     ? `<div class="qty-control" data-sku="${p.sku}">
@@ -644,7 +653,9 @@ function prodFooterHtml(p){
         <button class="qty-control-btn" onclick="event.preventDefault();event.stopPropagation();qtyInc('${p.sku}')" aria-label="Добавить">+</button>
        </div>`
     : `<button class="btn-add" data-sku="${p.sku}" onclick="event.preventDefault();event.stopPropagation();addProdToCart(this)">+</button>`;
-  return `<div class="prod-footer"><div class="prod-price">${p.price} ₽ <small>/ шт</small></div>${ctrl}</div>`;
+  // Под заказ — добавить можно, но помечаем.
+  const note = avail === 'order' ? `<div class="prod-order-note">⏳ Под заказ</div>` : '';
+  return `<div class="prod-footer"><div class="prod-price">${p.price} ₽ <small>/ шт</small></div>${ctrl}</div>${note}`;
 }
 
 function refreshCardFooter(sku){

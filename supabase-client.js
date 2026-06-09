@@ -1061,13 +1061,28 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       is_hit: !!p.isHit,
       description: p.desc || '',
       emoji: p.emoji || '📦',
+      // Наличие: 'in' (в наличии) | 'order' (под заказ) | 'out' (нет).
+      availability: p.availability || 'in',
       is_active: true,
     };
   }
 
+  // true, если ошибка — про отсутствующую колонку (схема ещё не обновлена).
+  function _isMissingColErr(error){
+    const m = ((error && error.message) || '') + ' ' + ((error && error.details) || '');
+    return /column .* does not exist/i.test(m) || /Could not find/i.test(m)
+        || (error && (error.code === '42703' || error.code === 'PGRST204'));
+  }
+
   window.supaUpsertProduct = async function(p){
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
-    const r = await _pgUpsert('products', _productRow(p), 'sku');
+    const row = _productRow(p);
+    let r = await _pgUpsert('products', row, 'sku');
+    // Колонки availability ещё нет в схеме → сохраняем без неё, не ломая всё остальное.
+    if (!r.ok && _isMissingColErr(r.error) && 'availability' in row) {
+      delete row.availability;
+      r = await _pgUpsert('products', row, 'sku');
+    }
     if (!r.ok) console.error('[supabase] upsert product', r.error);
     return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
@@ -1081,8 +1096,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const rows = (products || []).map(_productRow);
     const CHUNK = 50;
+    let stripAvail = false;   // станет true, если схема без колонки availability
+    const noAvail = arr => arr.map(r => { const c = {...r}; delete c.availability; return c; });
     for (let i = 0; i < rows.length; i += CHUNK) {
-      const r = await _pgUpsert('products', rows.slice(i, i + CHUNK), 'sku');
+      let chunk = rows.slice(i, i + CHUNK);
+      if (stripAvail) chunk = noAvail(chunk);
+      let r = await _pgUpsert('products', chunk, 'sku');
+      if (!r.ok && _isMissingColErr(r.error)) {
+        stripAvail = true;
+        r = await _pgUpsert('products', noAvail(chunk), 'sku');
+      }
       if (!r.ok) { console.error('[supabase] bulk upsert products', r.error); return { ok:false, error:r.error }; }
     }
     return { ok:true };
