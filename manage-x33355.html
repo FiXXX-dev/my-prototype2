@@ -394,6 +394,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <button class="side-link" onclick="showTab('products', this)"><span class="icon icon-package"></span> Товары <span class="count" id="cntProducts">0</span></button>
       <button class="side-link" onclick="showTab('categories', this)"><span class="icon icon-folder"></span> Категории <span class="count" id="cntCategories">0</span></button>
       <button class="side-link" onclick="showTab('orders', this)"><span class="icon icon-bag"></span> Заказы <span class="count" id="cntOrders">0</span></button>
+      <button class="side-link" onclick="showTab('customers', this)"><span class="icon icon-users"></span> Клиенты <span class="count" id="cntCustomers">0</span></button>
       <button class="side-link" onclick="showTab('contacts', this)"><span class="icon icon-mail"></span> Заявки <span class="count" id="cntContacts">0</span></button>
       <button class="side-link" onclick="showTab('promotions', this)"><span class="icon icon-flame"></span> Акции <span class="count" id="cntPromos">0</span></button>
       <button class="side-link" onclick="showTab('banners', this)"><span class="icon icon-image"></span> Баннеры <span class="count" id="cntBanners">0</span></button>
@@ -557,7 +558,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
           <div class="page-title">Заказы</div>
           <div class="page-sub">Все заказы клиентов</div>
         </div>
-        <button class="btn btn-secondary" onclick="clearOrders()"><span class="icon icon-trash"></span> Очистить все</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="exportOrdersCsv()"><span class="icon icon-download"></span> Экспорт CSV</button>
+          <button class="btn btn-secondary" onclick="clearOrders()"><span class="icon icon-trash"></span> Очистить все</button>
+        </div>
       </div>
       <div class="order-filter-tabs">
         <button class="order-filter-tab active" data-filter="active" onclick="setOrdersFilter('active', this)">Активные <span class="count" id="cntFilterActive">0</span></button>
@@ -565,6 +569,39 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <button class="order-filter-tab" data-filter="all" onclick="setOrdersFilter('all', this)">Все <span class="count" id="cntFilterAll">0</span></button>
       </div>
       <div id="ordersList"></div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section class="tab-content" id="tab-customers">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Клиенты</div>
+          <div class="page-sub">Зарегистрированные пользователи из базы (Supabase)</div>
+        </div>
+        <button class="btn btn-secondary" onclick="exportCustomersCsv()"><span class="icon icon-download"></span> Экспорт CSV</button>
+      </div>
+      <div style="margin-bottom:16px;">
+        <input type="text" id="searchCustomers" placeholder="🔎 Поиск по имени, телефону или email" oninput="renderCustomers()"
+               style="width:100%;max-width:420px;padding:11px 14px;border:1.5px solid #d0e8d8;border-radius:12px;font-family:inherit;font-size:14px;outline:none;">
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl" id="customersTable">
+          <thead>
+            <tr>
+              <th>Клиент</th>
+              <th>Телефон</th>
+              <th>Email</th>
+              <th>Тип</th>
+              <th style="text-align:center;">Заказов</th>
+              <th style="text-align:right;">Сумма покупок</th>
+            </tr>
+          </thead>
+          <tbody id="customersBody"></tbody>
+        </table>
+        <div class="tbl-footer">
+          <span id="customersCount">0 клиентов</span>
+        </div>
+      </div>
     </section>
 
     <!-- CONTACTS -->
@@ -1367,6 +1404,7 @@ function showTab(name, btn) {
     }
     renderOrders();
   }
+  if (name === 'customers') loadCustomersAdmin();
   if (name === 'contacts') loadContactsAdmin();
   if (name === 'promotions') loadPromotionsAdmin();
   if (name === 'news') loadNewsAdmin();
@@ -1446,6 +1484,8 @@ function loadAll() {
   // Подгружаем акции и новости в фоне, чтобы счётчики в сайдбаре были верны.
   if (typeof loadPromotionsAdmin === 'function') loadPromotionsAdmin();
   if (typeof loadNewsAdmin === 'function') loadNewsAdmin();
+  // Загружаем клиентов в фоне, чтобы счётчик в сайдбаре был верным до открытия вкладки.
+  if (typeof loadCustomersAdmin === 'function') loadCustomersAdmin();
   // Подтягиваем дерево категорий из БД, чтобы список категорий в модалке
   // товара и в фильтре сразу содержал все добавленные категории/подкатегории.
   if (typeof ensureCategoriesLoaded === 'function') {
@@ -1460,6 +1500,8 @@ function updateCounts() {
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
   document.getElementById('cntOrders').textContent = getOrders().filter(o => o.status !== 'done' && o.status !== 'issued').length;
   document.getElementById('cntContacts').textContent = _contactsCache.length || getContacts().length;
+  const cntCustEl = document.getElementById('cntCustomers');
+  if (cntCustEl && _customersCache.length) cntCustEl.textContent = _customersCache.length;
   document.getElementById('cntPromos').textContent = adminPromos.length;
   const newsCount = getNews().filter(n => n.active).length;
   const cntNewsEl = document.getElementById('cntNews');
@@ -1994,6 +2036,161 @@ function orderCardHtml(o) {
       </div></div>
     </div>
   `;
+}
+
+// ===== КЛИЕНТЫ =====
+// Список клиентов — из таблицы user_profiles (Supabase). Кол-во заказов и
+// сумму покупок считаем по заказам (тоже из Supabase, синхронизированы в
+// localStorage функцией refreshOrdersFromSupabase).
+let _customersCache = [];
+
+function _normPhone(p){ return (p || '').replace(/\D/g, '').slice(-10); }
+
+async function loadCustomersAdmin(){
+  const body = document.getElementById('customersBody');
+  if (body && !_customersCache.length) {
+    body.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:#8aaa94;">Загрузка из базы…</td></tr>';
+  }
+  // Свежие заказы нужны для корректных счётчиков/сумм.
+  if (typeof refreshOrdersFromSupabase === 'function') {
+    try { await refreshOrdersFromSupabase(); } catch(e) {}
+  }
+  if (typeof window.supaListProfiles === 'function') {
+    try {
+      const list = await window.supaListProfiles();
+      if (Array.isArray(list)) _customersCache = list;
+    } catch(e) { console.warn('[admin] list profiles failed', e); }
+  }
+  renderCustomers();
+  updateCounts();
+}
+
+// Сопоставляем заказы клиенту по user_id (UUID), телефону или email.
+function _ordersForCustomer(p, orders){
+  const phoneN = _normPhone(p.phone);
+  const emailL = (p.email || '').toLowerCase();
+  return orders.filter(o => {
+    if (p.user_id && o.userId && String(o.userId) === String(p.user_id)) return true;
+    if (phoneN && _normPhone(o.phone) === phoneN) return true;
+    if (emailL && (o.email || '').toLowerCase() === emailL) return true;
+    return false;
+  });
+}
+
+function _customerRows(){
+  const orders = getOrders();
+  return _customersCache.map(p => {
+    const fullName = [p.last_name, p.first_name, p.middle_name].filter(Boolean).join(' ')
+                     || p.company || '—';
+    const mine = _ordersForCustomer(p, orders);
+    const spent = mine
+      .filter(o => o.status === 'done' || o.status === 'issued')
+      .reduce((s, o) => s + (Number(o.total) || 0), 0);
+    return {
+      name: fullName,
+      phone: p.phone || '',
+      email: p.email || '',
+      type: p.user_type === 'company' ? 'ИП/Компания' : 'Физ. лицо',
+      company: p.company || '',
+      ordersCount: mine.length,
+      spent,
+    };
+  }).sort((a, b) => b.spent - a.spent || b.ordersCount - a.ordersCount);
+}
+
+function renderCustomers(){
+  const body = document.getElementById('customersBody');
+  if (!body) return;
+  const q = (document.getElementById('searchCustomers')?.value || '').toLowerCase().trim();
+  let rows = _customerRows();
+  if (q) {
+    rows = rows.filter(r =>
+      (r.name + ' ' + r.phone + ' ' + r.email + ' ' + r.company).toLowerCase().includes(q));
+  }
+  const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6" style="padding:32px;text-align:center;color:#8aaa94;">'
+      + (q ? 'Ничего не найдено' : 'Клиентов пока нет') + '</td></tr>';
+  } else {
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td><strong>${esc(r.name)}</strong>${r.company && r.company !== r.name ? '<br><span style="color:#8aaa94;font-size:12px;">' + esc(r.company) + '</span>' : ''}</td>
+        <td>${r.phone ? '<a href="tel:' + esc(r.phone) + '" style="color:#1aab58;text-decoration:none;">' + esc(r.phone) + '</a>' : '—'}</td>
+        <td>${r.email ? esc(r.email) : '—'}</td>
+        <td><span style="font-size:12px;color:#6b8a74;">${esc(r.type)}</span></td>
+        <td style="text-align:center;">${r.ordersCount}</td>
+        <td style="text-align:right;font-weight:700;">${r.spent.toLocaleString('ru-RU')} ₽</td>
+      </tr>`).join('');
+  }
+  const cnt = document.getElementById('customersCount');
+  if (cnt) cnt.textContent = rows.length + ' ' + _plural(rows.length, 'клиент', 'клиента', 'клиентов');
+}
+
+function _plural(n, one, few, many){
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
+// ===== ЭКСПОРТ В CSV =====
+// Универсальный helper: массив строк-массивов → скачиваемый CSV.
+// Разделитель «;» и BOM — чтобы корректно открывалось в русском Excel.
+function _downloadCsv(filename, headerRow, dataRows){
+  const esc = v => {
+    const s = (v == null ? '' : String(v)).replace(/"/g, '""');
+    return /[";\n\r]/.test(s) ? '"' + s + '"' : s;
+  };
+  const lines = [headerRow].concat(dataRows).map(row => row.map(esc).join(';'));
+  const csv = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportOrdersCsv(){
+  // Берём актуальные данные из Supabase перед выгрузкой.
+  if (typeof refreshOrdersFromSupabase === 'function') {
+    try { await refreshOrdersFromSupabase(); } catch(e) {}
+  }
+  let orders = sortOrdersDesc(getOrders());
+  if (ordersFilter === 'active') orders = orders.filter(o => o.status !== 'done' && o.status !== 'issued');
+  else if (ordersFilter === 'done') orders = orders.filter(o => o.status === 'done' || o.status === 'issued');
+  if (!orders.length) { alert('Нет заказов для экспорта'); return; }
+  const STATUS = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Доставлен',issued:'Выдан',cancelled:'Отменён'};
+  const PAY = {cash:'Наличными/картой',invoice:'Безнал (счёт)',transfer:'Перевод на карту'};
+  const headers = ['Номер','Дата','Статус','Клиент','Телефон','Email','Компания','Доставка','Адрес','Дата доставки','Оплата','Сумма, ₽','Товары','Комментарий'];
+  const rows = orders.map(o => [
+    o.num != null ? o.num : (o.id != null ? o.id : ''),
+    o.date || '',
+    STATUS[o.status] || 'В обработке',
+    o.name || '',
+    o.phone || '',
+    o.email || '',
+    o.company || '',
+    o.method === 'pickup' ? 'Самовывоз' : 'Курьер',
+    o.address || '',
+    [o.deliveryDate, o.deliveryTime].filter(Boolean).join(' '),
+    PAY[o.payment] || o.payment || '',
+    o.total != null ? o.total : '',
+    (o.items || []).map(i => `${i.name} x${i.qty}`).join('; '),
+    (o.comment || '').replace(/[\r\n]+/g, ' '),
+  ]);
+  const today = new Date().toISOString().slice(0, 10);
+  _downloadCsv(`orders_${today}.csv`, headers, rows);
+}
+
+async function exportCustomersCsv(){
+  if (!_customersCache.length) { try { await loadCustomersAdmin(); } catch(e) {} }
+  const rows = _customerRows();
+  if (!rows.length) { alert('Нет клиентов для экспорта'); return; }
+  const headers = ['Клиент','Телефон','Email','Тип','Компания','Заказов','Сумма покупок, ₽'];
+  const data = rows.map(r => [r.name, r.phone, r.email, r.type, r.company, r.ordersCount, r.spent]);
+  const today = new Date().toISOString().slice(0, 10);
+  _downloadCsv(`customers_${today}.csv`, headers, data);
 }
 
 // ===== Supabase orders bridge =====
