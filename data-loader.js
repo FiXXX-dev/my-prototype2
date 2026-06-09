@@ -372,6 +372,14 @@
   }
 
   async function _fetchSettings() {
+    // 1. Пробуем Supabase (авторитетный источник)
+    if (typeof window.supaGetSettings === 'function') {
+      try {
+        const d = await window.supaGetSettings();
+        if (d && typeof d === 'object' && Object.keys(d).length) return d;
+      } catch (e) { console.warn('[data-loader] supabase settings failed, trying json', e); }
+    }
+    // 2. Fallback: статический settings.json
     try {
       const resp = await fetch('settings.json', { cache: 'no-cache' });
       if (resp.ok) {
@@ -379,10 +387,6 @@
         if (obj && typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length) return obj;
       }
     } catch (e) {}
-    if (typeof window.supaGetSettings === 'function') {
-      try { const d = await window.supaGetSettings(); if (d && typeof d === 'object') return d; }
-      catch (e) { console.error('[data-loader] settings fallback failed', e); }
-    }
     return {};
   }
 
