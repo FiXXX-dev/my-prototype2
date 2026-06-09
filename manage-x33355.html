@@ -479,11 +479,16 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
       <!-- Аналитика: топ товаров + график выручки -->
       <div class="dash-analytics-grid" style="margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div class="tbl-wrap" style="padding:20px;">
-          <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;"><span class="icon icon-flame"></span> Топ товаров</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;"><span class="icon icon-flame"></span> Топ товаров</div>
+            <div id="dashTopToggle" style="display:flex;gap:4px;"></div>
+          </div>
+          <div id="dashTopSub" style="font-size:12px;color:#8aaa94;margin:6px 0 14px;"></div>
           <div id="dashTopProducts"></div>
         </div>
         <div class="tbl-wrap" style="padding:20px;">
-          <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;"><span class="icon icon-chart"></span> Выручка за 14 дней</div>
+          <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;"><span class="icon icon-chart"></span> Выручка за 14 дней</div>
+          <div style="font-size:12px;color:#8aaa94;margin:6px 0 14px;">Сумма заказов в статусах «Выполнен» и «Выдан» по дням. Высота столбика — относительно лучшего дня. Наведите на столбик, чтобы увидеть точную сумму.</div>
           <div id="dashRevChart"></div>
         </div>
       </div>
@@ -1595,64 +1600,119 @@ function renderDashboard() {
 
 // Аналитика на дашборде: топ продаваемых товаров + график выручки по дням.
 // Считается из заказов (синхронизированы из Supabase в localStorage).
-function _renderDashAnalytics(allOrders){
-  // ── Топ товаров по количеству (исключаем отменённые) ──
+let _dashTopMode = 'qty';        // 'qty' (по штукам) | 'revenue' (по выручке)
+let _dashOrdersForAnalytics = null;
+
+function setDashTopMode(m){
+  _dashTopMode = m;
+  if (_dashOrdersForAnalytics) _renderDashTopProducts(_dashOrdersForAnalytics);
+}
+
+function _fmtRubShort(n){
+  if (n >= 1000000) return (Math.round(n / 100000) / 10).toLocaleString('ru-RU') + ' млн';
+  if (n >= 1000) return (Math.round(n / 100) / 10).toLocaleString('ru-RU') + 'к';
+  return String(Math.round(n));
+}
+
+function _renderDashTopProducts(allOrders){
+  // Без отменённых: они не продажи.
   const counted = allOrders.filter(o => o.status !== 'cancelled');
   const map = {};
+  let totalQty = 0, totalRev = 0;
   counted.forEach(o => (o.items || []).forEach(it => {
     const key = it.name || it.sku || '—';
     if (!map[key]) map[key] = { name: key, qty: 0, revenue: 0 };
-    map[key].qty += Number(it.qty) || 0;
-    map[key].revenue += (Number(it.price) || 0) * (Number(it.qty) || 0);
+    const q = Number(it.qty) || 0, r = (Number(it.price) || 0) * q;
+    map[key].qty += q; map[key].revenue += r;
+    totalQty += q; totalRev += r;
   }));
-  const top = Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 7);
-  const maxQty = top.length ? top[0].qty : 0;
+  const byRevenue = _dashTopMode === 'revenue';
+  const top = Object.values(map)
+    .sort((a, b) => byRevenue ? b.revenue - a.revenue : b.qty - a.qty)
+    .slice(0, 7);
+  const maxVal = top.length ? (byRevenue ? top[0].revenue : top[0].qty) : 0;
+  const totalVal = byRevenue ? totalRev : totalQty;
+
+  const tg = document.getElementById('dashTopToggle');
+  if (tg) {
+    tg.innerHTML = [['qty', 'По штукам'], ['revenue', 'По выручке']].map(([m, label]) => {
+      const on = _dashTopMode === m;
+      return `<button onclick="setDashTopMode('${m}')" style="border:1px solid ${on ? '#2ECC71' : '#dce8e0'};background:${on ? '#eafaf0' : '#fff'};color:${on ? '#1aab58' : '#6b8a74'};font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;">${label}</button>`;
+    }).join('');
+  }
+  const sub = document.getElementById('dashTopSub');
+  if (sub) {
+    sub.textContent = byRevenue
+      ? 'Товары, принёсшие больше всего денег (все заказы, кроме отменённых). Полоска — сравнение с лидером, процент — доля от всей выручки.'
+      : 'Самые продаваемые по количеству штук (все заказы, кроме отменённых). Полоска — сравнение с лидером, процент — доля от всех проданных штук.';
+  }
+
   const elTop = document.getElementById('dashTopProducts');
-  if (elTop) {
-    elTop.innerHTML = !top.length
-      ? '<div style="color:#8aaa94;font-size:14px;padding:8px 0;">Пока нет данных о продажах</div>'
-      : top.map((p, i) => `
+  if (!elTop) return;
+  elTop.innerHTML = !top.length
+    ? '<div style="color:#8aaa94;font-size:14px;padding:8px 0;">Пока нет данных о продажах</div>'
+    : top.map((p, i) => {
+      const val = byRevenue ? p.revenue : p.qty;
+      const barPct = maxVal ? Math.round(val / maxVal * 100) : 0;
+      const sharePct = totalVal ? Math.round(val / totalVal * 100) : 0;
+      const shareHint = byRevenue ? '% от всей выручки' : '% от всех проданных штук';
+      return `
         <div style="margin-bottom:13px;">
           <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px;">
             <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i + 1}. ${escH(p.name)}</span>
-            <span style="color:#6b8a74;white-space:nowrap;">${p.qty} шт · ${p.revenue.toLocaleString('ru-RU')} ₽</span>
+            <span style="color:#6b8a74;white-space:nowrap;">${p.qty} шт · ${p.revenue.toLocaleString('ru-RU')} ₽ · <strong style="color:#1aab58;" title="${shareHint}">${sharePct}%</strong></span>
           </div>
-          <div style="height:8px;background:#eef5f0;border-radius:6px;overflow:hidden;">
-            <div style="height:100%;width:${maxQty ? Math.round(p.qty / maxQty * 100) : 0}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;"></div>
+          <div style="height:8px;background:#eef5f0;border-radius:6px;overflow:hidden;" title="${barPct}% от лидера">
+            <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;"></div>
           </div>
-        </div>`).join('');
-  }
+        </div>`;
+    }).join('');
+}
 
-  // ── График выручки за 14 дней (по выполненным заказам) ──
+function _renderDashAnalytics(allOrders){
+  _dashOrdersForAnalytics = allOrders;
+  _renderDashTopProducts(allOrders);
+
+  // ── График выручки за 14 дней (по выполненным/выданным заказам) ──
   const DAYS = 14;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const buckets = [];
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date(today); d.setDate(today.getDate() - i);
-    buckets.push({ d: d, sum: 0 });
+    buckets.push({ d: d, sum: 0, n: 0 });
   }
   allOrders.filter(o => o.status === 'done' || o.status === 'issued').forEach(o => {
     const od = parseOrderDate(o.date); if (!od) return;
     od.setHours(0, 0, 0, 0);
     const b = buckets.find(x => x.d.getTime() === od.getTime());
-    if (b) b.sum += Number(o.total) || 0;
+    if (b) { b.sum += Number(o.total) || 0; b.n++; }
   });
   const maxSum = Math.max(1, ...buckets.map(b => b.sum));
+  const totalSum = buckets.reduce((s, b) => s + b.sum, 0);
+  const totalN = buckets.reduce((s, b) => s + b.n, 0);
+  const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
   const elChart = document.getElementById('dashRevChart');
   if (elChart) {
     const hasAny = buckets.some(b => b.sum > 0);
     elChart.innerHTML = !hasAny
       ? '<div style="color:#8aaa94;font-size:14px;padding:8px 0;">Нет выполненных заказов за 14 дней</div>'
-      : '<div style="display:flex;align-items:flex-end;gap:4px;height:130px;">' +
-        buckets.map(b => {
-          const h = Math.round(b.sum / maxSum * 116);
-          const title = b.d.getDate() + '.' + (b.d.getMonth() + 1) + ' — ' + b.sum.toLocaleString('ru-RU') + ' ₽';
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;" title="${title}">
+      : '<div style="display:flex;align-items:flex-end;gap:4px;height:158px;">' +
+        buckets.map((b, i) => {
+          const h = Math.round(b.sum / maxSum * 110);
+          const dateLabel = b.d.getDate() + ' ' + MONTHS[b.d.getMonth()];
+          const title = dateLabel + ' — ' + b.sum.toLocaleString('ru-RU') + ' ₽ · ' + b.n + ' ' + plural(b.n, ['заказ', 'заказа', 'заказов']);
+          // Подпись месяца — под первым столбиком и при смене месяца.
+          const showMonth = i === 0 || b.d.getDate() === 1;
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%;" title="${title}">
+            <span style="font-size:9px;color:${b.sum ? '#1aab58' : 'transparent'};font-weight:700;white-space:nowrap;">${b.sum ? _fmtRubShort(b.sum) : '·'}</span>
             <div style="width:100%;height:${Math.max(2, h)}px;background:${b.sum ? 'linear-gradient(180deg,#2ECC71,#1aab58)' : '#eef5f0'};border-radius:4px 4px 0 0;"></div>
-            <span style="font-size:9px;color:#8aaa94;">${b.d.getDate()}</span>
+            <span style="font-size:9px;color:#8aaa94;white-space:nowrap;">${showMonth ? b.d.getDate() + '.' + String(b.d.getMonth() + 1).padStart(2, '0') : b.d.getDate()}</span>
           </div>`;
         }).join('') + '</div>' +
-        `<div style="font-size:11px;color:#8aaa94;margin-top:10px;text-align:right;">Максимум за день: ${maxSum.toLocaleString('ru-RU')} ₽</div>`;
+        `<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#8aaa94;margin-top:10px;flex-wrap:wrap;">
+          <span>Итого за 14 дней: <strong style="color:#1d3324;">${totalSum.toLocaleString('ru-RU')} ₽</strong> · ${totalN} ${plural(totalN, ['заказ', 'заказа', 'заказов'])}</span>
+          <span>Лучший день: ${maxSum.toLocaleString('ru-RU')} ₽</span>
+        </div>`;
   }
 }
 
