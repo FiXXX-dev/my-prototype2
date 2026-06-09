@@ -1586,11 +1586,14 @@ function renderDashboard() {
   document.getElementById('doneAll').textContent = doneOrders.length;
   document.getElementById('doneAllSum').textContent = doneOrders.reduce((s,o)=>s+o.total,0).toLocaleString('ru-RU') + ' ₽';
 
-  // Последние заказы — сортируем по дате убывания, показываем до 10
-  const recent = sortOrdersDesc(allOrders).slice(0, 10);
+  // Последние заказы — без выданных (они уже закрыты, на дашборде не нужны).
+  // Сортируем по дате убывания, показываем до 10.
+  const recent = sortOrdersDesc(allOrders.filter(o => o.status !== 'issued')).slice(0, 10);
   const last = document.getElementById('dashLastOrders');
   if (recent.length === 0) {
-    last.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
+    last.innerHTML = allOrders.length
+      ? '<div class="empty"><div class="empty-icon"><span class="icon icon-check" style="color:#2ECC71;"></span></div><div class="empty-title">Все заказы выданы</div><div>Активных заказов нет — новые появятся здесь</div></div>'
+      : '<div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
   } else {
     last.innerHTML = recent.map(o => orderCardHtml(o)).join('');
   }
