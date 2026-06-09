@@ -1794,6 +1794,7 @@ function setAvailability(sku, val){
       .then(r => {
         if (!r || !r.ok) { toast('⚠ Не удалось сохранить наличие в базу'); return; }
         if (typeof supaRequestSync === 'function') supaRequestSync();
+        toast('✓ Наличие сохранено — на сайте обновится в течение 1–2 минут');
       })
       .catch(e => { console.error('[admin] setAvailability supabase', e); toast('⚠ Ошибка сохранения наличия'); });
   }

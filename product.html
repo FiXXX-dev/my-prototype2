@@ -537,6 +537,19 @@ function loadAndInitProduct() {
   });
 }
 
+// Stale-while-revalidate: первый рендер мог пройти по кэшу из localStorage.
+// Когда из сети пришли свежие товары — перерисовываем страницу, если данные
+// этого товара изменились (наличие, цена и т.д.).
+window.addEventListener('kleverProductsLoaded', function () {
+  const list = (typeof getProductsSync === 'function') ? getProductsSync() : [];
+  if (!list.length) return;
+  const fresh = list.find(p => p.sku === sku) || null;
+  if (JSON.stringify(fresh) === JSON.stringify(product)) return;
+  PRODUCTS = list;
+  product = fresh;
+  renderProduct();
+});
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', loadAndInitProduct);
 } else {
