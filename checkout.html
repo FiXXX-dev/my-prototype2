@@ -857,9 +857,8 @@ async function submitOrder() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Отправляем…'; }
   const _unlockBtn = () => { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _origBtnTxt; } };
 
-  // Генерируем локальный ID сразу (fallback если Supabase не ответит).
-  let finalNum = Math.floor(100000 + Math.random() * 900000);
-  orderRecord.num = finalNum;
+  // Номер заказа = реальный id из Supabase. До ответа сервера он не известен.
+  let finalNum = null;
 
   // ── Сохраняем в localStorage НЕМЕДЛЕННО ─────────────────────────────────
   // Заказ не должен теряться из-за медленной сети. Сохраняем локально сразу,
@@ -901,7 +900,7 @@ async function submitOrder() {
   document.getElementById('checkoutWrap').style.display = 'none';
   const successWrap = document.getElementById('successWrap');
   successWrap.classList.add('visible');
-  document.getElementById('successOrderNum').textContent = '#' + finalNum;
+  document.getElementById('successOrderNum').textContent = finalNum === null ? 'Ваш заказ принят' : ('#' + finalNum);
 
   const methodText = effectiveDelivery === 'courier'
     ? `Доставим по адресу: ${addressClean}${deliveryDateClean ? '<br><span class="icon icon-calendar" style="font-size:12px;vertical-align:-0.1em;"></span> ' + deliveryDateClean : ''}${deliveryTimeClean ? ' ⏰ ' + deliveryTimeClean : ''}`
