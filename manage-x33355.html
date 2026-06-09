@@ -312,6 +312,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
   .tbl{min-width:680px;}
   .order-filter-tabs{overflow-x:auto;}
   .order-filter-tab{white-space:nowrap;font-size:13px;padding:9px 14px;}
+  .dash-analytics-grid{grid-template-columns:1fr !important;}
 }
 @media(max-width:600px){
   .sidebar{padding:10px 12px;gap:8px;}
@@ -471,6 +472,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
             <div class="stat-num" id="doneAll" style="font-size:24px;">0</div>
             <div class="stat-sub"><span id="doneAllSum">0 ₽</span></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Аналитика: топ товаров + график выручки -->
+      <div class="dash-analytics-grid" style="margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;"><span class="icon icon-flame"></span> Топ товаров</div>
+          <div id="dashTopProducts"></div>
+        </div>
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;"><span class="icon icon-chart"></span> Выручка за 14 дней</div>
+          <div id="dashRevChart"></div>
         </div>
       </div>
 
@@ -1565,6 +1578,71 @@ function renderDashboard() {
     last.innerHTML = '<div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Заказов пока нет</div><div>Они появятся здесь когда покупатели оформят первые заказы</div></div>';
   } else {
     last.innerHTML = recent.map(o => orderCardHtml(o)).join('');
+  }
+
+  _renderDashAnalytics(allOrders);
+}
+
+// Аналитика на дашборде: топ продаваемых товаров + график выручки по дням.
+// Считается из заказов (синхронизированы из Supabase в localStorage).
+function _renderDashAnalytics(allOrders){
+  // ── Топ товаров по количеству (исключаем отменённые) ──
+  const counted = allOrders.filter(o => o.status !== 'cancelled');
+  const map = {};
+  counted.forEach(o => (o.items || []).forEach(it => {
+    const key = it.name || it.sku || '—';
+    if (!map[key]) map[key] = { name: key, qty: 0, revenue: 0 };
+    map[key].qty += Number(it.qty) || 0;
+    map[key].revenue += (Number(it.price) || 0) * (Number(it.qty) || 0);
+  }));
+  const top = Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 7);
+  const maxQty = top.length ? top[0].qty : 0;
+  const elTop = document.getElementById('dashTopProducts');
+  if (elTop) {
+    elTop.innerHTML = !top.length
+      ? '<div style="color:#8aaa94;font-size:14px;padding:8px 0;">Пока нет данных о продажах</div>'
+      : top.map((p, i) => `
+        <div style="margin-bottom:13px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px;">
+            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i + 1}. ${escH(p.name)}</span>
+            <span style="color:#6b8a74;white-space:nowrap;">${p.qty} шт · ${p.revenue.toLocaleString('ru-RU')} ₽</span>
+          </div>
+          <div style="height:8px;background:#eef5f0;border-radius:6px;overflow:hidden;">
+            <div style="height:100%;width:${maxQty ? Math.round(p.qty / maxQty * 100) : 0}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;"></div>
+          </div>
+        </div>`).join('');
+  }
+
+  // ── График выручки за 14 дней (по выполненным заказам) ──
+  const DAYS = 14;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const buckets = [];
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    buckets.push({ d: d, sum: 0 });
+  }
+  allOrders.filter(o => o.status === 'done' || o.status === 'issued').forEach(o => {
+    const od = parseOrderDate(o.date); if (!od) return;
+    od.setHours(0, 0, 0, 0);
+    const b = buckets.find(x => x.d.getTime() === od.getTime());
+    if (b) b.sum += Number(o.total) || 0;
+  });
+  const maxSum = Math.max(1, ...buckets.map(b => b.sum));
+  const elChart = document.getElementById('dashRevChart');
+  if (elChart) {
+    const hasAny = buckets.some(b => b.sum > 0);
+    elChart.innerHTML = !hasAny
+      ? '<div style="color:#8aaa94;font-size:14px;padding:8px 0;">Нет выполненных заказов за 14 дней</div>'
+      : '<div style="display:flex;align-items:flex-end;gap:4px;height:130px;">' +
+        buckets.map(b => {
+          const h = Math.round(b.sum / maxSum * 116);
+          const title = b.d.getDate() + '.' + (b.d.getMonth() + 1) + ' — ' + b.sum.toLocaleString('ru-RU') + ' ₽';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;" title="${title}">
+            <div style="width:100%;height:${Math.max(2, h)}px;background:${b.sum ? 'linear-gradient(180deg,#2ECC71,#1aab58)' : '#eef5f0'};border-radius:4px 4px 0 0;"></div>
+            <span style="font-size:9px;color:#8aaa94;">${b.d.getDate()}</span>
+          </div>`;
+        }).join('') + '</div>' +
+        `<div style="font-size:11px;color:#8aaa94;margin-top:10px;text-align:right;">Максимум за день: ${maxSum.toLocaleString('ru-RU')} ₽</div>`;
   }
 }
 
