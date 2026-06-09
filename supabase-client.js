@@ -341,10 +341,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const data = await _pgGetRetry('orders', { select: '*', order: 'created_at.desc' });
       if (!Array.isArray(data)) return null;
       return data.map(r => ({
-        // Display id: prefer the supplied "num" column, fall back to the
-        // Supabase row id so admin never shows "#undefined". This also makes
-        // bare-minimal schemas (only id+5 fields) display nicely as #1, #2…
-        num: r.num != null ? r.num : r.id,
+        // Номер заказа = реальный id из Supabase (и в админке, и везде).
+        num: r.id,
         id: r.id,
         date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
         status: r.status || 'new',
