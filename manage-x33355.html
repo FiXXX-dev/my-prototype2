@@ -176,7 +176,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 .status-badge-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:'Onest',sans-serif;transition:filter .15s,transform .1s;line-height:1.4;}
 .status-badge-btn:hover{filter:brightness(.88);transform:scale(1.03);}
 .status-badge-btn .sa{font-size:9px;opacity:0.65;margin-left:1px;}
-.status-drop-menu{position:fixed;top:0;left:0;background:white;border:1.5px solid #e0ece4;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.14);z-index:600;min-width:195px;padding:6px;display:none;}
+.status-drop-menu{position:fixed;top:0;left:0;background:white;border:1.5px solid #e0ece4;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.14);z-index:600;min-width:195px;padding:6px;display:none;max-height:calc(100vh - 16px);overflow-y:auto;}
 .status-drop-menu.open{display:block;}
 .status-drop-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:none;background:none;width:100%;text-align:left;font-family:'Onest',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:8px;color:#1a2e22;transition:background .12s;}
 .status-drop-item:hover{background:#f2f7f4;}
@@ -2246,9 +2246,19 @@ function toggleStatusMenu(btn, e) {
   let left = rect.left;
   const menuWidth = 200;
   if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
-  menu.style.top = (rect.bottom + 4) + 'px';
   menu.style.left = Math.max(8, left) + 'px';
+  // Показываем, затем по реальной высоте решаем — открыть вниз или вверх,
+  // чтобы меню у нижнего края экрана не обрезалось (его нельзя было доскроллить,
+  // т.к. position:fixed). Если не влезает никуда — внутренний скролл (CSS max-height).
   menu.classList.add('open');
+  const menuH = menu.offsetHeight;
+  const spaceBelow = window.innerHeight - rect.bottom - 8;
+  const spaceAbove = rect.top - 8;
+  let top;
+  if (menuH <= spaceBelow) top = rect.bottom + 4;          // влезает снизу
+  else if (menuH <= spaceAbove) top = rect.top - menuH - 4; // разворачиваем вверх
+  else top = 8;                                             // не влезает — к верху, со скроллом
+  menu.style.top = Math.max(8, top) + 'px';
 }
 
 function pickStatus(el, num, status) {
