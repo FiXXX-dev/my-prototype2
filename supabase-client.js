@@ -522,10 +522,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.supaSignIn = async function(email, password){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      const result = await Promise.race([
+        sb.auth.signInWithPassword({ email, password }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+      ]);
+      const { data, error } = result;
       if (error) return { ok:false, error };
       return { ok:true, user: data.user, session: data.session };
-    } catch(e) { return { ok:false, error:e }; }
+    } catch(e) {
+      if (e && e.message === 'timeout') {
+        return { ok:false, error: { message: 'Превышено время ожидания. Проверьте соединение и попробуйте снова.' } };
+      }
+      return { ok:false, error:e };
+    }
   };
 
   window.supaSignOut = async function(){
