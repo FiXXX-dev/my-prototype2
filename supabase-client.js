@@ -375,6 +375,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         invoiceInn: r.invoice_inn || '',
         language: r.language,
         _supaId: r.id,
+        userId: r.user_id || null,
       }));
     } catch (e) {
       console.error('[supabase] list exception', e);
