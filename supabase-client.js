@@ -278,6 +278,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       return m ? m[1] : null;
     }
 
+    // user_id — колонка типа uuid. Локальные пользователи (регистрация по
+    // телефону/паролю) имеют id вида "u1780688605663", который НЕ является
+    // валидным UUID → Postgres отклоняет всю вставку (22P02, 400 Bad Request).
+    // Пропускаем в БД только настоящий UUID; иначе null — заказ всё равно
+    // свяжется с пользователем по телефону/email.
+    const _isUuid = v => typeof v === 'string'
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
     const fullRow = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
@@ -298,7 +306,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
-      user_id: order.userId || null,
+      user_id: _isUuid(order.userId) ? order.userId : null,
     };
 
     // Recursively retry, removing the offending column on each missing-column error.
