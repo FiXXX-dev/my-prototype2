@@ -24,7 +24,3 @@ ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS comment          text,
   ADD COLUMN IF NOT EXISTS language         text    DEFAULT 'ru',
   ADD COLUMN IF NOT EXISTS user_id          uuid;
-
--- Username Telegram-бота уведомлений (см. telegram_notifications.sql)
-ALTER TABLE public.settings
-  ADD COLUMN IF NOT EXISTS tg_bot text DEFAULT '';
