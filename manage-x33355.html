@@ -784,6 +784,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <input type="number" id="prodPrice" placeholder="35">
       </div>
       <div class="form-grp">
+        <label>Старая цена (₽) <span style="color:#8aaa94;font-size:11px;font-weight:400;">— если заполнена, показывается зачёркнутой + % скидки</span></label>
+        <input type="number" id="prodOldPrice" placeholder="Например: 50 (было до скидки)">
+      </div>
+      <div class="form-grp">
         <label>Категория *</label>
         <select id="prodCat" onchange="onProductCatChange()">
           <option>Бытовая химия</option>
@@ -1735,6 +1739,7 @@ async function loadProductsAdmin() {
           desc: p.description || p.desc || '',
           emoji: p.emoji || '📦',
           availability: p.availability || 'in',
+          old_price: Number(p.old_price) || 0,
         }));
         try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
         populateFilterCat();
@@ -1777,7 +1782,7 @@ function renderProducts() {
         <td><span class="col-num">${p.sku}</span></td>
         <td>${p.cat}</td>
         <td><strong>${p.price} ₽</strong></td>
-        <td>${badgeHtml(p.badge)}</td>
+        <td>${badgeHtml(p.badge, p.old_price, p.price)}</td>
         <td>${availabilitySelectHtml(p)}</td>
         <td style="text-align:center;">
           <button class="hit-star ${p.isHit ? 'on' : ''}" onclick="toggleHit('${p.sku}')" title="${p.isHit ? 'Убрать из хитов' : 'Сделать хитом продаж'}">${p.isHit ? '⭐' : '☆'}</button>
@@ -1863,10 +1868,13 @@ function setAvailability(sku, val){
   }
 }
 
-function badgeHtml(b) {
+function badgeHtml(b, oldPrice, price) {
   if (b==='hit') return '<span class="col-badge b-hit"><span class="icon icon-flame"></span> Хит</span>';
   if (b==='new') return '<span class="col-badge b-new">Новинка</span>';
-  if (b==='sale') return '<span class="col-badge b-sale"><span class="icon icon-tag"></span> Скидка</span>';
+  if (b==='sale' || (oldPrice > 0 && price > 0 && oldPrice > price)) {
+    const pct = (oldPrice > 0 && price > 0 && oldPrice > price) ? Math.round((1 - price/oldPrice)*100) : null;
+    return '<span class="col-badge b-sale"><span class="icon icon-tag"></span> Скидка' + (pct ? ' -'+pct+'%' : '') + '</span>';
+  }
   return '<span style="color:#c0d0c5;">—</span>';
 }
 
@@ -1911,6 +1919,7 @@ function openProductModal() {
   document.getElementById('prodName').value = '';
   document.getElementById('prodSku').value = '';
   document.getElementById('prodPrice').value = '';
+  document.getElementById('prodOldPrice').value = '';
   document.getElementById('prodBadge').value = '';
   document.getElementById('prodAvailability').value = 'in';
   document.getElementById('prodImg').value = '';
@@ -1978,6 +1987,7 @@ function editProduct(sku) {
   document.getElementById('prodName').value = p.name;
   document.getElementById('prodSku').value = p.sku;
   document.getElementById('prodPrice').value = p.price;
+  document.getElementById('prodOldPrice').value = p.old_price || '';
   document.getElementById('prodBadge').value = p.badge || '';
   document.getElementById('prodAvailability').value = p.availability || 'in';
   document.getElementById('prodImg').value = p.img || '';
@@ -2003,6 +2013,7 @@ async function saveProduct() {
   const name = document.getElementById('prodName').value.trim();
   const sku = document.getElementById('prodSku').value.trim();
   const price = parseFloat(document.getElementById('prodPrice').value);
+  const old_price = parseFloat(document.getElementById('prodOldPrice').value) || 0;
   // value списка = id категории. Имя берём из дерева (для p.cat и отображения),
   // id — для категории на клиенте (классификация/фильтры).
   const categoryId = document.getElementById('prodCat').value || undefined;
@@ -2028,14 +2039,14 @@ async function saveProduct() {
 
   if (editingSku) {
     // Редактирование
-    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc} : p);
+    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, old_price: old_price || undefined, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc} : p);
   } else {
     // Добавление
     if (existing) {
       alert('Товар с таким артикулом уже существует!');
       return;
     }
-    products.unshift({name, sku, price, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc, emoji:'📦'});
+    products.unshift({name, sku, price, old_price: old_price || undefined, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc, emoji:'📦'});
   }
 
   // Сначала пишем в Supabase (источник истины) и проверяем результат —

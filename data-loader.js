@@ -43,6 +43,7 @@
       desc: p.description || p.desc || '',
       emoji: p.emoji || '📦',
       availability: p.availability || 'in',
+      old_price: Number(p.old_price) || 0,
     });
   }
 

@@ -255,7 +255,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
   <div style="flex:1;min-width:240px;background:#fff8e8;border:1.5px solid #ffd9a8;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;">
     <span style="font-size:24px;">💰</span>
     <div style="font-size:13px;line-height:1.4;">
-      <strong style="display:block;color:#cf7a00;">Минимальная сумма — 5 000 ₽</strong>
+      <strong style="display:block;color:#cf7a00;">Минимальная сумма — <span id="minOrderBadge">5 000 ₽</span></strong>
       <span style="color:#8a6a2a;"><span data-i18n="checkout.min_warn_desc">При меньшей сумме заказ не оформляется</span></span>
     </div>
   </div>
@@ -427,7 +427,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <div class="min-order-warning" id="minOrderWarning">
       <span class="icon icon-alert"></span>
       <div class="text">
-        <strong>Минимальная сумма заказа — 5 000 ₽</strong>
+        <strong>Минимальная сумма заказа — <span id="minOrderText">5 000</span> ₽</strong>
         Добавьте товаров ещё на <span id="needMore"></span> ₽, чтобы оформить заказ.
       </div>
     </div>
@@ -550,6 +550,12 @@ function applyPickupSettings() {
     if (s.minOrder != null && !isNaN(Number(s.minOrder)))         MIN_ORDER = Number(s.minOrder);
     if (s.freeDelivery != null && !isNaN(Number(s.freeDelivery))) DELIVERY_FREE_FROM = Number(s.freeDelivery);
     if (s.deliveryCost != null && !isNaN(Number(s.deliveryCost))) DELIVERY_COST = Number(s.deliveryCost);
+    // Обновляем видимые подписи с суммой минималки — они берутся из настроек.
+    const minFmt = MIN_ORDER.toLocaleString('ru-RU');
+    ['minOrderText', 'minOrderBadge'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = minFmt + (id === 'minOrderBadge' ? ' ₽' : '');
+    });
     if (typeof updateSummary === 'function') updateSummary();
   }
   const locs = (s && Array.isArray(s.pickupLocations)) ? s.pickupLocations.filter(p => p && p.address) : [];
