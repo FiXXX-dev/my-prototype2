@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Страница не найдена — КЛЕВЕР</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="icons.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Onest',sans-serif;background:#f7fbf8;color:#1a2e22;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;}
+.logo{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;color:#2ECC71;letter-spacing:-1px;margin-bottom:48px;text-decoration:none;display:inline-block;}
+.logo span{color:#1a2e22;}
+.num{font-family:'Unbounded',sans-serif;font-size:clamp(80px,20vw,160px);font-weight:900;line-height:1;letter-spacing:-4px;
+  background:linear-gradient(135deg,#2ECC71,#C8F135);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.title{font-family:'Unbounded',sans-serif;font-size:clamp(18px,4vw,28px);font-weight:900;letter-spacing:-0.5px;margin:12px 0 16px;color:#1a2e22;}
+.sub{font-size:15px;color:#6b8a74;line-height:1.6;max-width:400px;margin:0 auto 40px;}
+.actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;text-decoration:none;transition:transform .15s,box-shadow .15s;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.1);}
+.btn-primary{background:#2ECC71;color:#fff;}
+.btn-secondary{background:#fff;color:#1a2e22;border:1.5px solid #d0e8d8;}
+.icon-box{font-size:64px;margin-bottom:8px;line-height:1;}
+</style>
+</head>
+<body>
+<a href="index.html" class="logo"><span>КЛЕ</span>ВЕР</a>
+<div class="icon-box">📦</div>
+<div class="num">404</div>
+<div class="title">Страница не найдена</div>
+<p class="sub">Возможно, ссылка устарела или была введена с ошибкой. Но мы точно сможем вам помочь!</p>
+<div class="actions">
+  <a href="catalog.html" class="btn btn-primary">
+    <span class="icon icon-grid"></span> Перейти в каталог
+  </a>
+  <a href="index.html" class="btn btn-secondary">
+    <span class="icon icon-home"></span> На главную
+  </a>
+</div>
+</body>
+</html>

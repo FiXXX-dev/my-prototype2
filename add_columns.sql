@@ -2,6 +2,11 @@
 -- Adds all columns required by the Clever HoReCa order system.
 -- All statements use IF NOT EXISTS so it's safe to run multiple times.
 
+-- Старая (до скидки) цена товара. Если > 0 и > price — показывается зачёркнутой,
+-- на карточке автоматически считается процент скидки.
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS old_price numeric DEFAULT 0;
+
 ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS status           text    DEFAULT 'new',
   ADD COLUMN IF NOT EXISTS num              text,

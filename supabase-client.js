@@ -1049,7 +1049,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   function _productRow(p){
-    return {
+    const row = {
       sku: p.sku,
       name: p.name,
       price: Number(p.price) || 0,
@@ -1063,8 +1063,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       emoji: p.emoji || '📦',
       // Наличие: 'in' (в наличии) | 'order' (под заказ) | 'out' (нет).
       availability: p.availability || 'in',
+      // Старая цена: если > 0 и > price — показывается зачёркнутой на карточке.
+      old_price: Number(p.old_price) || 0,
       is_active: true,
     };
+    return row;
   }
 
   // true, если ошибка — про отсутствующую колонку (схема ещё не обновлена).
@@ -1078,9 +1081,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const row = _productRow(p);
     let r = await _pgUpsert('products', row, 'sku');
-    // Колонки availability ещё нет в схеме → сохраняем без неё, не ломая всё остальное.
-    if (!r.ok && _isMissingColErr(r.error) && 'availability' in row) {
-      delete row.availability;
+    // Если неизвестная колонка (схема ещё не обновлена) — убираем новые поля и повторяем.
+    if (!r.ok && _isMissingColErr(r.error)) {
+      if ('old_price' in row) delete row.old_price;
+      if ('availability' in row) delete row.availability;
       r = await _pgUpsert('products', row, 'sku');
     }
     if (!r.ok) console.error('[supabase] upsert product', r.error);
@@ -1096,15 +1100,15 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const rows = (products || []).map(_productRow);
     const CHUNK = 50;
-    let stripAvail = false;   // станет true, если схема без колонки availability
-    const noAvail = arr => arr.map(r => { const c = {...r}; delete c.availability; return c; });
+    let stripNew = false;   // станет true, если схема не знает новых колонок
+    const stripNewCols = arr => arr.map(r => { const c = {...r}; delete c.availability; delete c.old_price; return c; });
     for (let i = 0; i < rows.length; i += CHUNK) {
       let chunk = rows.slice(i, i + CHUNK);
-      if (stripAvail) chunk = noAvail(chunk);
+      if (stripNew) chunk = stripNewCols(chunk);
       let r = await _pgUpsert('products', chunk, 'sku');
       if (!r.ok && _isMissingColErr(r.error)) {
-        stripAvail = true;
-        r = await _pgUpsert('products', noAvail(chunk), 'sku');
+        stripNew = true;
+        r = await _pgUpsert('products', stripNewCols(chunk), 'sku');
       }
       if (!r.ok) { console.error('[supabase] bulk upsert products', r.error); return { ok:false, error:r.error }; }
     }
