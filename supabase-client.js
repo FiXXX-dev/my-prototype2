@@ -884,7 +884,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const row = Object.assign({ id: 1 }, s);
     delete row.updated_at;
-    const r = await _pgUpsert('settings', row, 'id');
+    let r = await _pgUpsert('settings', row, 'id');
+    // Колонка tg_bot появляется после запуска telegram_notifications.sql /
+    // add_columns.sql. Если её ещё нет — сохраняем остальные настройки без неё.
+    if (!r.ok && 'tg_bot' in row) {
+      const m = ((r.error && (r.error.message||'')) + ' ' + (r.error && (r.error.details||'')));
+      if (/column .* does not exist/i.test(m) || /Could not find/i.test(m)
+          || (r.error && (r.error.code === '42703' || r.error.code === 'PGRST204'))) {
+        const slim = Object.assign({}, row);
+        delete slim.tg_bot;
+        r = await _pgUpsert('settings', slim, 'id');
+      }
+    }
     return r.ok ? { ok:true, data: r.data } : { ok:false, error:r.error };
   };
 

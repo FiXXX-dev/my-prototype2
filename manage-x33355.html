@@ -746,6 +746,15 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
 
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8f4ec;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;"><span class="icon icon-bell"></span> Telegram-бот уведомлений</div>
+          <div style="font-size:13px;color:#8aaa94;margin-bottom:18px;">Бот присылает покупателю сообщение при смене статуса заказа. Введите username бота (без @) — кнопка «Получать уведомления» появится на странице после оформления заказа. Настройка бота: файл telegram_notifications.sql в репозитории.</div>
+          <div class="form-grp" style="max-width:420px;">
+            <label>Username бота</label>
+            <input type="text" id="setTgBot" placeholder="klever_orders_bot">
+          </div>
+        </div>
+
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8f4ec;">
           <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;"><span class="icon icon-store"></span> Пункты самовывоза</div>
           <div style="font-size:13px;color:#8aaa94;margin-bottom:18px;">Адреса, из которых клиент сможет выбрать при оформлении заказа с самовывозом. Без адресов самовывоз скрывается на сайте.</div>
           <div id="pickupList"></div>
@@ -2910,6 +2919,7 @@ function _applySettingsToForm(s) {
   document.getElementById('setWhatsApp').value = s.whatsapp !== undefined && s.whatsapp !== '' ? s.whatsapp : 'https://wa.me/79119228677';
   document.getElementById('setTelegram').value = s.telegram !== undefined && s.telegram !== '' ? s.telegram : 'https://t.me/cleverspb';
   document.getElementById('setMax').value = s.max || '';
+  document.getElementById('setTgBot').value = s.tgBot || '';
   adminPickups = Array.isArray(s.pickupLocations) ? s.pickupLocations.map(p => ({
     id: p.id || ('p' + Date.now() + Math.random().toString(36).slice(2,6)),
     name: p.name || '',
@@ -2951,6 +2961,7 @@ function _normalizeSettingsRow(s) {
     whatsapp: s.whatsapp != null ? s.whatsapp : '',
     telegram: s.telegram != null ? s.telegram : '',
     max: s.max_link != null ? s.max_link : (s.max || ''),
+    tgBot: s.tg_bot != null ? s.tg_bot : (s.tgBot || ''),
     pickupLocations: pickups,
   };
 }
@@ -3009,6 +3020,9 @@ async function saveSettings() {
     whatsapp: document.getElementById('setWhatsApp').value.trim(),
     telegram: document.getElementById('setTelegram').value.trim(),
     max: document.getElementById('setMax').value.trim(),
+    // Принимаем «@bot», «t.me/bot» или просто «bot» — храним голый username.
+    tgBot: document.getElementById('setTgBot').value.trim()
+      .replace(/^https?:\/\/(t\.me|telegram\.me)\//i, '').replace(/^@/, ''),
     pickupLocations: pickups,
   };
   localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(s));
@@ -3018,6 +3032,7 @@ async function saveSettings() {
       phone1: s.phone1, phone2: s.phone2, email: s.email, address: s.address,
       min_order: s.minOrder, free_delivery: s.freeDelivery, delivery_cost: s.deliveryCost,
       whatsapp: s.whatsapp, telegram: s.telegram, max_link: s.max,
+      tg_bot: s.tgBot,
       pickup_locations: pickups,
     };
     const r = await supaUpsertSettings(row);
