@@ -51,7 +51,7 @@ alter table public.settings drop column if exists tg_bot;
 -- ── Секреты (только внутри БД) ──────────────────────────────────────────────
 create or replace function public._email_token()
 returns text language sql security definer set search_path = public
-as $$ select '6b17d896c1ec01920314d6f200447e90'::text $$;
+as $$ select 'ВСТАВЬ_ТОКЕН_NOTISEND'::text $$;
 
 create or replace function public._email_sender()
 returns text language sql security definer set search_path = public
