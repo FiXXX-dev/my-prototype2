@@ -267,6 +267,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           || error?.code === 'PGRST204';
     }
 
+    // NOT NULL violation — num column has no default in some DB schemas.
+    function isNotNullViolation(error){
+      return /null value in column .* violates not-null/i.test(error?.message || '')
+          || error?.code === '23502';
+    }
+
     // Extract the offending column name from a missing-column error so we can
     // strip only THAT column and retry — this preserves delivery_method,
     // payment_method, delivery_address, etc. as long as they exist in the schema.
@@ -321,6 +327,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         return { ok: true, data: Array.isArray(data) ? data[0] : data };
       } catch (e) {
         const error = (e && e.supaError) || e || {};
+        // num NOT NULL without DEFAULT → auto-fill with timestamp and retry once.
+        if (isNotNullViolation(error) && !('num' in row)) {
+          console.warn('[supabase] num NOT NULL in DB — retrying with auto-generated num');
+          return tryInsert({ ...row, num: Date.now() });
+        }
         if (!isMissingColumnError(error)) {
           console.error('[supabase] insert error', error);
           return { ok: false, error };
@@ -352,8 +363,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const data = await _pgGetRetry('orders', { select: '*', order: 'created_at.desc' });
       if (!Array.isArray(data)) return null;
       return data.map(r => ({
-        // Номер заказа = реальный id из Supabase (и в админке, и везде).
-        num: r.id,
+        // Номер заказа: предпочитаем num (авто-sequence), иначе UUID id.
+        num: r.num != null ? r.num : r.id,
         id: r.id,
         date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
         status: r.status || 'new',
