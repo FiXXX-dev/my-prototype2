@@ -192,6 +192,8 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
   /* Keep "Оформить заказ" reachable above the bottom tab bar */
   #submitBtn,.btn-submit-order{position:sticky !important;bottom:74px !important;z-index:50 !important;width:100% !important;}
 }
+.cart-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f1a14;color:white;padding:14px 24px;border-radius:30px;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,0.3);z-index:300;opacity:0;transition:opacity .3s,transform .3s;display:flex;align-items:center;gap:10px;max-width:90%;}
+.cart-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 <script src="categories.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -623,6 +625,8 @@ function openCart() {
   setTimeout(function(){ el.style.boxShadow = prev; }, 1100);
 }
 
+function showCartMsg(msg,isErr){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:'+(isErr?'#e05a4e':'#2ECC71')+';font-size:18px;font-weight:900;">'+(isErr?'✕':'✓')+'</span> '+msg;document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3200);}
+
 function getCart() {
   try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
   catch(e) { return []; }
@@ -800,7 +804,7 @@ async function submitOrder() {
   // Товары, которых нет в наличии, оформить нельзя.
   const _oosNames = getCart().filter(i => cartItemOOS(i.sku)).map(i => i.name);
   if (_oosNames.length) {
-    alert('Нет в наличии: ' + _oosNames.join(', ') + '.\nУдалите эти товары из заказа, чтобы оформить его.');
+    showCartMsg('Нет в наличии: ' + _oosNames.join(', ') + '. Удалите из заказа, чтобы оформить', true);
     updateSummary();
     return;
   }
@@ -1465,7 +1469,7 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
     if (typeof addToCart === 'function') { addToCart(p); return; }
     try {
       var _pp=(window.getProductsSync?window.getProductsSync():[]).find(function(x){return x.sku===p.sku;});
-      if (_pp&&(_pp.availability||'in')==='out'){alert('«'+p.name+'» сейчас нет в наличии');return;}
+      if (_pp&&(_pp.availability||'in')==='out'){showCartMsg('«'+p.name+'» сейчас нет в наличии',true);return;}
       const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
       const ex = cart.find(i => i.sku === p.sku);
       if (ex) ex.qty++; else cart.push({...p, qty:1});
