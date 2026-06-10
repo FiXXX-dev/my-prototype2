@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Проверьте статус вашего заказа в интернет-магазине Клевер по номеру заказа и номеру телефона.">
+<title>Проверить заказ — Клевер</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="icons.css">
+<link rel="preconnect" href="https://fquhoxxcucgesxrexsjn.supabase.co" crossorigin>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  :root {
+    --green: #2ECC71;
+    --green-dark: #1aab58;
+    --green-light: #a8f0c6;
+    --lime: #C8F135;
+    --dark: #0f1a14;
+    --dark2: #162119;
+    --gray: #f2f7f4;
+    --text: #1a2e22;
+    --white: #ffffff;
+    --accent: #FF6B35;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Onest', sans-serif; background: var(--white); color: var(--text); overflow-x: hidden; }
+
+  /* HEADER */
+  header { position: sticky; top: 0; z-index: 100; background: var(--dark); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 70px; border-bottom: 2px solid var(--green); }
+  .logo { font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 24px; color: var(--white); letter-spacing: -1px; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo span { color: var(--lime); }
+  nav { display: flex; gap: 32px; align-items: center; }
+  nav a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.3px; transition: color .2s; }
+  nav a:hover { color: var(--lime); }
+  .header-actions { display: flex; gap: 12px; align-items: center; }
+  .btn-phone { background: var(--green); color: var(--dark); padding: 10px 20px; border-radius: 40px; text-decoration: none; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: filter .2s; }
+  .btn-phone:hover { filter: brightness(1.1); }
+
+  /* PAGE */
+  .page-wrap { max-width: 600px; margin: 60px auto; padding: 0 20px 80px; }
+
+  .page-title { font-family: 'Unbounded', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; }
+  .page-sub { color: #6b8a74; font-size: 15px; margin-bottom: 40px; line-height: 1.6; }
+
+  /* FORM CARD */
+  .form-card { background: var(--white); border: 1.5px solid #e0ece4; border-radius: 20px; padding: 32px; margin-bottom: 24px; }
+
+  .form-group { margin-bottom: 20px; }
+  .form-label { font-size: 13px; font-weight: 600; color: #6b8a74; margin-bottom: 8px; display: block; letter-spacing: 0.3px; text-transform: uppercase; }
+  .form-input { width: 100%; padding: 14px 16px; border: 1.5px solid #d4e8dc; border-radius: 12px; font-family: 'Onest', sans-serif; font-size: 15px; color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s; background: #fff; }
+  .form-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(46,204,113,0.12); }
+  .form-input.error { border-color: #FF3B6B; box-shadow: 0 0 0 3px rgba(255,59,107,0.1); }
+  .form-hint { font-size: 12px; color: #8aaa94; margin-top: 6px; }
+
+  .btn-search { width: 100%; padding: 16px; background: var(--green); color: var(--dark); border: none; border-radius: 40px; font-family: 'Unbounded', sans-serif; font-size: 15px; font-weight: 900; cursor: pointer; transition: filter .2s, transform .1s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .btn-search:hover { filter: brightness(1.08); }
+  .btn-search:active { transform: scale(0.98); }
+  .btn-search:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+  /* ERROR MESSAGE */
+  .error-msg { display: none; background: #fff0f3; border: 1.5px solid #ffc8d0; border-radius: 14px; padding: 16px 20px; color: #c0003d; font-size: 14px; font-weight: 500; align-items: flex-start; gap: 12px; margin-top: 16px; }
+  .error-msg.visible { display: flex; }
+  .error-msg-icon { font-size: 20px; flex-shrink: 0; }
+
+  /* RESULT CARD */
+  .result-card { display: none; background: var(--white); border: 1.5px solid #e0ece4; border-radius: 20px; overflow: hidden; }
+  .result-card.visible { display: block; }
+
+  .result-header { background: var(--gray); padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .result-num { font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
+  .result-date { font-size: 13px; color: #6b8a74; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; font-family: 'Onest', sans-serif; }
+  .s-new      { background: #fff3ee; color: var(--accent); }
+  .s-assembling{ background: #fffbe8; color: #a07800; }
+  .s-courier  { background: #e8f0ff; color: #3b5bdb; }
+  .s-ready    { background: #d1fae5; color: #047857; }
+  .s-done     { background: #e8faf0; color: var(--green-dark); }
+  .s-issued   { background: #e8faf0; color: var(--green-dark); }
+  .s-cancelled{ background: #ffe8ee; color: #FF3B6B; }
+
+  .result-body { padding: 24px 28px; }
+
+  .delivery-info { background: var(--gray); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px; display: grid; gap: 8px; }
+  .di-row { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+  .di-label { color: #6b8a74; font-size: 13px; font-weight: 600; flex-shrink: 0; min-width: 90px; }
+  .di-value { color: var(--text); font-weight: 500; }
+
+  .items-title { font-size: 13px; font-weight: 700; color: #6b8a74; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; }
+  .order-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px 0; border-bottom: 1px solid #edf5f0; align-items: center; }
+  .order-item:last-child { border-bottom: none; }
+  .oi-name { font-size: 14px; font-weight: 500; }
+  .oi-qty  { font-size: 13px; color: #8aaa94; }
+  .oi-price { font-family: 'Unbounded', sans-serif; font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; }
+
+  .totals-block { margin-top: 20px; border-top: 1.5px solid #e0ece4; padding-top: 16px; }
+  .totals-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 8px; color: #6b8a74; }
+  .totals-row.total { font-family: 'Unbounded', sans-serif; font-size: 17px; font-weight: 900; color: var(--text); margin-top: 10px; margin-bottom: 0; border-top: 1.5px dashed #e0ece4; padding-top: 12px; }
+  .totals-val { font-weight: 600; color: var(--text); }
+  .totals-row.total .totals-val { color: var(--green-dark); }
+
+  .result-footer { padding: 20px 28px; border-top: 1.5px solid #edf5f0; display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-again { padding: 12px 24px; background: var(--gray); color: var(--text); border: none; border-radius: 40px; font-family: 'Onest', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: filter .15s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .btn-again:hover { filter: brightness(0.94); }
+  .btn-catalog { padding: 12px 24px; background: var(--green); color: var(--dark); border: none; border-radius: 40px; font-family: 'Onest', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: filter .15s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .btn-catalog:hover { filter: brightness(1.08); }
+
+  /* SPINNER */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(0,0,0,0.15); border-top-color: var(--dark); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+
+  /* CONTACT HINT */
+  .contact-hint { text-align: center; margin-top: 24px; color: #8aaa94; font-size: 13px; line-height: 1.6; }
+  .contact-hint a { color: var(--green-dark); font-weight: 600; text-decoration: none; }
+  .contact-hint a:hover { text-decoration: underline; }
+
+  /* FOOTER */
+  footer { background: var(--dark2); padding: 48px 40px 32px; border-top: 2px solid rgba(46,204,113,0.2); margin-top: 60px; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+  .footer-logo { font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 20px; color: var(--white); display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .footer-logo span { color: var(--lime); }
+  .footer-desc { color: rgba(255,255,255,0.5); font-size: 13px; line-height: 1.7; margin-bottom: 20px; }
+  .footer-contact a { display: block; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 8px; transition: color .2s; }
+  .footer-contact a:hover { color: var(--lime); }
+  .footer-contact .addr { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 8px; line-height: 1.6; }
+  .footer-col h4 { color: var(--lime); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+  .footer-col ul { list-style: none; }
+  .footer-col ul li { margin-bottom: 10px; }
+  .footer-col ul li a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13px; transition: color .2s; }
+  .footer-col ul li a:hover { color: var(--lime); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .footer-bottom p { color: rgba(255,255,255,0.35); font-size: 12px; }
+  .social-links { display: flex; gap: 10px; }
+  .social-link { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); text-decoration: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; transition: background .2s, color .2s; }
+  .social-link:hover { background: var(--green); color: var(--dark); }
+
+  /* MOBILE TABBAR */
+  .klever-tabbar { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200; background: var(--dark); border-top: 1.5px solid rgba(46,204,113,0.18); }
+  .klever-tabbar-inner { display: flex; }
+  .klever-tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px 10px; text-decoration: none; color: rgba(255,255,255,0.5); font-size: 10px; font-weight: 500; gap: 3px; transition: color .15s; }
+  .klever-tabbar a.active, .klever-tabbar a:hover { color: var(--green); }
+  .klever-tab-icon { font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center; height: 26px; }
+  .klever-tab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
+
+  @media (max-width: 768px) {
+    header { padding: 0 16px; height: 60px; }
+    .logo { font-size: 20px; }
+    nav { display: none; }
+    .btn-phone { display: none; }
+    .page-wrap { margin: 28px auto; }
+    .page-title { font-size: 22px; }
+    .form-card { padding: 20px 18px; }
+    .result-header { padding: 16px 18px; }
+    .result-body { padding: 16px 18px; }
+    .result-footer { padding: 16px 18px; }
+    footer { padding: 32px 20px 100px; }
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+    .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    .klever-tabbar { display: block; }
+  }
+  @media (max-width: 400px) {
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG sprite -->
+<svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="cl-leaf-a" cx="0.35" cy="0.35" r="0.85"><stop offset="0%" stop-color="#5fe39a"/><stop offset="55%" stop-color="#2ECC71"/><stop offset="100%" stop-color="#1a8f4a"/></radialGradient>
+    <radialGradient id="cl-leaf-b" cx="0.35" cy="0.35" r="0.85"><stop offset="0%" stop-color="#52d989"/><stop offset="55%" stop-color="#26b864"/><stop offset="100%" stop-color="#157d3f"/></radialGradient>
+    <linearGradient id="cl-stem" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a8f4a"/><stop offset="100%" stop-color="#0f6b34"/></linearGradient>
+  </defs>
+  <symbol id="clover-logo" viewBox="0 0 32 32">
+    <path d="M16 16 C 15.6 21 14.8 26 14.3 30 C 14.3 30.5 14.7 30.8 15.2 30.7 L 16.8 30.7 C 17.3 30.8 17.7 30.5 17.7 30 C 17.2 26 16.4 21 16 16 Z" fill="url(#cl-stem)"/>
+    <path d="M16 16 C 9.5 14.4 6 11.2 6.4 7.2 C 6.7 4 9.6 2.4 12.3 4 C 14 5 15.2 6.6 16 8.5 C 16.8 6.6 18 5 19.7 4 C 22.4 2.4 25.3 4 25.6 7.2 C 26 11.2 22.5 14.4 16 16 Z" fill="url(#cl-leaf-a)"/>
+    <path d="M16 16 C 17.6 9.5 20.8 6 24.8 6.4 C 28 6.7 29.6 9.6 28 12.3 C 27 14 25.4 15.2 23.5 16 C 25.4 16.8 27 18 28 19.7 C 29.6 22.4 28 25.3 24.8 25.6 C 20.8 26 17.6 22.5 16 16 Z" fill="url(#cl-leaf-b)"/>
+    <path d="M16 16 C 22.5 17.6 26 20.8 25.6 24.8 C 25.3 28 22.4 29.6 19.7 28 C 18 27 16.8 25.4 16 23.5 C 15.2 25.4 14 27 12.3 28 C 9.6 29.6 6.7 28 6.4 24.8 C 6 20.8 9.5 17.6 16 16 Z" fill="url(#cl-leaf-a)"/>
+    <path d="M16 16 C 14.4 22.5 11.2 26 7.2 25.6 C 4 25.3 2.4 22.4 4 19.7 C 5 18 6.6 16.8 8.5 16 C 6.6 15.2 5 14 4 12.3 C 2.4 9.6 4 6.7 7.2 6.4 C 11.2 6 14.4 9.5 16 16 Z" fill="url(#cl-leaf-b)"/>
+    <circle cx="16" cy="16" r="1.8" fill="#1a8f4a"/>
+  </symbol>
+</svg>
+
+<!-- Page loader bar -->
+<div id="page-loader" style="position:fixed;top:0;left:0;width:0;height:3px;background:linear-gradient(90deg,#2ECC71,#C8F135);z-index:99999;transition:width 0.3s ease;"></div>
+<script>(function(){var l=document.getElementById('page-loader');if(!l)return;l.style.width='30%';setTimeout(function(){l.style.width='70%'},100);window.addEventListener('load',function(){l.style.width='100%';setTimeout(function(){l.style.opacity='0';setTimeout(function(){l.remove()},300)},200)})})();</script>
+
+<header>
+  <a href="index.html" class="logo"><svg width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></a>
+  <nav>
+    <a href="catalog.html">Каталог</a>
+    <a href="sales.html">Акции</a>
+    <a href="wholesale.html">Оптовикам</a>
+    <a href="delivery.html">Доставка</a>
+    <a href="about.html">О нас</a>
+    <a href="contacts.html">Контакты</a>
+  </nav>
+  <div class="header-actions">
+    <a href="tel:+78129228677" class="btn-phone"><span class="icon icon-phone"></span> 8 (812) 922-86-77</a>
+    <a href="account.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;transition:background .2s;flex-shrink:0;" title="Личный кабинет" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'"><span class="icon icon-user"></span></a>
+  </div>
+</header>
+
+<main>
+  <div class="page-wrap">
+    <h1 class="page-title">Проверить заказ</h1>
+    <p class="page-sub">Введите номер заказа из SMS или письма и ваш телефон — покажем текущий статус.</p>
+
+    <!-- Search form -->
+    <div class="form-card" id="formCard">
+      <div class="form-group">
+        <label class="form-label" for="inputNum">Номер заказа</label>
+        <input class="form-input" type="text" id="inputNum" placeholder="Например: 12 или a3f7b2c1-..." autocomplete="off" spellcheck="false">
+        <div class="form-hint">Номер заказа указан в SMS или на странице после оформления</div>
+      </div>
+      <div class="form-group" style="margin-bottom:24px;">
+        <label class="form-label" for="inputPhone">Ваш телефон</label>
+        <input class="form-input" type="tel" id="inputPhone" placeholder="+7 912 345-67-89" autocomplete="tel">
+        <div class="form-hint">Телефон, который вы указали при оформлении заказа</div>
+      </div>
+      <button class="btn-search" id="btnSearch" onclick="searchOrder()">
+        <span class="icon icon-search"></span> Найти заказ
+      </button>
+      <div class="error-msg" id="errorMsg">
+        <span class="error-msg-icon"><span class="icon icon-close"></span></span>
+        <span id="errorText">Заказ не найден. Проверьте номер заказа и телефон.</span>
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div class="result-card" id="resultCard">
+      <div class="result-header">
+        <div>
+          <div class="result-num" id="resNum">Заказ #—</div>
+          <div class="result-date" id="resDate"></div>
+        </div>
+        <span class="status-badge" id="resBadge"></span>
+      </div>
+      <div class="result-body">
+        <!-- Delivery info -->
+        <div class="delivery-info" id="resDelivery"></div>
+
+        <!-- Items -->
+        <div class="items-title">Состав заказа</div>
+        <div id="resItems"></div>
+
+        <!-- Totals -->
+        <div class="totals-block" id="resTotals"></div>
+      </div>
+      <div class="result-footer">
+        <button class="btn-again" onclick="resetForm()"><span class="icon icon-search"></span> Найти другой</button>
+        <a class="btn-catalog" href="catalog.html"><span class="icon icon-shop"></span> В каталог</a>
+      </div>
+    </div>
+
+    <div class="contact-hint">
+      Вопросы по заказу? Звоните: <a href="tel:+78129228677">8 (812) 922-86-77</a><br>
+      или напишите в <a href="https://wa.me/79112368277" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo"><svg width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></div>
+      <div class="footer-desc">Производство, продажа и доставка хозяйственных товаров и бытовой химии в Санкт-Петербурге.</div>
+      <div class="footer-contact">
+        <a href="tel:+78129228677">8 (812) 922-86-77</a>
+        <a href="tel:+79112368277">+7 911 236-82-77</a>
+        <div class="addr">Санкт-Петербург, ул. Софийская 4 к 3, павильон 29/8</div>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Каталог</h4>
+      <ul>
+        <li><a href="catalog.html">Бумажная продукция</a></li>
+        <li><a href="catalog.html">Одноразовая посуда</a></li>
+        <li><a href="catalog.html">Бытовая химия</a></li>
+        <li><a href="catalog.html">Хозтовары</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Компания</h4>
+      <ul>
+        <li><a href="about.html">О нас</a></li>
+        <li><a href="sales.html">Акции</a></li>
+        <li><a href="wholesale.html">Оптовикам</a></li>
+        <li><a href="contacts.html">Контакты</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Покупателям</h4>
+      <ul>
+        <li><a href="delivery.html">Доставка и оплата</a></li>
+        <li><a href="order-status.html">Проверить заказ</a></li>
+        <li><a href="account.html">Личный кабинет</a></li>
+        <li><a href="about.html">Условия возврата</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 ООО «Клевер». Все права защищены.</p>
+    <div class="social-links">
+      <a href="https://vk.com" target="_blank" rel="noopener" class="social-link">VK</a>
+      <a href="https://t.me" target="_blank" rel="noopener" class="social-link">TG</a>
+      <a href="https://wa.me/79112368277" target="_blank" rel="noopener" class="social-link">WA</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Mobile tabbar -->
+<nav class="klever-tabbar" id="kleverTabbar" aria-label="Навигация">
+  <div class="klever-tabbar-inner">
+    <a href="index.html" data-tab-key="home"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2V9.5z"/></svg></span><span class="klever-tab-label">Главная</span></a>
+    <a href="catalog.html" data-tab-key="catalog"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="klever-tab-label">Каталог</span></a>
+    <a href="account.html" data-tab-key="account"><span class="klever-tab-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="klever-tab-label">Кабинет</span></a>
+  </div>
+</nav>
+
+<script>
+(function(){
+  var SUPA_URL  = 'https://fquhoxxcucgesxrexsjn.supabase.co';
+  var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxdWhveHhjdWNnZXN4cmV4c2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NzM5MDYsImV4cCI6MjA5NTQ0OTkwNn0.z09KuaZ1ybuURb46iWl9Ef-HT2gbecw8Wjw3oFJl9wI';
+
+  var STATUS_LABEL = {
+    new:        'В обработке',
+    assembling: 'В сборке',
+    courier:    'Передан курьеру',
+    ready:      'Готов к выдаче',
+    done:       'Доставлен',
+    issued:     'Выдан',
+    cancelled:  'Отменён'
+  };
+  var STATUS_ICON = {
+    new:        '🕐',
+    assembling: '📦',
+    courier:    '🚚',
+    ready:      '✅',
+    done:       '✅',
+    issued:     '✅',
+    cancelled:  '✕'
+  };
+  var STATUS_CLASS = {
+    new: 's-new', assembling: 's-assembling', courier: 's-courier',
+    ready: 's-ready', done: 's-done', issued: 's-issued', cancelled: 's-cancelled'
+  };
+  var METHOD_LABEL = { courier: 'Курьером', pickup: 'Самовывоз', delivery: 'Курьером' };
+  var PAY_LABEL    = { cash: 'Наличными / картой', invoice: 'Безналичный расчёт', transfer: 'Перевод на карту' };
+
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
+  function digitsOnly(s){ return String(s||'').replace(/\D/g,''); }
+
+  function phoneMatch(dbPhone, inputPhone){
+    var a = digitsOnly(dbPhone);
+    var b = digitsOnly(inputPhone);
+    if (!a || !b) return false;
+    // Normalize: 8xxx → 7xxx for Russian numbers
+    if (a.length === 11 && a[0] === '8') a = '7' + a.slice(1);
+    if (b.length === 11 && b[0] === '8') b = '7' + b.slice(1);
+    // Allow matching last 10 digits
+    var a10 = a.slice(-10), b10 = b.slice(-10);
+    return a10 === b10 && a10.length === 10;
+  }
+
+  function isUUID(s){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s); }
+
+  async function fetchOrder(query){
+    var url = SUPA_URL + '/rest/v1/orders?' + query + '&select=*&limit=5';
+    var resp = await fetch(url, {
+      headers: {
+        'apikey': SUPA_ANON,
+        'Authorization': 'Bearer ' + SUPA_ANON,
+        'Accept': 'application/json'
+      }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return resp.json();
+  }
+
+  async function findOrder(numRaw, phoneRaw){
+    var rows = [];
+    var numTrim = numRaw.trim();
+
+    if (isUUID(numTrim)){
+      // Query by UUID id
+      rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim));
+    } else if (/^\d+$/.test(numTrim)){
+      // Query by numeric num
+      rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim));
+    } else {
+      // Try both: partial match on id might not work, try id first then num
+      try { rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim)); } catch(e){}
+      if (!rows.length) {
+        try { rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim)); } catch(e){}
+      }
+    }
+
+    if (!rows || !rows.length) return null;
+
+    // Verify phone
+    var matched = rows.find(function(r){ return phoneMatch(r.customer_phone, phoneRaw); });
+    return matched || null;
+  }
+
+  function renderOrder(r){
+    // Header
+    var displayNum = r.num != null ? r.num : r.id;
+    document.getElementById('resNum').textContent = 'Заказ #' + displayNum;
+    var dt = r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'}) : '';
+    document.getElementById('resDate').textContent = dt;
+
+    // Status badge
+    var st = r.status || 'new';
+    var badge = document.getElementById('resBadge');
+    badge.className = 'status-badge ' + (STATUS_CLASS[st] || 's-new');
+    badge.innerHTML = (STATUS_ICON[st] || '') + ' ' + esc(STATUS_LABEL[st] || st);
+
+    // Delivery info
+    var method = r.delivery_method || 'courier';
+    var methodLabel = METHOD_LABEL[method] || method;
+    var rows = [];
+    rows.push('<div class="di-row"><span class="di-label">Доставка</span><span class="di-value">' + esc(methodLabel) + '</span></div>');
+    if (r.delivery_address){
+      rows.push('<div class="di-row"><span class="di-label">Адрес</span><span class="di-value">' + esc(r.delivery_address) + '</span></div>');
+    }
+    if (r.payment_method){
+      rows.push('<div class="di-row"><span class="di-label">Оплата</span><span class="di-value">' + esc(PAY_LABEL[r.payment_method] || r.payment_method) + '</span></div>');
+    }
+    if (r.customer_name){
+      rows.push('<div class="di-row"><span class="di-label">Получатель</span><span class="di-value">' + esc(r.customer_name) + '</span></div>');
+    }
+    if (r.comment){
+      rows.push('<div class="di-row"><span class="di-label">Комментарий</span><span class="di-value">' + esc(r.comment) + '</span></div>');
+    }
+    document.getElementById('resDelivery').innerHTML = rows.join('');
+
+    // Items
+    var items = Array.isArray(r.items) ? r.items : [];
+    var itemsHtml = items.map(function(it){
+      var lineTotal = (it.price || 0) * (it.qty || 1);
+      return '<div class="order-item">'
+        + '<div><div class="oi-name">' + esc(it.name || 'Товар') + '</div>'
+        + '<div class="oi-qty">' + (it.qty || 1) + ' шт × ' + fmt(it.price || 0) + ' ₽</div></div>'
+        + '<div class="oi-price">' + fmt(lineTotal) + ' ₽</div>'
+        + '</div>';
+    }).join('');
+    document.getElementById('resItems').innerHTML = itemsHtml || '<div style="color:#8aaa94;font-size:14px;padding:12px 0;">Нет данных о составе заказа</div>';
+
+    // Totals
+    var totalsHtml = '';
+    if (r.subtotal != null && r.subtotal !== r.total_price){
+      totalsHtml += '<div class="totals-row"><span>Товары</span><span class="totals-val">' + fmt(r.subtotal) + ' ₽</span></div>';
+    }
+    if (r.delivery_cost != null && r.delivery_cost > 0){
+      totalsHtml += '<div class="totals-row"><span>Доставка</span><span class="totals-val">' + fmt(r.delivery_cost) + ' ₽</span></div>';
+    } else if (r.delivery_cost === 0){
+      totalsHtml += '<div class="totals-row"><span>Доставка</span><span class="totals-val" style="color:var(--green-dark);">Бесплатно</span></div>';
+    }
+    totalsHtml += '<div class="totals-row total"><span>Итого</span><span class="totals-val">' + fmt(r.total_price || 0) + ' ₽</span></div>';
+    document.getElementById('resTotals').innerHTML = totalsHtml;
+  }
+
+  window.searchOrder = async function(){
+    var numEl   = document.getElementById('inputNum');
+    var phoneEl = document.getElementById('inputPhone');
+    var btn     = document.getElementById('btnSearch');
+    var errEl   = document.getElementById('errorMsg');
+    var errTxt  = document.getElementById('errorText');
+    var resCard = document.getElementById('resultCard');
+
+    var numVal   = numEl.value.trim();
+    var phoneVal = phoneEl.value.trim();
+
+    // Validation
+    numEl.classList.remove('error');
+    phoneEl.classList.remove('error');
+    errEl.classList.remove('visible');
+
+    if (!numVal){
+      numEl.classList.add('error');
+      errTxt.textContent = 'Введите номер заказа.';
+      errEl.classList.add('visible');
+      numEl.focus();
+      return;
+    }
+    if (!phoneVal || digitsOnly(phoneVal).length < 10){
+      phoneEl.classList.add('error');
+      errTxt.textContent = 'Введите номер телефона (не менее 10 цифр).';
+      errEl.classList.add('visible');
+      phoneEl.focus();
+      return;
+    }
+
+    // Loading state
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Ищем…';
+    resCard.classList.remove('visible');
+
+    try {
+      var order = await findOrder(numVal, phoneVal);
+      if (!order){
+        errTxt.textContent = 'Заказ не найден. Проверьте номер заказа и телефон.';
+        errEl.classList.add('visible');
+      } else {
+        renderOrder(order);
+        resCard.classList.add('visible');
+        resCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    } catch(e){
+      console.error('[order-status]', e);
+      errTxt.textContent = 'Ошибка соединения. Попробуйте ещё раз или позвоните нам.';
+      errEl.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="icon icon-search"></span> Найти заказ';
+    }
+  };
+
+  window.resetForm = function(){
+    document.getElementById('resultCard').classList.remove('visible');
+    document.getElementById('errorMsg').classList.remove('visible');
+    document.getElementById('inputNum').value = '';
+    document.getElementById('inputPhone').value = '';
+    document.getElementById('inputNum').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Enter key triggers search
+  document.addEventListener('DOMContentLoaded', function(){
+    ['inputNum','inputPhone'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('keydown', function(e){ if (e.key === 'Enter') searchOrder(); });
+    });
+
+    // Pre-fill from URL: ?num=...
+    var params = new URLSearchParams(location.search);
+    var preNum = params.get('num') || params.get('id') || '';
+    if (preNum){
+      var el = document.getElementById('inputNum');
+      if (el){ el.value = preNum; document.getElementById('inputPhone').focus(); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
