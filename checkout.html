@@ -486,6 +486,11 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <a href="catalog.html" class="primary" data-i18n="checkout.success_continue">Продолжить покупки</a>
     <a href="index.html" class="secondary" data-i18n="checkout.success_home">На главную</a>
   </div>
+  <div style="margin-top:20px;">
+    <a id="trackOrderLink" href="order-status.html" style="display:inline-flex;align-items:center;gap:8px;color:var(--green-dark);font-size:14px;font-weight:600;text-decoration:none;opacity:0.85;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
+      <span class="icon icon-search"></span> Проверить статус заказа
+    </a>
+  </div>
 </div>
 
 <footer>
@@ -495,6 +500,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <a href="index.html">Главная</a>
     <a href="catalog.html" data-i18n="nav.catalog">Каталог</a>
     <a href="delivery.html" data-i18n="nav.delivery">Доставка</a>
+    <a href="order-status.html">Проверить заказ</a>
   </div>
 </footer>
 
@@ -959,6 +965,8 @@ async function submitOrder() {
           if (last) { last.num = finalNum; localStorage.setItem('klever_orders', JSON.stringify(saved)); }
         } catch(e) {}
         if (_numEl) _numEl.textContent = '#' + finalNum;
+        const _trackLink = document.getElementById('trackOrderLink');
+        if (_trackLink) _trackLink.href = 'order-status.html?num=' + encodeURIComponent(finalNum);
         console.log('[order] saved to Supabase, id:', finalNum);
       } else {
         // ok:false — ошибка БД (напр. RLS, ограничение). Заказ остаётся в
