@@ -262,9 +262,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     function isMissingColumnError(error){
       const msg = (error?.message || '') + ' ' + (error?.details || '');
       return /column .* does not exist/i.test(msg)
-          || /Could not find/i.test(msg)
+          || /Could not find the .* column/i.test(msg)
           || error?.code === '42703'
           || error?.code === 'PGRST204';
+    }
+
+    // Таблица отсутствует или кэш схемы PostgREST устарел → HTTP 404.
+    // Это НЕ ошибка колонки: повторять/обрезать бессмысленно, нужен SQL.
+    function isTableMissingError(error, status){
+      const msg = (error?.message || '') + ' ' + (error?.details || '');
+      return /relation .* does not exist/i.test(msg)
+          || /Could not find the table/i.test(msg)
+          || error?.code === '42P01'
+          || error?.code === 'PGRST205'
+          || status === 404;
     }
 
     // NOT NULL violation — num column has no default in some DB schemas.
@@ -332,8 +343,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           console.warn('[supabase] num NOT NULL in DB — retrying with auto-generated num');
           return tryInsert({ ...row, num: Date.now() });
         }
+        if (isTableMissingError(error, e && e.status)) {
+          console.error('[supabase] таблица orders недоступна (404) — схема БД не совпадает с кэшем API. Запустите fix_orders_schema.sql в Supabase SQL Editor.', error);
+          return { ok: false, error, tableMissing: true };
+        }
         if (!isMissingColumnError(error)) {
-          console.error('[supabase] insert error', error);
+          console.error('[supabase] insert error: HTTP', e && e.status, '| code:', error.code, '| message:', error.message || error);
           return { ok: false, error };
         }
         const col = missingColName(error);
@@ -349,7 +364,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     }
 
     try {
-      return await tryInsert(fullRow);
+      let res = await tryInsert(fullRow);
+      // Последний рубеж: если полная вставка не прошла (кроме «таблицы нет»),
+      // пробуем минимальный набор колонок, который есть в любой схеме orders —
+      // лучше заказ без даты доставки в админке, чем вообще без заказа.
+      if (!res.ok && !res.tableMissing) {
+        console.warn('[supabase] full insert failed — retrying with minimal columns');
+        const minimal = {
+          customer_name: fullRow.customer_name,
+          customer_phone: fullRow.customer_phone,
+          items: fullRow.items,
+          total_price: fullRow.total_price,
+        };
+        const res2 = await tryInsert(minimal);
+        if (res2.ok) return res2;
+      }
+      return res;
     } catch (e) {
       console.error('[supabase] insert exception', e);
       return { ok: false, error: e };
