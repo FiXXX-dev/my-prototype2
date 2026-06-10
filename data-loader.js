@@ -370,6 +370,7 @@
     if (s.whatsapp != null) out.whatsapp = s.whatsapp;
     if (s.telegram != null) out.telegram = s.telegram;
     if (maxv != null) out.max = maxv;
+    out.tgBot = (s.tg_bot != null ? s.tg_bot : (s.tgBot || '')) || '';
     return out;
   }
 

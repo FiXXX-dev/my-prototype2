@@ -488,6 +488,18 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <a href="catalog.html" class="primary" data-i18n="checkout.success_continue">Продолжить покупки</a>
     <a href="index.html" class="secondary" data-i18n="checkout.success_home">На главную</a>
   </div>
+  <div id="tgNotifyBlock" style="display:none;margin:24px auto 0;max-width:440px;background:#e8f5ff;border:1.5px solid #b3dcf5;border-radius:16px;padding:18px 22px;text-align:left;">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <span style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:#0088cc;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" fill="white" width="20" height="20"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+      </span>
+      <div>
+        <div style="font-weight:700;font-size:14px;color:#1a2e22;margin-bottom:4px;">Узнавайте о статусе заказа первыми</div>
+        <div style="font-size:13px;color:#5a7a8a;line-height:1.5;margin-bottom:12px;">Подключите уведомления в Telegram — пришлём сообщение, когда заказ соберут и он будет готов к выдаче.</div>
+        <a id="tgNotifyLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#0088cc;color:white;padding:10px 20px;border-radius:30px;font-size:13px;font-weight:700;text-decoration:none;">Включить уведомления →</a>
+      </div>
+    </div>
+  </div>
   <div style="margin-top:20px;">
     <a id="trackOrderLink" href="order-status.html" style="display:inline-flex;align-items:center;gap:8px;color:var(--green-dark);font-size:14px;font-weight:600;text-decoration:none;opacity:0.85;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
       <span class="icon icon-search"></span> Проверить статус заказа
@@ -951,6 +963,19 @@ async function submitOrder() {
   }[effectivePayment] || '';
   document.getElementById('successDetails').innerHTML =
     `Сумма заказа: <strong>${total} ₽</strong><br>${methodText}<br>Оплата: <strong>${paymentLabel}</strong><br>Свяжемся с вами по номеру: <strong>${phoneClean}</strong>`;
+
+  // ── Telegram-уведомления о статусе ──────────────────────────────────────
+  // Кнопка появляется только если в настройках админки задан username бота.
+  // Телефон передаём в /start — бот сам свяжет его с chat_id покупателя.
+  try {
+    const _tgBot = (typeof getSettingsSync === 'function' ? (getSettingsSync().tgBot || '') : '').trim();
+    const _phone10 = phoneClean.replace(/\D/g, '').slice(-10);
+    if (_tgBot && _phone10.length === 10) {
+      document.getElementById('tgNotifyLink').href =
+        'https://t.me/' + encodeURIComponent(_tgBot) + '?start=' + _phone10;
+      document.getElementById('tgNotifyBlock').style.display = 'block';
+    }
+  } catch (e) {}
 
   window.scrollTo({top: 0, behavior: 'smooth'});
 
