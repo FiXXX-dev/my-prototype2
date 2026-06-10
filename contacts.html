@@ -59,6 +59,17 @@
   .form-group input:focus,.form-group textarea:focus{border-color:var(--green);}
   .form-group input::placeholder,.form-group textarea::placeholder{color:rgba(255,255,255,0.25);}
   .form-group textarea{resize:none;height:120px;}
+  .form-group input.field-error,.form-group textarea.field-error{border-color:#FF3B6B;}
+  .field-hint{display:none;color:#ff7d9c;font-size:12px;font-weight:500;}
+  .field-hint.visible{display:block;}
+  .form-success{display:none;background:rgba(46,204,113,0.12);border:1.5px solid rgba(46,204,113,0.4);border-radius:14px;padding:20px 24px;margin-top:16px;color:#a8f0c6;font-size:14px;line-height:1.6;}
+  .form-success.visible{display:flex;gap:12px;align-items:flex-start;}
+  .form-success .fs-icon{font-size:22px;flex-shrink:0;color:var(--green);}
+  .form-success strong{color:white;}
+  .form-fail{display:none;background:rgba(255,59,107,0.12);border:1.5px solid rgba(255,59,107,0.4);border-radius:14px;padding:16px 20px;margin-top:16px;color:#ff9ab2;font-size:14px;line-height:1.6;}
+  .form-fail.visible{display:block;}
+  @keyframes btnspin{to{transform:rotate(360deg);}}
+  .btn-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(15,26,20,0.25);border-top-color:var(--dark);border-radius:50%;animation:btnspin .8s linear infinite;vertical-align:-3px;margin-right:8px;}
   .btn-submit{margin-top:8px;width:100%;padding:18px;background:var(--green);border:none;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:var(--dark);cursor:pointer;transition:all .2s;}
   .btn-submit:hover{background:var(--lime);transform:translateY(-2px);}
   footer{background:var(--dark2);padding:40px;border-top:2px solid rgba(46,204,113,0.2);display:flex;justify-content:space-between;align-items:center;margin-top:80px;}
@@ -213,42 +224,84 @@
     <div class="form-title" data-i18n="contacts.form_title">Напишите нам</div>
     <div class="form-sub" data-i18n="contacts.form_sub">Оставьте заявку — перезвоним в течение 30 минут</div>
     <div class="form-row">
-      <div class="form-group"><label>Ваше имя</label><input type="text" id="contactName" placeholder="Иван Иванов"></div>
-      <div class="form-group"><label>Телефон</label><input type="tel" id="contactPhone" placeholder="+7 (___) ___-__-__"></div>
+      <div class="form-group"><label>Ваше имя</label><input type="text" id="contactName" placeholder="Иван Иванов"><div class="field-hint" id="hintName">Укажите ваше имя</div></div>
+      <div class="form-group"><label>Телефон</label><input type="tel" id="contactPhone" placeholder="+7 (___) ___-__-__"><div class="field-hint" id="hintPhone">Укажите корректный телефон (не менее 10 цифр)</div></div>
     </div>
-    <div class="form-group" style="margin-bottom:16px;"><label>Сообщение</label><textarea id="contactMessage" placeholder="Опишите ваш вопрос или заказ..."></textarea></div>
-    <button class="btn-submit" onclick="sendContactForm()">Отправить сообщение →</button>
+    <div class="form-group" style="margin-bottom:16px;"><label>Сообщение</label><textarea id="contactMessage" placeholder="Опишите ваш вопрос или заказ..."></textarea><div class="field-hint" id="hintMessage">Напишите сообщение</div></div>
+    <button class="btn-submit" id="contactSubmitBtn" onclick="sendContactForm()">Отправить сообщение →</button>
+    <div class="form-success" id="contactSuccess">
+      <span class="fs-icon"><span class="icon icon-check-circle"></span></span>
+      <span id="contactSuccessText"></span>
+    </div>
+    <div class="form-fail" id="contactFail">Не удалось отправить сообщение — проверьте интернет и попробуйте ещё раз. Или позвоните нам: <a href="tel:+78129228677" style="color:white;font-weight:700;">8 (812) 922-86-77</a></div>
   </div>
 </div>
 
 <script>
+function _cfMark(inputId, hintId, bad) {
+  document.getElementById(inputId).classList.toggle('field-error', bad);
+  document.getElementById(hintId).classList.toggle('visible', bad);
+}
+
 async function sendContactForm() {
-  const btn = document.querySelector('.btn-submit');
+  const btn = document.getElementById('contactSubmitBtn');
+  const okBox = document.getElementById('contactSuccess');
+  const failBox = document.getElementById('contactFail');
   const name = document.getElementById('contactName').value.trim();
   const phone = document.getElementById('contactPhone').value.trim();
   const msg = document.getElementById('contactMessage').value.trim();
 
-  if (!name) { alert('Пожалуйста, укажите ваше имя'); document.getElementById('contactName').focus(); return; }
-  if (!phone || phone.replace(/\D/g,'').length < 10) { alert('Пожалуйста, укажите корректный телефон'); document.getElementById('contactPhone').focus(); return; }
-  if (!msg) { alert('Пожалуйста, напишите сообщение'); document.getElementById('contactMessage').focus(); return; }
+  okBox.classList.remove('visible');
+  failBox.classList.remove('visible');
 
-  if (btn) { btn.disabled = true; btn.textContent = 'Отправляем...'; }
+  const badName = !name;
+  const badPhone = !phone || phone.replace(/\D/g,'').length < 10;
+  const badMsg = !msg;
+  _cfMark('contactName', 'hintName', badName);
+  _cfMark('contactPhone', 'hintPhone', badPhone);
+  _cfMark('contactMessage', 'hintMessage', badMsg);
+  if (badName) { document.getElementById('contactName').focus(); return; }
+  if (badPhone) { document.getElementById('contactPhone').focus(); return; }
+  if (badMsg) { document.getElementById('contactMessage').focus(); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>Отправляем...';
 
   let saved = false;
-  if (typeof window.supaInsertContact === 'function') {
-    const r = await window.supaInsertContact({ name, phone, message: msg });
-    if (r.ok) saved = true;
-    else console.error('[contacts] Supabase insert failed', r.error);
+  try {
+    if (typeof window.supaInsertContact === 'function') {
+      const r = await window.supaInsertContact({ name, phone, message: msg });
+      if (r && r.ok) saved = true;
+      else console.error('[contacts] Supabase insert failed', r && r.error);
+    }
+  } catch (e) {
+    console.error('[contacts] Supabase insert error', e);
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Отправить сообщение →'; }
+  btn.disabled = false;
+  btn.innerHTML = 'Отправить сообщение →';
 
-  alert('Спасибо, ' + name + '!\nВаше сообщение отправлено. Мы перезвоним вам на номер ' + phone + ' в течение 30 минут.');
-
-  document.getElementById('contactName').value = '';
-  document.getElementById('contactPhone').value = '';
-  document.getElementById('contactMessage').value = '';
+  if (saved) {
+    document.getElementById('contactSuccessText').innerHTML =
+      'Спасибо, <strong>' + name.replace(/[<>&"]/g, '') + '</strong>! Ваше сообщение отправлено. '
+      + 'Мы перезвоним вам на номер <strong>' + phone.replace(/[<>&"]/g, '') + '</strong> в течение 30 минут.';
+    okBox.classList.add('visible');
+    document.getElementById('contactName').value = '';
+    document.getElementById('contactPhone').value = '';
+    document.getElementById('contactMessage').value = '';
+    okBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    failBox.classList.add('visible');
+    failBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
+
+// Сбрасываем подсветку ошибки при вводе
+['contactName','contactPhone','contactMessage'].forEach(function(id){
+  const el = document.getElementById(id);
+  const hint = { contactName:'hintName', contactPhone:'hintPhone', contactMessage:'hintMessage' }[id];
+  el.addEventListener('input', function(){ _cfMark(id, hint, false); });
+});
 </script>
 <footer>
   <div class="footer-logo"><svg class="logo-icon" width="24" height="24" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span></div>
@@ -278,6 +331,7 @@ function getCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}ca
 function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartBadge();}
 function _kleverIsOOS(sku){try{const p=(window.getProductsSync?getProductsSync():[]).find(x=>x.sku===sku);return !!p&&(p.availability||'in')==='out';}catch(e){return false;}}
 function showOOSToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#e05a4e;font-size:18px;font-weight:900;">✕</span> «'+name+'» нет в наличии';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+function showCartMsg(msg,isErr){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:'+(isErr?'#e05a4e':'#2ECC71')+';font-size:18px;font-weight:900;">'+(isErr?'✕':'✓')+'</span> '+msg;document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3200);}
 function addToCart(p){if(_kleverIsOOS(p.sku)){showOOSToast(p.name);return;}const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:1});saveCart(c);showAddedToast(p.name);}
 function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();}
 function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;if(d>0&&_kleverIsOOS(s)){showOOSToast(i.name||'Товар');return;}i.qty+=d;if(i.qty<=0){removeFromCart(s);return;}saveCart(c);renderCart();}
@@ -289,7 +343,7 @@ function openCart(){document.getElementById('cartOverlay').classList.add('open')
 function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartPanel').classList.remove('open');document.body.style.overflow='';}
 function getProdImg(sku,fallback){try{var arr=(window.getProductsSync?window.getProductsSync():[]);var p=arr.find(function(x){return x.sku===sku;});return (p&&p.img)||fallback||'';}catch(e){return fallback||'';}}
 function renderCart(){const cart=getCart();const items=document.getElementById('cartItems');const total=document.getElementById('cartTotal');if(!items)return;if(cart.length===0){items.innerHTML='<div class="cart-empty"><div style="margin-bottom:16px;"><span class="icon icon-cart" style="font-size:56px;color:#d0e8d8;"></span></div><div style="font-family:Unbounded,sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;">Корзина пуста</div><div style="color:#8aaa94;font-size:14px;">Добавьте товары из каталога</div></div>';total.textContent='0 ₽';return;}items.innerHTML=cart.map(i=>{const _img=getProdImg(i.sku,i.img);const _oos=_kleverIsOOS(i.sku);return '<div class="cart-item"'+(_oos?' style="background:#fff5f5;border-radius:14px;"':'')+'><div class="cart-item-img">'+(_img?'<img src="'+_img+'" alt="" onerror="this.outerHTML=\'<span style=font-size:24px>📦</span>\'">':'<span style="font-size:24px">📦</span>')+'</div><div class="cart-item-info"><div class="cart-item-name">'+i.name+'</div>'+(_oos?'<div style="color:#e05a4e;font-size:11px;font-weight:800;margin:2px 0;">Нет в наличии — удалите, чтобы оформить заказ</div>':'')+'<div class="cart-item-sku">Арт. '+i.sku+' · '+i.price+' ₽</div><div class="cart-item-controls"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', -1)" aria-label="Уменьшить">−</button><input type="number" class="qty-input" min="1" max="9999" value="'+i.qty+'" onchange="setCartQty(\''+i.sku+'\',this)" onclick="event.stopPropagation()"><button class="qty-btn" onclick="changeQty(\''+i.sku+'\', 1)" aria-label="Увеличить">+</button><button class="remove-btn" onclick="removeFromCart(\''+i.sku+'\')">Удалить</button></div></div><div class="cart-item-price">'+(Math.round(i.price*i.qty*100)/100)+' ₽</div></div>';}).join('');total.textContent=getCartTotal()+' ₽';}
-function checkout(){if(getCartCount()===0){alert('Корзина пуста! Добавьте товары.');return;}const _oos=getCart().filter(i=>_kleverIsOOS(i.sku)).map(i=>i.name);if(_oos.length){alert('Нет в наличии: '+_oos.join(', ')+'.\nУдалите эти товары из корзины, чтобы оформить заказ.');renderCart();return;}window.location.href='checkout.html';}
+function checkout(){if(getCartCount()===0){showCartMsg('Корзина пуста — добавьте товары',true);return;}const _oos=getCart().filter(i=>_kleverIsOOS(i.sku)).map(i=>i.name);if(_oos.length){showCartMsg('Нет в наличии: '+_oos.join(', ')+'. Удалите из корзины, чтобы оформить заказ',true);renderCart();return;}window.location.href='checkout.html';}
 function showAddedToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span class="icon icon-check" style="color:#2ECC71;font-size:18px;"></span> «'+name+'» добавлен в корзину';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 document.addEventListener('DOMContentLoaded',updateCartBadge);
 </script>
@@ -605,7 +659,7 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
     if (typeof addToCart === 'function') { addToCart(p); return; }
     try {
       var _pp=(window.getProductsSync?window.getProductsSync():[]).find(function(x){return x.sku===p.sku;});
-      if (_pp&&(_pp.availability||'in')==='out'){alert('«'+p.name+'» сейчас нет в наличии');return;}
+      if (_pp&&(_pp.availability||'in')==='out'){showOOSToast(p.name);return;}
       const cart = JSON.parse(localStorage.getItem('klever_cart')||'[]');
       const ex = cart.find(i => i.sku === p.sku);
       if (ex) ex.qty++; else cart.push({...p, qty:1});
