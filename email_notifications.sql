@@ -55,7 +55,7 @@ as $$ select 'ВСТАВЬ_ТОКЕН_NOTISEND'::text $$;
 
 create or replace function public._email_sender()
 returns text language sql security definer set search_path = public
-as $$ select 'nurmuhamedovsa@gmail.com'::text $$;
+as $$ select 'ВСТАВЬ_EMAIL_ОТПРАВИТЕЛЯ'::text $$;
 
 revoke all on function public._email_token()  from public, anon, authenticated;
 revoke all on function public._email_sender() from public, anon, authenticated;
