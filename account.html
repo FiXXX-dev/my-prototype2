@@ -1123,9 +1123,28 @@ function invalidateAccountCache(){
   } catch(e) {}
 }
 
+// Если Supabase вернул 0 заказов — ищем в localStorage по телефону/email/userId
+// (страховка: телефон при оформлении мог быть записан немного иначе).
+function _localOrdersFallback(u){
+  try {
+    const all = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
+    const phone10 = ((u && u.phone) || '').replace(/\D/g, '').slice(-10);
+    const email   = ((u && u.email) || '').toLowerCase().trim();
+    return all.filter(o => {
+      if (u && o.userId && o.userId === u.id) return true;
+      if (phone10 && o.phone && o.phone.replace(/\D/g, '').slice(-10) === phone10) return true;
+      if (email && o.email && o.email.toLowerCase() === email) return true;
+      return false;
+    }).slice().reverse();
+  } catch(e) { return []; }
+}
+
 // Применяет готовые массивы данных в память и перерисовывает активную вкладку.
 function _applyAccountData(orders, favs, addrs, uid){
-  if (Array.isArray(orders)) myOrders = orders;
+  if (Array.isArray(orders)){
+    // Supabase вернул пустой массив — пробуем localStorage как запасной вариант
+    myOrders = orders.length > 0 ? orders : _localOrdersFallback(getCurrentUser());
+  }
   if (Array.isArray(favs))   myFavorites = favs;
   if (Array.isArray(addrs)) {
     myAddresses = addrs.map(mapAddrRow);
