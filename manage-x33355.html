@@ -4346,39 +4346,101 @@ function showAnalyticsDay(idx) {
   if (!detailEl || !titleEl || !ordersEl) return;
 
   titleEl.textContent = b.d.toLocaleDateString('ru-RU', {day:'numeric', month:'long', year:'numeric'});
-
   const dayTotal = b.orders.reduce((s,o) => s+(Number(o.total)||0), 0);
-  const STATUS_LABEL = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов',done:'✓ Выполнен',issued:'✓ Выдан',cancelled:'✕ Отменён'};
+
+  const STATUS_LABEL = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Выполнен',issued:'Выдан',cancelled:'Отменён'};
+  const STATUS_COLOR = {new:'#f0a500',assembling:'#3498db',courier:'#8e44ad',ready:'#16a085',done:'#1aab58',issued:'#1aab58',cancelled:'#e74c3c'};
 
   ordersEl.innerHTML = `
-    <div style="margin-bottom:14px;padding:12px 16px;background:#f0faf4;border-radius:10px;display:flex;gap:20px;font-size:13px;">
-      <span>Заказов: <strong>${b.orders.length}</strong></span>
-      <span>Выручка: <strong style="color:#1aab58;">${dayTotal.toLocaleString('ru-RU')} ₽</strong></span>
-      <span>Средний чек: <strong>${Math.round(dayTotal/b.orders.length).toLocaleString('ru-RU')} ₽</strong></span>
+    <div style="margin-bottom:20px;padding:14px 20px;background:#f0faf4;border-radius:12px;display:flex;gap:28px;flex-wrap:wrap;font-size:14px;">
+      <span>📦 Заказов: <strong>${b.orders.length}</strong></span>
+      <span>💰 Выручка: <strong style="color:#1aab58;">${dayTotal.toLocaleString('ru-RU')} ₽</strong></span>
+      <span>🧾 Средний чек: <strong>${Math.round(dayTotal/b.orders.length).toLocaleString('ru-RU')} ₽</strong></span>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr style="border-bottom:2px solid #e8f4ec;">
-        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">№</th>
-        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">Клиент</th>
-        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">Товары</th>
-        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">Доставка</th>
-        <th style="padding:8px 6px;text-align:right;color:#6b8a74;">Сумма</th>
-        <th style="padding:8px 6px;text-align:center;color:#6b8a74;">Статус</th>
-      </tr></thead>
-      <tbody>
-        ${b.orders.map(o => {
-          const items = (o.items||[]).map(i => i.name + ' ×' + i.qty).join(', ');
-          return `<tr style="border-bottom:1px solid #f0f7f2;cursor:pointer;">
-            <td style="padding:10px 6px;font-weight:700;">#${o.num}</td>
-            <td style="padding:10px 6px;">${o.name||'—'}<br><span style="color:#8aaa94;font-size:12px;">${o.phone||''}</span></td>
-            <td style="padding:10px 6px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${items}">${items||'—'}</td>
-            <td style="padding:10px 6px;">${o.method==='pickup'?'Самовывоз':'Курьер'}</td>
-            <td style="padding:10px 6px;text-align:right;font-weight:700;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</td>
-            <td style="padding:10px 6px;text-align:center;"><span style="font-size:11px;">${STATUS_LABEL[o.status]||o.status}</span></td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+    ${b.orders.map(o => {
+      const items = o.items || [];
+      const st = o.status || 'new';
+      const stColor = STATUS_COLOR[st] || '#888';
+      const stLabel = STATUS_LABEL[st] || st;
+      const delivery = o.method === 'pickup' ? '🏪 Самовывоз' : '🚚 Курьер';
+      const PAY = {cash:'💵 Наличными/картой', invoice:'🏦 Безналичный расчёт', transfer:'💳 Перевод на карту'};
+      const payLabel = PAY[o.payment] || o.payment || '—';
+
+      return `
+        <div style="border:1.5px solid #e8f4ec;border-radius:14px;margin-bottom:14px;overflow:hidden;">
+
+          <!-- Шапка заказа — кликабельная -->
+          <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.ana-arrow').textContent=this.nextElementSibling.style.display==='block'?'▲':'▼'"
+               style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;background:#fff;user-select:none;">
+            <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:#1a2e22;min-width:52px;">#${o.num}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.name||'—'}</div>
+              <div style="font-size:12px;color:#8aaa94;">${o.phone||''} ${o.email ? '· '+o.email : ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:15px;font-weight:900;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</div>
+              <div style="font-size:11px;color:#8aaa94;">${items.length} ${items.length===1?'товар':items.length<5?'товара':'товаров'}</div>
+            </div>
+            <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:${stColor};flex-shrink:0;">${stLabel}</span>
+            <span class="ana-arrow" style="color:#8aaa94;font-size:12px;flex-shrink:0;">▼</span>
+          </div>
+
+          <!-- Детали заказа — скрыты по умолчанию -->
+          <div style="display:none;border-top:1.5px solid #e8f4ec;">
+
+            <!-- Инфо: доставка, оплата, дата -->
+            <div style="display:flex;gap:0;border-bottom:1px solid #f0f7f2;">
+              <div style="flex:1;padding:12px 18px;border-right:1px solid #f0f7f2;">
+                <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Доставка</div>
+                <div style="font-size:13px;font-weight:600;">${delivery}</div>
+                ${o.address ? `<div style="font-size:12px;color:#6b8a74;margin-top:2px;">${o.address}</div>` : ''}
+                ${o.deliveryDate ? `<div style="font-size:12px;color:#6b8a74;">📅 ${o.deliveryDate}${o.deliveryTime?' '+o.deliveryTime:''}</div>` : ''}
+              </div>
+              <div style="flex:1;padding:12px 18px;border-right:1px solid #f0f7f2;">
+                <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Оплата</div>
+                <div style="font-size:13px;font-weight:600;">${payLabel}</div>
+                ${o.invoiceCompany ? `<div style="font-size:12px;color:#6b8a74;">${o.invoiceCompany}${o.invoiceInn?' · ИНН '+o.invoiceInn:''}</div>` : ''}
+              </div>
+              <div style="flex:1;padding:12px 18px;">
+                <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Время заказа</div>
+                <div style="font-size:13px;font-weight:600;">${o.date||'—'}</div>
+                ${o.comment ? `<div style="font-size:12px;color:#f0a500;margin-top:4px;">💬 ${o.comment}</div>` : ''}
+              </div>
+            </div>
+
+            <!-- Таблица товаров -->
+            <div style="padding:14px 18px;">
+              <div style="font-size:12px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Состав заказа</div>
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                  <tr style="border-bottom:1.5px solid #e8f4ec;">
+                    <th style="padding:6px 8px;text-align:left;color:#6b8a74;font-weight:600;">Товар</th>
+                    <th style="padding:6px 8px;text-align:center;color:#6b8a74;font-weight:600;width:60px;">Кол-во</th>
+                    <th style="padding:6px 8px;text-align:right;color:#6b8a74;font-weight:600;width:90px;">Цена</th>
+                    <th style="padding:6px 8px;text-align:right;color:#6b8a74;font-weight:600;width:100px;">Сумма</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map(i => `
+                    <tr style="border-bottom:1px solid #f5faf6;">
+                      <td style="padding:9px 8px;font-weight:500;">${i.name||'—'}</td>
+                      <td style="padding:9px 8px;text-align:center;color:#6b8a74;">${i.qty||1} шт</td>
+                      <td style="padding:9px 8px;text-align:right;color:#6b8a74;">${(Number(i.price)||0).toLocaleString('ru-RU')} ₽</td>
+                      <td style="padding:9px 8px;text-align:right;font-weight:700;color:#1a2e22;">${((Number(i.qty)||1)*(Number(i.price)||0)).toLocaleString('ru-RU')} ₽</td>
+                    </tr>`).join('')}
+                </tbody>
+                <tfoot>
+                  <tr style="border-top:2px solid #e8f4ec;">
+                    <td colspan="3" style="padding:10px 8px;text-align:right;font-weight:700;color:#6b8a74;">Итого:</td>
+                    <td style="padding:10px 8px;text-align:right;font-size:16px;font-weight:900;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+          </div>
+        </div>`;
+    }).join('')}`;
 
   detailEl.style.display = 'block';
   detailEl.scrollIntoView({behavior:'smooth', block:'start'});
