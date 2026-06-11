@@ -975,7 +975,7 @@ async function submitOrder() {
   if (typeof supaInsertOrder === 'function') {
     supaInsertOrder(orderRecord).then(supaRes => {
       if (supaRes && supaRes.ok && supaRes.data && supaRes.data.id) {
-        const finalNum = supaRes.data.num != null ? supaRes.data.num : supaRes.data.id;
+        const finalNum = supaRes.data.id;
         orderRecord.num = finalNum;
         try {
           const saved = JSON.parse(localStorage.getItem('klever_orders') || '[]');
