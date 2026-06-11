@@ -393,6 +393,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span><span class="badge">админ</span></a>
     <nav class="side-nav">
       <button class="side-link active" onclick="showTab('dashboard', this)"><span class="icon icon-chart"></span> Дашборд</button>
+      <button class="side-link" onclick="showTab('analytics', this)"><span class="icon icon-chart"></span> Аналитика</button>
       <button class="side-link" onclick="showTab('products', this)"><span class="icon icon-package"></span> Товары <span class="count" id="cntProducts">0</span></button>
       <button class="side-link" onclick="showTab('categories', this)"><span class="icon icon-folder"></span> Категории <span class="count" id="cntCategories">0</span></button>
       <button class="side-link" onclick="showTab('orders', this)"><span class="icon icon-bag"></span> Заказы <span class="count" id="cntOrders">0</span></button>
@@ -499,6 +500,54 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
       </div>
       <div id="dashLastOrders"></div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="tab-content" id="tab-analytics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Аналитика</div>
+          <div class="page-sub">Детальная статистика продаж по периодам</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="date" id="analyticsFrom" style="padding:9px 12px;border:1.5px solid #d0e8d8;border-radius:10px;font-family:inherit;font-size:13px;outline:none;">
+          <span style="color:#8aaa94;font-size:13px;">—</span>
+          <input type="date" id="analyticsTo" style="padding:9px 12px;border:1.5px solid #d0e8d8;border-radius:10px;font-family:inherit;font-size:13px;outline:none;">
+          <button class="btn btn-primary" onclick="renderAnalytics()" style="padding:9px 18px;">Показать</button>
+        </div>
+      </div>
+
+      <!-- Сводные цифры -->
+      <div class="stats-grid" id="analyticsStats" style="margin-bottom:24px;"></div>
+
+      <!-- График по дням — кликабельный -->
+      <div class="tbl-wrap" style="padding:20px;margin-bottom:20px;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;">📈 Выручка по дням <span id="analyticsPeriodLabel" style="font-size:12px;color:#8aaa94;font-weight:400;margin-left:8px;"></span></div>
+        <div id="analyticsChart" style="min-height:120px;"></div>
+      </div>
+
+      <!-- Детализация выбранного дня -->
+      <div id="analyticsDayDetail" style="display:none;margin-bottom:20px;">
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;">📋 Заказы за <span id="analyticsDayTitle"></span></div>
+            <button onclick="document.getElementById('analyticsDayDetail').style.display='none'" style="background:none;border:none;color:#8aaa94;font-size:20px;cursor:pointer;">✕</button>
+          </div>
+          <div id="analyticsDayOrders"></div>
+        </div>
+      </div>
+
+      <!-- Топ товаров за период -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;">🏆 Топ товаров за период</div>
+          <div id="analyticsTopProducts"></div>
+        </div>
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;">👥 Топ клиентов за период</div>
+          <div id="analyticsTopClients"></div>
+        </div>
+      </div>
     </section>
 
     <!-- PRODUCTS -->
@@ -1451,6 +1500,7 @@ function showTab(name, btn) {
   }
   if (name === 'settings') loadSettings();
   if (name === 'categories') loadCatHomeStateAndRender();
+  if (name === 'analytics') renderAnalytics();
 }
 
 // On admin login, prime orders from Supabase and subscribe to live changes
@@ -4156,6 +4206,182 @@ async function moveBannerOrder(id, dir) {
     ]);
   }
   await loadBannersAdmin();
+}
+
+// ===== АНАЛИТИКА =====
+function renderAnalytics() {
+  const allOrders = getOrders();
+
+  const toEl = document.getElementById('analyticsTo');
+  const fromEl = document.getElementById('analyticsFrom');
+  const today = new Date(); today.setHours(23,59,59,999);
+  const defFrom = new Date(); defFrom.setDate(today.getDate() - 29); defFrom.setHours(0,0,0,0);
+
+  if (!fromEl.value) fromEl.valueAsDate = defFrom;
+  if (!toEl.value) toEl.valueAsDate = today;
+
+  const dFrom = new Date(fromEl.value); dFrom.setHours(0,0,0,0);
+  const dTo = new Date(toEl.value); dTo.setHours(23,59,59,999);
+
+  function parseD(o) {
+    if (!o.date) return null;
+    const parts = o.date.split(',')[0].trim().split('.');
+    if (parts.length < 3) return null;
+    return new Date(+parts[2], +parts[1]-1, +parts[0]);
+  }
+
+  const filtered = allOrders.filter(o => {
+    if (o.status === 'cancelled') return false;
+    const d = parseD(o); if (!d) return false;
+    return d >= dFrom && d <= dTo;
+  });
+
+  const totalRev = filtered.reduce((s, o) => s + (Number(o.total) || 0), 0);
+  const avgCheck = filtered.length ? Math.round(totalRev / filtered.length) : 0;
+  const doneOrders = filtered.filter(o => o.status === 'done' || o.status === 'issued');
+  const doneRev = doneOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+
+  const statsEl = document.getElementById('analyticsStats');
+  if (statsEl) statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Заказов за период</div><div class="stat-num">${filtered.length}</div><div class="stat-sub">Без отменённых</div></div>
+    <div class="stat-card"><div class="stat-label">Сумма заказов</div><div class="stat-num">${totalRev.toLocaleString('ru-RU')} ₽</div><div class="stat-sub">Все активные</div></div>
+    <div class="stat-card"><div class="stat-label">Выполнено</div><div class="stat-num">${doneOrders.length}</div><div class="stat-sub">${doneRev.toLocaleString('ru-RU')} ₽</div></div>
+    <div class="stat-card"><div class="stat-label">Средний чек</div><div class="stat-num">${avgCheck.toLocaleString('ru-RU')} ₽</div><div class="stat-sub">По всем заказам</div></div>
+  `;
+
+  const days = [];
+  for (let d = new Date(dFrom); d <= dTo; d.setDate(d.getDate()+1)) {
+    days.push({ d: new Date(d), sum: 0, orders: [] });
+  }
+  filtered.forEach(o => {
+    const od = parseD(o); if (!od) return;
+    const b = days.find(x => x.d.toDateString() === od.toDateString());
+    if (b) { b.sum += Number(o.total)||0; b.orders.push(o); }
+  });
+
+  const maxSum = Math.max(1, ...days.map(b => b.sum));
+  const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const periodDays = days.length;
+  const labelStep = periodDays <= 14 ? 1 : periodDays <= 31 ? 2 : 7;
+
+  const chartEl = document.getElementById('analyticsChart');
+  const periodLabel = document.getElementById('analyticsPeriodLabel');
+  if (periodLabel) periodLabel.textContent = `(${filtered.length} заказов · ${totalRev.toLocaleString('ru-RU')} ₽)`;
+
+  if (chartEl) {
+    chartEl.innerHTML = '<div style="display:flex;align-items:flex-end;gap:3px;height:140px;overflow-x:auto;">' +
+      days.map((b, i) => {
+        const h = Math.round(b.sum / maxSum * 110);
+        const hasOrders = b.orders.length > 0;
+        return `<div onclick="showAnalyticsDay(${i})" style="flex:1;min-width:${periodDays > 60 ? 8 : 20}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;cursor:${hasOrders?'pointer':'default'};" title="${b.d.toLocaleDateString('ru-RU')} — ${b.sum.toLocaleString('ru-RU')} ₽ · ${b.orders.length} заказов">
+          <span style="font-size:9px;color:${b.sum?'#1aab58':'transparent'};font-weight:700;">${b.sum ? (b.sum>=1000?Math.round(b.sum/1000)+'к':b.sum) : ''}</span>
+          <div style="width:100%;height:${Math.max(2,h)}px;background:${b.sum?'linear-gradient(180deg,#2ECC71,#1aab58)':'#eef5f0'};border-radius:3px 3px 0 0;transition:opacity .15s;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'"></div>
+          <span style="font-size:9px;color:#8aaa94;">${i % labelStep === 0 ? b.d.getDate() : ''}</span>
+        </div>`;
+      }).join('') + '</div>';
+    chartEl._days = days;
+  }
+
+  // Топ товаров за период
+  const productMap = {};
+  filtered.forEach(o => {
+    (o.items||[]).forEach(i => {
+      if (!productMap[i.name]) productMap[i.name] = {qty:0, rev:0};
+      productMap[i.name].qty += Number(i.qty)||0;
+      productMap[i.name].rev += (Number(i.qty)||0) * (Number(i.price)||0);
+    });
+  });
+  const topProds = Object.entries(productMap).sort((a,b)=>b[1].rev-a[1].rev).slice(0,8);
+  const maxPRev = topProds.length ? topProds[0][1].rev : 1;
+  const topProdsEl = document.getElementById('analyticsTopProducts');
+  if (topProdsEl) topProdsEl.innerHTML = topProds.length
+    ? topProds.map(([name,v],i) => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:12px;color:#8aaa94;font-weight:700;width:18px;flex-shrink:0;">${i+1}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+              <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+              <span style="font-size:12px;color:#1aab58;font-weight:700;white-space:nowrap;margin-left:6px;">${v.rev.toLocaleString('ru-RU')} ₽</span>
+            </div>
+            <div style="height:5px;background:#eef5f0;border-radius:4px;"><div style="height:100%;width:${Math.round(v.rev/maxPRev*100)}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:4px;"></div></div>
+          </div>
+          <span style="font-size:11px;color:#8aaa94;width:40px;text-align:right;flex-shrink:0;">${v.qty} шт</span>
+        </div>`)
+      .join('')
+    : '<div style="color:#8aaa94;font-size:14px;">Нет данных</div>';
+
+  // Топ клиентов за период
+  const clientMap = {};
+  filtered.forEach(o => {
+    const key = o.phone || o.email || o.name || 'unknown';
+    if (!clientMap[key]) clientMap[key] = {name: o.name||'—', phone: o.phone||'', count:0, rev:0};
+    clientMap[key].count++;
+    clientMap[key].rev += Number(o.total)||0;
+  });
+  const topClients = Object.values(clientMap).sort((a,b)=>b.rev-a.rev).slice(0,8);
+  const topClientsEl = document.getElementById('analyticsTopClients');
+  if (topClientsEl) topClientsEl.innerHTML = topClients.length
+    ? topClients.map((c,i) => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f7f2;">
+          <div style="width:30px;height:30px;border-radius:50%;background:#eaf5ee;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1aab58;font-size:13px;flex-shrink:0;">${i+1}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div>
+            <div style="font-size:11px;color:#8aaa94;">${c.phone} · ${c.count} ${c.count===1?'заказ':c.count<5?'заказа':'заказов'}</div>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:#1aab58;white-space:nowrap;">${c.rev.toLocaleString('ru-RU')} ₽</span>
+        </div>`)
+      .join('')
+    : '<div style="color:#8aaa94;font-size:14px;">Нет данных</div>';
+}
+
+function showAnalyticsDay(idx) {
+  const chartEl = document.getElementById('analyticsChart');
+  if (!chartEl || !chartEl._days) return;
+  const b = chartEl._days[idx];
+  if (!b || !b.orders.length) return;
+
+  const detailEl = document.getElementById('analyticsDayDetail');
+  const titleEl = document.getElementById('analyticsDayTitle');
+  const ordersEl = document.getElementById('analyticsDayOrders');
+  if (!detailEl || !titleEl || !ordersEl) return;
+
+  titleEl.textContent = b.d.toLocaleDateString('ru-RU', {day:'numeric', month:'long', year:'numeric'});
+
+  const dayTotal = b.orders.reduce((s,o) => s+(Number(o.total)||0), 0);
+  const STATUS_LABEL = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов',done:'✓ Выполнен',issued:'✓ Выдан',cancelled:'✕ Отменён'};
+
+  ordersEl.innerHTML = `
+    <div style="margin-bottom:14px;padding:12px 16px;background:#f0faf4;border-radius:10px;display:flex;gap:20px;font-size:13px;">
+      <span>Заказов: <strong>${b.orders.length}</strong></span>
+      <span>Выручка: <strong style="color:#1aab58;">${dayTotal.toLocaleString('ru-RU')} ₽</strong></span>
+      <span>Средний чек: <strong>${Math.round(dayTotal/b.orders.length).toLocaleString('ru-RU')} ₽</strong></span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:2px solid #e8f4ec;">
+        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">№</th>
+        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">Клиент</th>
+        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">Товары</th>
+        <th style="padding:8px 6px;text-align:left;color:#6b8a74;">Доставка</th>
+        <th style="padding:8px 6px;text-align:right;color:#6b8a74;">Сумма</th>
+        <th style="padding:8px 6px;text-align:center;color:#6b8a74;">Статус</th>
+      </tr></thead>
+      <tbody>
+        ${b.orders.map(o => {
+          const items = (o.items||[]).map(i => i.name + ' ×' + i.qty).join(', ');
+          return `<tr style="border-bottom:1px solid #f0f7f2;cursor:pointer;">
+            <td style="padding:10px 6px;font-weight:700;">#${o.num}</td>
+            <td style="padding:10px 6px;">${o.name||'—'}<br><span style="color:#8aaa94;font-size:12px;">${o.phone||''}</span></td>
+            <td style="padding:10px 6px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${items}">${items||'—'}</td>
+            <td style="padding:10px 6px;">${o.method==='pickup'?'Самовывоз':'Курьер'}</td>
+            <td style="padding:10px 6px;text-align:right;font-weight:700;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</td>
+            <td style="padding:10px 6px;text-align:center;"><span style="font-size:11px;">${STATUS_LABEL[o.status]||o.status}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  detailEl.style.display = 'block';
+  detailEl.scrollIntoView({behavior:'smooth', block:'start'});
 }
 </script>
 <div id="printSlip" style="display:none;"></div>
