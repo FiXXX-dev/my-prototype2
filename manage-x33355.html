@@ -2177,7 +2177,7 @@ function orderCardHtml(o) {
       <div class="order-head">
         <div class="order-head-main">
           <div>
-            <div class="order-num">#${o.num != null ? o.num : (o.id != null ? o.id : '?')}</div>
+            <div class="order-num">#${o.num != null ? o.num : (o.id ? String(o.id).slice(0,8) : '…')}</div>
             <div class="order-date">${o.date}</div>
           </div>
           <span class="order-status status-${sClass}">${sLabel}</span>
@@ -2495,7 +2495,7 @@ function buildPrintSlip(o) {
   return `
     <div class="pi-header">
       <div>
-        <div class="pi-title">Накладная #${o.num != null ? o.num : (o.id || '?')}</div>
+        <div class="pi-title">Накладная #${o.num != null ? o.num : (o.id ? String(o.id).slice(0,8) : '…')}</div>
         <div class="pi-meta">${o.date} · ${statusLabel}</div>
       </div>
       <div style="text-align:right;font-size:11px;color:#888;">
