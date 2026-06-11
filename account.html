@@ -1141,10 +1141,9 @@ function _localOrdersFallback(u){
 
 // Применяет готовые массивы данных в память и перерисовывает активную вкладку.
 function _applyAccountData(orders, favs, addrs, uid){
-  if (Array.isArray(orders)){
-    // Supabase вернул пустой массив — пробуем localStorage как запасной вариант
-    myOrders = orders.length > 0 ? orders : _localOrdersFallback(getCurrentUser());
-  }
+  // Supabase ответил массивом (даже пустым) — он источник истины.
+  // localStorage используем только если Supabase вообще недоступен (null).
+  myOrders = Array.isArray(orders) ? orders : _localOrdersFallback(getCurrentUser());
   if (Array.isArray(favs))   myFavorites = favs;
   if (Array.isArray(addrs)) {
     myAddresses = addrs.map(mapAddrRow);
