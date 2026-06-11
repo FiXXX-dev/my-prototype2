@@ -1,23 +1,14 @@
 -- ============================================================================
--- РЕМОНТ НОМЕРОВ ЗАКАЗОВ — запустить в Supabase SQL Editor (опционально!)
--- ============================================================================
--- Колонка id в orders — уже автоинкрементное число (8, 18, 23...), и сайт
--- использует её как номер заказа, когда num пустой. Так что заказы будут
--- показываться как #8, #18, #23 даже БЕЗ этого скрипта.
---
--- Этот скрипт просто приводит колонку num в порядок, чтобы она совпадала
--- с id и автозаполнялась у новых заказов. Номера при этом НЕ меняются.
+-- ПОЛНЫЙ РЕМОНТ ТАБЛИЦЫ ЗАКАЗОВ — запустить в Supabase SQL Editor
 -- ============================================================================
 
--- 1. Убираем NOT NULL если есть
+-- 1. Убираем NOT NULL если стоит
 ALTER TABLE public.orders ALTER COLUMN num DROP NOT NULL;
 
--- 2. Заполняем num значением id у всех заказов, где num пустой
---    (заказ #8 остаётся заказом #8 — номера не меняются)
+-- 2. Заполняем num значением id у заказов, где num пустой
 UPDATE public.orders SET num = id WHERE num IS NULL;
 
--- 3. Создаём последовательность и синхронизируем её с текущим максимумом,
---    чтобы новые заказы продолжали нумерацию (24, 25, ...)
+-- 3. Создаём последовательность и выставляем её на текущий максимум
 CREATE SEQUENCE IF NOT EXISTS public.orders_num_seq;
 SELECT setval('public.orders_num_seq', (SELECT COALESCE(MAX(num), 0) FROM public.orders));
 
@@ -25,5 +16,15 @@ SELECT setval('public.orders_num_seq', (SELECT COALESCE(MAX(num), 0) FROM public
 ALTER TABLE public.orders
   ALTER COLUMN num SET DEFAULT nextval('public.orders_num_seq'::regclass);
 
--- 5. Обновляем кэш схемы API
+-- 5. Открываем доступ для роли anon (без этого POST возвращает 404/403)
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.orders TO anon;
+GRANT USAGE ON SEQUENCE public.orders_num_seq TO anon;
+
+-- 6. Открываем RLS-политику
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "open" ON public.orders;
+CREATE POLICY "open" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+
+-- 7. Обновляем кэш схемы PostgREST
 NOTIFY pgrst, 'reload schema';
