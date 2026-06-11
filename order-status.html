@@ -388,29 +388,32 @@
     var numTrim = numRaw.trim();
 
     if (isUUID(numTrim)){
-      // Query by UUID id
+      // UUID — ищем по id напрямую
       rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim));
     } else if (/^\d+$/.test(numTrim)){
-      // Query by numeric num
-      rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim));
-    } else {
-      // Try both: partial match on id might not work, try id first then num
+      // Числовой номер — сначала ищем по id (основной ключ)
       try { rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim)); } catch(e){}
-      if (!rows.length) {
+      // Fallback на старое поле num если по id не нашли
+      if (!rows || !rows.length){
+        try { rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim)); } catch(e){}
+      }
+    } else {
+      try { rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim)); } catch(e){}
+      if (!rows || !rows.length){
         try { rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim)); } catch(e){}
       }
     }
 
     if (!rows || !rows.length) return null;
 
-    // Verify phone
+    // Проверяем телефон
     var matched = rows.find(function(r){ return phoneMatch(r.customer_phone, phoneRaw); });
     return matched || null;
   }
 
   function renderOrder(r){
     // Header
-    var displayNum = r.num != null ? r.num : r.id;
+    var displayNum = r.id;
     document.getElementById('resNum').textContent = 'Заказ #' + displayNum;
     var dt = r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'}) : '';
     document.getElementById('resDate').textContent = dt;
