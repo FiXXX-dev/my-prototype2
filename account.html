@@ -1121,6 +1121,7 @@ function invalidateAccountCache(){
       if (k && k.startsWith('klever_acct_')) localStorage.removeItem(k);
     }
   } catch(e) {}
+  try { localStorage.removeItem(ORDERS_KEY); } catch(e) {}
 }
 
 // Если Supabase вернул 0 заказов — ищем в localStorage по телефону/email/userId
@@ -1164,6 +1165,16 @@ function _applyAccountData(orders, favs, addrs, uid){
 async function loadAccountData(){
   const u = getCurrentUser();
   if (!u) return;
+
+  // Чистим кэш если в нём старые localStorage-заказы без supabase id
+  const cached = _acctReadCache(u.id);
+  if (cached && Array.isArray(cached.orders)) {
+    const hasStale = cached.orders.some(o => !o._supaId && typeof o.num === 'number' && o.num > 1000);
+    if (hasStale) {
+      invalidateAccountCache();
+    }
+  }
+
   if (accountDataLoaded && accountDataLoadedFor === u.id) return;
   if (accountDataLoading) return accountDataLoading;
 
