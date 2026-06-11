@@ -397,10 +397,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const data = await _pgGetRetry('orders', { select: '*', order: 'created_at.desc' });
       if (!Array.isArray(data)) return null;
       return data.map(r => ({
-        // Номер заказа: предпочитаем num (авто-sequence), иначе UUID id.
-        num: r.num != null ? r.num : r.id,
+        // Номер заказа — это id (автоинкремент). Поле num устарело.
+        num: r.id,
         id: r.id,
-        date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+        date: r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', {
+          day:'2-digit', month:'2-digit', year:'numeric',
+          hour:'2-digit', minute:'2-digit'
+        }) : '',
         status: r.status || 'new',
         items: Array.isArray(r.items) ? r.items : [],
         subtotal: r.subtotal,
