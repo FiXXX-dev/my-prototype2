@@ -344,11 +344,15 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
           return tryInsert({ ...row, num: Date.now() });
         }
         if (isTableMissingError(error, e && e.status)) {
-          console.error('[supabase] таблица orders недоступна (404) — схема БД не совпадает с кэшем API. Запустите fix_orders_schema.sql в Supabase SQL Editor.', error);
+          // Выводим полное тело ответа Supabase, чтобы понять реальную причину (404/403/422).
+          console.error('[supabase] orders недоступна — HTTP', e && e.status,
+            '| supaError:', JSON.stringify(e && e.supaError),
+            '| Частые причины: нет GRANT на anon, нет USAGE на sequence, RLS без политики.',
+            '| Запустите fix_orders_schema.sql');
           return { ok: false, error, tableMissing: true };
         }
         if (!isMissingColumnError(error)) {
-          console.error('[supabase] insert error: HTTP', e && e.status, '| code:', error.code, '| message:', error.message || error);
+          console.error('[supabase] insert error: HTTP', e && e.status, '| code:', error.code, '| message:', error.message || error, '| full:', JSON.stringify(e && e.supaError));
           return { ok: false, error };
         }
         const col = missingColName(error);
