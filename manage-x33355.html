@@ -1648,12 +1648,9 @@ function _renderDashTopProducts(allOrders){
       return `<button onclick="setDashTopMode('${m}')" style="border:1px solid ${on ? '#2ECC71' : '#dce8e0'};background:${on ? '#eafaf0' : '#fff'};color:${on ? '#1aab58' : '#6b8a74'};font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;">${label}</button>`;
     }).join('');
   }
+  // Подпись-объяснение убрана — загромождала блок.
   const sub = document.getElementById('dashTopSub');
-  if (sub) {
-    sub.textContent = byRevenue
-      ? 'Товары, принёсшие больше всего денег (все заказы, кроме отменённых). Полоска — сравнение с лидером, процент — доля от всей выручки.'
-      : 'Самые продаваемые по количеству штук (все заказы, кроме отменённых). Полоска — сравнение с лидером, процент — доля от всех проданных штук.';
-  }
+  if (sub) sub.textContent = '';
 
   const elTop = document.getElementById('dashTopProducts');
   if (!elTop) return;
@@ -1663,16 +1660,19 @@ function _renderDashTopProducts(allOrders){
       const val = byRevenue ? p.revenue : p.qty;
       const barPct = maxVal ? Math.round(val / maxVal * 100) : 0;
       const sharePct = totalVal ? Math.round(val / totalVal * 100) : 0;
-      const shareHint = byRevenue ? '% от всей выручки' : '% от всех проданных штук';
       return `
-        <div style="margin-bottom:13px;">
-          <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px;">
-            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i + 1}. ${escH(p.name)}</span>
-            <span style="color:#6b8a74;white-space:nowrap;">${p.qty} шт · ${p.revenue.toLocaleString('ru-RU')} ₽ · <strong style="color:#1aab58;" title="${shareHint}">${sharePct}%</strong></span>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:12px;color:#8aaa94;font-weight:700;width:16px;flex-shrink:0;">${i+1}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:4px;">
+              <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(p.name)}</span>
+              <span style="font-size:12px;color:#1aab58;font-weight:700;white-space:nowrap;flex-shrink:0;">${byRevenue ? p.revenue.toLocaleString('ru-RU') + ' ₽' : p.qty + ' шт'}</span>
+            </div>
+            <div style="height:6px;background:#eef5f0;border-radius:6px;overflow:hidden;">
+              <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;transition:width .4s ease;"></div>
+            </div>
           </div>
-          <div style="height:8px;background:#eef5f0;border-radius:6px;overflow:hidden;" title="${barPct}% от лидера">
-            <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;"></div>
-          </div>
+          <span style="font-size:11px;color:#b0c8b8;font-weight:700;width:28px;text-align:right;flex-shrink:0;">${sharePct}%</span>
         </div>`;
     }).join('');
 }
