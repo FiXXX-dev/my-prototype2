@@ -483,9 +483,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.supaListOrdersByUser = async function(userId, opts){
     if (!isConfigured()) return null;
     const mapRow = r => ({
-      num: r.num != null ? r.num : r.id,
+      num: r.id,
       id: r.id,
-      date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+      date: r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', {
+        day:'2-digit', month:'2-digit', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      }) : '',
       status: r.status || 'new',
       items: Array.isArray(r.items) ? r.items : [],
       subtotal: r.subtotal,
@@ -509,13 +512,25 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     // Normalize phone to last 10 digits so +7/8/no-code all match via ilike.
     const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
     const email = ((opts && opts.email) || '').toLowerCase().trim();
+    const isUUID = v => typeof v === 'string'
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
-    // PostgREST использует * как wildcard в ilike (в URL), а не %.
+    // Логика фильтрации:
+    // - Есть валидный UUID → смотрим ТОЛЬКО заказы этого пользователя по user_id,
+    //   плюс гостевые заказы (user_id IS NULL) по телефону/email.
+    //   Это предотвращает ситуацию, когда два аккаунта с одинаковым телефоном
+    //   видят одни и те же заказы.
+    // - Нет UUID (гость / локальный пользователь) → только телефон/email.
     function buildOr(withUserId) {
       const f = [];
-      if (withUserId && userId) f.push(`user_id.eq.${userId}`);
-      if (phone) f.push(`customer_phone.ilike.*${phone}*`);
-      if (email) f.push(`customer_email.ilike.*${email}*`);
+      if (withUserId && userId && isUUID(userId)) {
+        f.push(`user_id.eq.${userId}`);
+        if (phone) f.push(`and(user_id.is.null,customer_phone.ilike.*${phone}*)`);
+        if (email) f.push(`and(user_id.is.null,customer_email.ilike.*${email}*)`);
+      } else {
+        if (phone) f.push(`customer_phone.ilike.*${phone}*`);
+        if (email) f.push(`customer_email.ilike.*${email}*`);
+      }
       return f;
     }
 
