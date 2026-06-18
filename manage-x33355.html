@@ -2214,7 +2214,7 @@ function renderOrders() {
 }
 
 function orderCardHtml(o) {
-  const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
+  const items = (o.items || []).map(i => `<div class="order-item"><span>${escH(i.name)} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
   const isPickup = o.method === 'pickup';
   const STATUS_CLASS = {assembling:'assembling',courier:'courier',ready:'ready',done:'done',issued:'issued',cancelled:'cancelled'};
@@ -2240,26 +2240,26 @@ function orderCardHtml(o) {
           <div class="order-section">
             <div class="order-label">Клиент</div>
             <div class="order-value">
-              <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
-              <span class="icon icon-phone"></span> ${o.phone}${o.email ? '<br><span class="icon icon-mail"></span> ' + o.email : ''}
+              <strong>${escH(o.name)}</strong>${o.company ? ' · ' + escH(o.company) : ''}<br>
+              <span class="icon icon-phone"></span> ${escH(o.phone)}${o.email ? '<br><span class="icon icon-mail"></span> ' + escH(o.email) : ''}
             </div>
           </div>
           <div class="order-section">
             <div class="order-label">Доставка</div>
             <div class="order-value">
               ${o.method === 'pickup' ? '<span class="icon icon-store"></span> Самовывоз' : '<span class="icon icon-truck"></span> Курьер'}<br>
-              ${o.address || '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + o.deliveryDate : ''}${o.deliveryTime ? ' ' + o.deliveryTime : ''}
+              ${o.address ? escH(o.address) : '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + escH(o.deliveryDate) : ''}${o.deliveryTime ? ' ' + escH(o.deliveryTime) : ''}
             </div>
           </div>
         </div>
         ${o.payment ? `<div class="order-section" style="margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;">
           <div class="order-label">Оплата</div>
-          <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
+          <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${escH(o.invoiceCompany || '')}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + escH(o.invoiceInn) : ''}</span>` : ''}</div>
         </div>` : ''}
         ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
         ${o.comment && String(o.comment).trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
           <div class="order-label" style="margin-bottom:6px;"><span class="icon icon-chat"></span> Комментарий клиента</div>
-          <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${String(o.comment).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;')}</div>
+          <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${escH(o.comment)}</div>
         </div>` : ''}
         <div class="order-actions">
           <div class="status-select-wrap">
@@ -2533,7 +2533,7 @@ function buildPrintSlip(o) {
   const rows = items.map((i, idx) => `
     <tr>
       <td>${idx + 1}</td>
-      <td>${(i.name || '').replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;')}</td>
+      <td>${escH(i.name)}</td>
       <td style="text-align:center;">${i.qty}</td>
       <td style="text-align:right;">${(i.price || 0).toLocaleString('ru-RU')} ₽</td>
       <td style="text-align:right;">${((i.qty||1)*(i.price||0)).toLocaleString('ru-RU')} ₽</td>
@@ -2541,7 +2541,7 @@ function buildPrintSlip(o) {
   const statusLabel = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Доставлен',issued:'Выдан',cancelled:'Отменён'}[o.status] || o.status;
   const methodLabel = o.method === 'pickup' ? 'Самовывоз' : 'Курьерская доставка';
   const paymentLabel = {cash: o.method==='pickup'?'Наличными / картой при получении':'Наличными / картой курьеру', invoice:'Безналичный расчёт (счёт)', transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
-  const safeComment = o.comment ? String(o.comment).replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;') : '';
+  const safeComment = o.comment ? escH(o.comment) : '';
   return `
     <div class="pi-header">
       <div>
@@ -2556,15 +2556,15 @@ function buildPrintSlip(o) {
     <div class="pi-grid">
       <div class="pi-section">
         <div class="pi-label">Клиент</div>
-        <div class="pi-value"><strong>${o.name||'—'}</strong>${o.company?'<br>'+o.company:''}${o.phone?'<br>'+o.phone:''}${o.email?'<br>'+o.email:''}</div>
+        <div class="pi-value"><strong>${o.name?escH(o.name):'—'}</strong>${o.company?'<br>'+escH(o.company):''}${o.phone?'<br>'+escH(o.phone):''}${o.email?'<br>'+escH(o.email):''}</div>
       </div>
       <div class="pi-section">
         <div class="pi-label">Доставка</div>
-        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}${o.deliveryDate?'<br>'+o.deliveryDate:''}${o.deliveryTime?' '+o.deliveryTime:''}</div>
+        <div class="pi-value">${methodLabel}${o.address?'<br>'+escH(o.address):''}${o.deliveryDate?'<br>'+escH(o.deliveryDate):''}${o.deliveryTime?' '+escH(o.deliveryTime):''}</div>
       </div>
       ${o.payment?`<div class="pi-section">
         <div class="pi-label">Оплата</div>
-        <div class="pi-value">${paymentLabel}${o.invoiceCompany?'<br>'+o.invoiceCompany:''}${o.invoiceInn?'<br>ИНН '+o.invoiceInn:''}</div>
+        <div class="pi-value">${paymentLabel}${o.invoiceCompany?'<br>'+escH(o.invoiceCompany):''}${o.invoiceInn?'<br>ИНН '+escH(o.invoiceInn):''}</div>
       </div>`:''}
       ${safeComment?`<div class="pi-section">
         <div class="pi-label">Комментарий</div>
@@ -4300,7 +4300,7 @@ function renderAnalytics() {
           <span style="font-size:12px;color:#8aaa94;font-weight:700;width:18px;flex-shrink:0;">${i+1}</span>
           <div style="flex:1;min-width:0;">
             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-              <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+              <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(name)}</span>
               <span style="font-size:12px;color:#1aab58;font-weight:700;white-space:nowrap;margin-left:6px;">${v.rev.toLocaleString('ru-RU')} ₽</span>
             </div>
             <div style="height:5px;background:#eef5f0;border-radius:4px;"><div style="height:100%;width:${Math.round(v.rev/maxPRev*100)}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:4px;"></div></div>
@@ -4325,8 +4325,8 @@ function renderAnalytics() {
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f7f2;">
           <div style="width:30px;height:30px;border-radius:50%;background:#eaf5ee;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1aab58;font-size:13px;flex-shrink:0;">${i+1}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div>
-            <div style="font-size:11px;color:#8aaa94;">${c.phone} · ${c.count} ${c.count===1?'заказ':c.count<5?'заказа':'заказов'}</div>
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(c.name)}</div>
+            <div style="font-size:11px;color:#8aaa94;">${escH(c.phone)} · ${c.count} ${c.count===1?'заказ':c.count<5?'заказа':'заказов'}</div>
           </div>
           <span style="font-size:13px;font-weight:700;color:#1aab58;white-space:nowrap;">${c.rev.toLocaleString('ru-RU')} ₽</span>
         </div>`)
@@ -4374,8 +4374,8 @@ function showAnalyticsDay(idx) {
                style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;background:#fff;user-select:none;">
             <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:#1a2e22;min-width:52px;">#${o.num}</div>
             <div style="flex:1;min-width:0;">
-              <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.name||'—'}</div>
-              <div style="font-size:12px;color:#8aaa94;">${o.phone||''} ${o.email ? '· '+o.email : ''}</div>
+              <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.name?escH(o.name):'—'}</div>
+              <div style="font-size:12px;color:#8aaa94;">${escH(o.phone||'')} ${o.email ? '· '+escH(o.email) : ''}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-size:15px;font-weight:900;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</div>
@@ -4393,18 +4393,18 @@ function showAnalyticsDay(idx) {
               <div style="flex:1;padding:12px 18px;border-right:1px solid #f0f7f2;">
                 <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Доставка</div>
                 <div style="font-size:13px;font-weight:600;">${delivery}</div>
-                ${o.address ? `<div style="font-size:12px;color:#6b8a74;margin-top:2px;">${o.address}</div>` : ''}
-                ${o.deliveryDate ? `<div style="font-size:12px;color:#6b8a74;">📅 ${o.deliveryDate}${o.deliveryTime?' '+o.deliveryTime:''}</div>` : ''}
+                ${o.address ? `<div style="font-size:12px;color:#6b8a74;margin-top:2px;">${escH(o.address)}</div>` : ''}
+                ${o.deliveryDate ? `<div style="font-size:12px;color:#6b8a74;">📅 ${escH(o.deliveryDate)}${o.deliveryTime?' '+escH(o.deliveryTime):''}</div>` : ''}
               </div>
               <div style="flex:1;padding:12px 18px;border-right:1px solid #f0f7f2;">
                 <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Оплата</div>
                 <div style="font-size:13px;font-weight:600;">${payLabel}</div>
-                ${o.invoiceCompany ? `<div style="font-size:12px;color:#6b8a74;">${o.invoiceCompany}${o.invoiceInn?' · ИНН '+o.invoiceInn:''}</div>` : ''}
+                ${o.invoiceCompany ? `<div style="font-size:12px;color:#6b8a74;">${escH(o.invoiceCompany)}${o.invoiceInn?' · ИНН '+escH(o.invoiceInn):''}</div>` : ''}
               </div>
               <div style="flex:1;padding:12px 18px;">
                 <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Время заказа</div>
                 <div style="font-size:13px;font-weight:600;">${o.date||'—'}</div>
-                ${o.comment ? `<div style="font-size:12px;color:#f0a500;margin-top:4px;">💬 ${o.comment}</div>` : ''}
+                ${o.comment ? `<div style="font-size:12px;color:#f0a500;margin-top:4px;">💬 ${escH(o.comment)}</div>` : ''}
               </div>
             </div>
 
@@ -4423,7 +4423,7 @@ function showAnalyticsDay(idx) {
                 <tbody>
                   ${items.map(i => `
                     <tr style="border-bottom:1px solid #f5faf6;">
-                      <td style="padding:9px 8px;font-weight:500;">${i.name||'—'}</td>
+                      <td style="padding:9px 8px;font-weight:500;">${i.name?escH(i.name):'—'}</td>
                       <td style="padding:9px 8px;text-align:center;color:#6b8a74;">${i.qty||1} шт</td>
                       <td style="padding:9px 8px;text-align:right;color:#6b8a74;">${(Number(i.price)||0).toLocaleString('ru-RU')} ₽</td>
                       <td style="padding:9px 8px;text-align:right;font-weight:700;color:#1a2e22;">${((Number(i.qty)||1)*(Number(i.price)||0)).toLocaleString('ru-RU')} ₽</td>

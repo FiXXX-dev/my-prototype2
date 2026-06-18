@@ -511,7 +511,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     });
     // Normalize phone to last 10 digits so +7/8/no-code all match via ilike.
     const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
-    const email = ((opts && opts.email) || '').toLowerCase().trim();
+    // Экранируем структурные символы PostgREST в email, иначе через
+    // специально составленный email можно сломать фильтр or=(...) и прочитать
+    // чужие заказы (инъекция в фильтр). Убираем , ( ) * пробелы и кавычки.
+    const email = ((opts && opts.email) || '').toLowerCase().trim().replace(/[(),*"'\s]/g, '');
     const isUUID = v => typeof v === 'string'
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
