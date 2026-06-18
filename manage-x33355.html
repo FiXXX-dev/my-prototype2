@@ -377,9 +377,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="login-logo"><svg class="logo-icon" width="48" height="48" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg> <span>Клевер</span></div>
     <div class="login-sub">Панель управления магазином</div>
     <div class="login-form">
-      <input type="password" class="login-input" id="passInput" placeholder="Введите пароль" onkeypress="if(event.key==='Enter') doLogin()">
-      <div class="login-err" id="loginErr">Неверный пароль</div>
-      <button class="login-btn" onclick="doLogin()">Войти →</button>
+      <input type="email" class="login-input" id="emailInput" placeholder="Email администратора" autocomplete="username" onkeypress="if(event.key==='Enter') doLogin()">
+      <input type="password" class="login-input" id="passInput" placeholder="Пароль" autocomplete="current-password" onkeypress="if(event.key==='Enter') doLogin()">
+      <div class="login-err" id="loginErr">Неверный email или пароль</div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Войти →</button>
     </div>
     <a href="index.html" style="display:block;text-align:center;margin-top:20px;color:#8aaa94;font-size:13px;text-decoration:none;">← Вернуться на сайт</a>
   </div>
@@ -1448,22 +1449,38 @@ const DEFAULT_PRODUCTS=[
 {name:'Папка-скоросшиватель 10 шт',sku:'KANC08',price:125,cat:'Канцелярия',img:''}
 ];
 
-// ===== АУТЕНТИФИКАЦИЯ =====
-const ADMIN_PASS = 'cleverspb33355';
-
-function doLogin() {
-  const pass = document.getElementById('passInput').value;
-  if (pass === ADMIN_PASS) {
-    sessionStorage.setItem('klever_admin', '1');
-    showAdmin();
-  } else {
-    document.getElementById('loginErr').classList.add('show');
-    document.getElementById('passInput').focus();
+// ===== АУТЕНТИФИКАЦИЯ (Supabase Auth) =====
+// Пароль больше НЕ хранится в коде. Вход — реальный аккаунт Supabase Auth,
+// а доступ к данным проверяется на сервере (RLS + функция is_admin()).
+async function doLogin() {
+  const email = (document.getElementById('emailInput').value || '').trim();
+  const pass  = document.getElementById('passInput').value || '';
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  err.classList.remove('show');
+  if (!email || !pass) { err.textContent = 'Введите email и пароль'; err.classList.add('show'); return; }
+  if (typeof supaAdminSignIn !== 'function') { err.textContent = 'Сервис недоступен'; err.classList.add('show'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Вход…'; }
+  try {
+    const res = await supaAdminSignIn(email, pass);
+    if (res && res.ok) {
+      showAdmin();
+    } else {
+      err.textContent = (res && res.reason === 'not_admin')
+        ? 'Этот аккаунт не админ' : 'Неверный email или пароль';
+      err.classList.add('show');
+      document.getElementById('passInput').focus();
+    }
+  } catch(e) {
+    err.textContent = 'Ошибка входа, попробуйте ещё раз';
+    err.classList.add('show');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Войти →'; }
   }
 }
 
-function doLogout() {
-  sessionStorage.removeItem('klever_admin');
+async function doLogout() {
+  try { if (typeof supaAdminSignOut === 'function') await supaAdminSignOut(); } catch(e){}
   location.reload();
 }
 
@@ -3102,10 +3119,15 @@ function plural(n, forms) {
 // При первом запуске — загружаем настройки
 loadSettings();
 
-// Авто-вход если сессия активна (после возврата на админку)
-if (sessionStorage.getItem('klever_admin') === '1') {
-  showAdmin();
-}
+// Авто-вход: восстанавливаем сессию Supabase Auth (если админ уже входил).
+(async function(){
+  try {
+    if (typeof supaAdminRestore === 'function') {
+      const res = await supaAdminRestore();
+      if (res && res.ok) showAdmin();
+    }
+  } catch(e){}
+})();
 
 // ===== CATEGORIES ADMIN =====
 const ADMIN_ICON_CHOICES = ['takeaway','spray','paper-roll','shield','box','broom','paperclip','flame','bag','package','star','heart','phone','mail','pin','truck','store','chat','chart','gear','lock','megaphone'];

@@ -44,6 +44,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         && SUPABASE_ANON_KEY.length > 20;
   }
 
+  // Токен авторизованного админа. Если задан — запросы к БД идут под его
+  // сессией (RLS даёт полный доступ). Устанавливается ТОЛЬКО в админ-панели
+  // после входа через Supabase Auth. На клиентских страницах остаётся null,
+  // поэтому те запросы — анонимные (и без CORS-preflight, важно на DPI).
+  let _authToken = null;
+  function setAuthToken(t){ _authToken = t || null; }
+
   let _client = null;
   function getClient(){
     if (_client) return _client;
@@ -93,7 +100,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const ctrl = new AbortController();
     const timer = setTimeout(() => _abort(ctrl), 25000);
     try {
-      const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: ctrl.signal });
+      const headers = { Accept: 'application/json' };
+      // Админ: ходим под его сессией (RLS → полный доступ). Клиент: без токена.
+      if (_authToken) headers.Authorization = 'Bearer ' + _authToken;
+      const resp = await fetch(url.toString(), { headers, signal: ctrl.signal });
       if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
       return await resp.json();
     } finally {
@@ -110,12 +120,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const ctrl = new AbortController();
     const timer = setTimeout(() => _abort(ctrl), 10000);
     try {
+      const baseHeaders = { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY };
+      // Админ: добавляем его токен → запись/правка/удаление проходят по RLS.
+      if (_authToken) baseHeaders.Authorization = 'Bearer ' + _authToken;
       const resp = await fetch(url.toString(), {
         method: method || 'POST',
-        headers: Object.assign(
-          { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY },
-          extraHeaders || {}
-        ),
+        headers: Object.assign(baseHeaders, extraHeaders || {}),
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
@@ -256,69 +266,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
 
-    // Columns that must always be present — never stripped.
-    const REQUIRED = new Set(['customer_name','customer_phone','items','total_price']);
-
-    function isMissingColumnError(error){
-      const msg = (error?.message || '') + ' ' + (error?.details || '');
-      return /column .* does not exist/i.test(msg)
-          || /Could not find the .* column/i.test(msg)
-          || error?.code === '42703'
-          || error?.code === 'PGRST204';
-    }
-
-    // Таблица отсутствует или кэш схемы PostgREST устарел → HTTP 404.
-    // Это НЕ ошибка колонки: повторять/обрезать бессмысленно, нужен SQL.
-    function isTableMissingError(error, status){
-      const msg = (error?.message || '') + ' ' + (error?.details || '');
-      return /relation .* does not exist/i.test(msg)
-          || /Could not find the table/i.test(msg)
-          || error?.code === '42P01'
-          || error?.code === 'PGRST205'
-          || status === 404;
-    }
-
-    // NOT NULL violation — num column has no default in some DB schemas.
-    function isNotNullViolation(error){
-      return /null value in column .* violates not-null/i.test(error?.message || '')
-          || error?.code === '23502';
-    }
-
-    // Extract the offending column name from a missing-column error so we can
-    // strip only THAT column and retry — this preserves delivery_method,
-    // payment_method, delivery_address, etc. as long as they exist in the schema.
-    function missingColName(error){
-      const msg = error?.message || '';
-      const m = msg.match(/column ["'`]?(\w+)["'`]? (?:of relation|does not exist)/i)
-             || msg.match(/Could not find .*?["'`](\w+)["'`]/i)
-             || msg.match(/["'`](\w+)["'`] is not present in the table/i);
-      return m ? m[1] : null;
-    }
-
-    // user_id — колонка типа uuid. Локальные пользователи (регистрация по
-    // телефону/паролю) имеют id вида "u1780688605663", который НЕ является
-    // валидным UUID → Postgres отклоняет всю вставку (22P02, 400 Bad Request).
-    // Пропускаем в БД только настоящий UUID; иначе null — заказ всё равно
-    // свяжется с пользователем по телефону/email.
     const _isUuid = v => typeof v === 'string'
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
-    const fullRow = {
+    // Заказ создаётся через защищённую функцию rpc_create_order (SECURITY
+    // DEFINER): прямого доступа к таблице orders у анонима нет (RLS), поэтому
+    // нельзя ни выгрузить, ни изменить чужие заказы. Функция возвращает
+    // созданную строку — из неё берём id (= номер заказа).
+    // Используем _pgPostRetry (plain fetch + повторы) — устойчиво к обрывам DPI.
+    const payload = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
-      items: order.items || [],
-      total_price: order.total != null ? Number(order.total) : 0,
-      language: language,
-      comment: order.comment || '',
-      // num отправляем только если значение задано — null/undefined пропускаем,
-      // чтобы не конфликтовать с NOT NULL или DEFAULT в схеме Supabase.
-      // Номером заказа теперь служит поле id (автоинкремент).
-      ...(order.num != null ? { num: order.num } : {}),
-      status: order.status || 'new',
       customer_email: order.email || '',
       company: order.company || '',
+      items: order.items || [],
       subtotal: order.subtotal != null ? Number(order.subtotal) : null,
       delivery_cost: order.delivery != null ? Number(order.delivery) : null,
+      total_price: order.total != null ? Number(order.total) : 0,
       delivery_method: order.method || 'courier',
       delivery_address: order.address || '',
       delivery_date: order.deliveryDate || null,
@@ -326,67 +290,27 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
+      comment: order.comment || '',
+      language: language,
+      status: order.status || 'new',
       user_id: _isUuid(order.userId) ? order.userId : null,
     };
 
-    // Recursively retry, removing the offending column on each missing-column error.
-    // Uses plain-fetch _pgPostRetry (NO CORS preflight) so the insert lands even on
-    // DPI/ТСПУ networks that block the SDK's OPTIONS request ("Failed to fetch").
-    async function tryInsert(row) {
-      try {
-        const data = await _pgPostRetry('orders', [row], 'POST', { Prefer: 'return=representation' }, 5);
-        return { ok: true, data: Array.isArray(data) ? data[0] : data };
-      } catch (e) {
-        const error = (e && e.supaError) || e || {};
-        // num NOT NULL without DEFAULT → auto-fill with timestamp and retry once.
-        if (isNotNullViolation(error) && !('num' in row)) {
-          console.warn('[supabase] num NOT NULL in DB — retrying with auto-generated num');
-          return tryInsert({ ...row, num: Date.now() });
-        }
-        if (isTableMissingError(error, e && e.status)) {
-          // Выводим полное тело ответа Supabase, чтобы понять реальную причину (404/403/422).
-          console.error('[supabase] orders недоступна — HTTP', e && e.status,
-            '| supaError:', JSON.stringify(e && e.supaError),
-            '| Частые причины: нет GRANT на anon, нет USAGE на sequence, RLS без политики.',
-            '| Запустите fix_orders_schema.sql');
-          return { ok: false, error, tableMissing: true };
-        }
-        if (!isMissingColumnError(error)) {
-          console.error('[supabase] insert error: HTTP', e && e.status, '| code:', error.code, '| message:', error.message || error, '| full:', JSON.stringify(e && e.supaError));
-          return { ok: false, error };
-        }
-        const col = missingColName(error);
-        if (!col || REQUIRED.has(col)) {
-          console.error('[supabase] cannot strip required column or unknown col', error);
-          return { ok: false, error };
-        }
-        const stripped = { ...row };
-        delete stripped[col];
-        console.warn(`[supabase] column "${col}" missing — retrying without it`);
-        return tryInsert(stripped);
-      }
-    }
-
     try {
-      let res = await tryInsert(fullRow);
-      // Последний рубеж: если полная вставка не прошла (кроме «таблицы нет»),
-      // пробуем минимальный набор колонок, который есть в любой схеме orders —
-      // лучше заказ без даты доставки в админке, чем вообще без заказа.
-      if (!res.ok && !res.tableMissing) {
-        console.warn('[supabase] full insert failed — retrying with minimal columns');
-        const minimal = {
-          customer_name: fullRow.customer_name,
-          customer_phone: fullRow.customer_phone,
-          items: fullRow.items,
-          total_price: fullRow.total_price,
-        };
-        const res2 = await tryInsert(minimal);
-        if (res2.ok) return res2;
-      }
-      return res;
+      const data = await _pgPostRetry('rpc/rpc_create_order', { payload }, 'POST',
+        { Prefer: 'return=representation' }, 5);
+      // rpc_create_order возвращает одну строку orders (объект); на всякий
+      // случай поддержим и массив.
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row && row.id != null) return { ok: true, data: row };
+      console.error('[supabase] rpc_create_order вернул пустой результат:', JSON.stringify(data));
+      return { ok: false, error: { message: 'empty rpc result' } };
     } catch (e) {
-      console.error('[supabase] insert exception', e);
-      return { ok: false, error: e };
+      const error = (e && e.supaError) || e || {};
+      console.error('[order] rpc_create_order failed — HTTP', e && e.status,
+        '| code:', error.code, '| message:', error.message || error,
+        '| Если функции нет — запустите fix_security_rls.sql в Supabase.');
+      return { ok: false, error };
     }
   };
 
@@ -509,58 +433,27 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       language: r.language,
       _supaId: r.id,
     });
-    // Normalize phone to last 10 digits so +7/8/no-code all match via ilike.
+    // Телефон → последние 10 цифр; email → нижний регистр.
     const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
-    // Экранируем структурные символы PostgREST в email, иначе через
-    // специально составленный email можно сломать фильтр or=(...) и прочитать
-    // чужие заказы (инъекция в фильтр). Убираем , ( ) * пробелы и кавычки.
-    const email = ((opts && opts.email) || '').toLowerCase().trim().replace(/[(),*"'\s]/g, '');
-    const isUUID = v => typeof v === 'string'
-      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+    const email = ((opts && opts.email) || '').toLowerCase().trim();
+    if (!phone && !email) return [];
 
-    // Логика фильтрации:
-    // - Есть валидный UUID → смотрим ТОЛЬКО заказы этого пользователя по user_id,
-    //   плюс гостевые заказы (user_id IS NULL) по телефону/email.
-    //   Это предотвращает ситуацию, когда два аккаунта с одинаковым телефоном
-    //   видят одни и те же заказы.
-    // - Нет UUID (гость / локальный пользователь) → только телефон/email.
-    function buildOr(withUserId) {
-      const f = [];
-      if (withUserId && userId && isUUID(userId)) {
-        f.push(`user_id.eq.${userId}`);
-        if (phone) f.push(`and(user_id.is.null,customer_phone.ilike.*${phone}*)`);
-        if (email) f.push(`and(user_id.is.null,customer_email.ilike.*${email}*)`);
-      } else {
-        if (phone) f.push(`customer_phone.ilike.*${phone}*`);
-        if (email) f.push(`customer_email.ilike.*${email}*`);
-      }
-      return f;
-    }
-
-    async function fetchWith(withUserId) {
-      const filters = buildOr(withUserId);
-      if (!filters.length) return [];
-      return _pgGetRetry('orders', { select: '*', or: '(' + filters.join(',') + ')', order: 'created_at.desc' });
-    }
-
+    // Список заказов идёт через защищённую функцию rpc_my_orders: прямого
+    // доступа к таблице orders у клиента нет (RLS), а функция возвращает только
+    // заказы с совпавшим телефоном/email — выгрузить всю базу нельзя.
     try {
-      let data;
-      try {
-        data = await fetchWith(true);
-      } catch (e) {
-        // Если колонки user_id нет в старой схеме (400) — повторяем без неё.
-        if (e && e.status === 400 && userId) data = await fetchWith(false);
-        else throw e;
-      }
-      // Deduplicate (OR may return duplicates if multiple filters hit one row).
+      const data = await _pgPostRetry('rpc/rpc_my_orders',
+        { p_phone: phone || null, p_email: email || null }, 'POST', {}, 3);
+      const rows = Array.isArray(data) ? data : [];
+      // Дедупликация на всякий случай (совпасть могли и телефон, и email).
       const seen = new Set();
-      const rows = [];
-      for (const r of (Array.isArray(data) ? data : [])) {
-        if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); }
-      }
-      return rows.map(mapRow);
+      const out = [];
+      for (const r of rows) { if (!seen.has(r.id)) { seen.add(r.id); out.push(r); } }
+      return out.map(mapRow);
     } catch (e) {
-      console.error('[supabase] list orders by user', e);
+      const error = (e && e.supaError) || e || {};
+      console.error('[supabase] rpc_my_orders failed — HTTP', e && e.status,
+        '| message:', error.message || error);
       return null;
     }
   };
@@ -1205,5 +1098,62 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { console.error('[supabase] upload image exception', e); return { ok:false, error:e }; }
   };
 
-  window.kleverSupabase = { isConfigured, getClient };
+  // ===== Админ-авторизация (Supabase Auth) =====
+  // Вход админа в панель управления. Возвращает { ok, isAdmin }.
+  window.supaAdminSignIn = async function(email, password){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error || !data || !data.session) return { ok:false, error };
+      setAuthToken(data.session.access_token);
+      const admin = await _checkIsAdmin();
+      if (!admin) { setAuthToken(null); await sb.auth.signOut(); return { ok:false, reason:'not_admin' }; }
+      _bindTokenRefresh();
+      return { ok:true, isAdmin:true };
+    } catch(e){ return { ok:false, error:e }; }
+  };
+
+  // Восстановление сессии админа при перезагрузке страницы панели.
+  window.supaAdminRestore = async function(){
+    const sb = getClient(); if (!sb) return { ok:false };
+    try {
+      const { data } = await sb.auth.getSession();
+      if (!data || !data.session) return { ok:false };
+      setAuthToken(data.session.access_token);
+      const admin = await _checkIsAdmin();
+      if (!admin) { setAuthToken(null); return { ok:false }; }
+      _bindTokenRefresh();
+      return { ok:true, isAdmin:true };
+    } catch(e){ return { ok:false }; }
+  };
+
+  window.supaAdminSignOut = async function(){
+    const sb = getClient();
+    setAuthToken(null);
+    try { if (sb) await sb.auth.signOut(); } catch(e){}
+  };
+
+  // Подхватываем обновлённый токен (SDK сам рефрешит сессию раз в ~час).
+  let _tokenBound = false;
+  function _bindTokenRefresh(){
+    if (_tokenBound) return;
+    const sb = getClient(); if (!sb) return;
+    try {
+      sb.auth.onAuthStateChange((_event, session) => {
+        setAuthToken(session && session.access_token ? session.access_token : null);
+      });
+      _tokenBound = true;
+    } catch(e){}
+  }
+
+  // Проверяем через RPC is_admin(), что текущая сессия принадлежит админу.
+  async function _checkIsAdmin(){
+    try {
+      const sb = getClient();
+      const { data, error } = await sb.rpc('is_admin');
+      return !error && data === true;
+    } catch(e){ return false; }
+  }
+
+  window.kleverSupabase = { isConfigured, getClient, setAuthToken };
 })();
