@@ -370,45 +370,32 @@
 
   function isUUID(s){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s); }
 
-  async function fetchOrder(query){
-    var url = SUPA_URL + '/rest/v1/orders?' + query + '&select=*&limit=5';
+  // Заказ ищем через защищённую функцию rpc_track_order: прямого доступа к
+  // таблице orders у анонима нет (RLS), функция вернёт заказ только при
+  // совпадении номера И телефона — перебрать чужие заказы нельзя.
+  async function rpcTrackOrder(num, phone){
+    var url = SUPA_URL + '/rest/v1/rpc/rpc_track_order';
     var resp = await fetch(url, {
+      method: 'POST',
       headers: {
         'apikey': SUPA_ANON,
         'Authorization': 'Bearer ' + SUPA_ANON,
+        'Content-Type': 'application/json',
         'Accept': 'application/json'
-      }
+      },
+      body: JSON.stringify({ p_num: num, p_phone: phone })
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     return resp.json();
   }
 
   async function findOrder(numRaw, phoneRaw){
-    var rows = [];
     var numTrim = numRaw.trim();
-
-    if (isUUID(numTrim)){
-      // UUID — ищем по id напрямую
-      rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim));
-    } else if (/^\d+$/.test(numTrim)){
-      // Числовой номер — сначала ищем по id (основной ключ)
-      try { rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim)); } catch(e){}
-      // Fallback на старое поле num если по id не нашли
-      if (!rows || !rows.length){
-        try { rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim)); } catch(e){}
-      }
-    } else {
-      try { rows = await fetchOrder('id=eq.' + encodeURIComponent(numTrim)); } catch(e){}
-      if (!rows || !rows.length){
-        try { rows = await fetchOrder('num=eq.' + encodeURIComponent(numTrim)); } catch(e){}
-      }
-    }
-
-    if (!rows || !rows.length) return null;
-
-    // Проверяем телефон
-    var matched = rows.find(function(r){ return phoneMatch(r.customer_phone, phoneRaw); });
-    return matched || null;
+    // Номер заказа теперь — это числовой id. Нечисловой ввод заказа не имеет.
+    if (!/^\d+$/.test(numTrim)) return null;
+    var rows = [];
+    try { rows = await rpcTrackOrder(parseInt(numTrim, 10), phoneRaw); } catch(e){ return null; }
+    return (Array.isArray(rows) && rows.length) ? rows[0] : null;
   }
 
   function renderOrder(r){
