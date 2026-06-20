@@ -929,12 +929,21 @@ async function submitOrder() {
   _localOrders.push(orderRecord);
   localStorage.setItem('klever_orders', JSON.stringify(_localOrders));
 
-  // Сбрасываем кэш ЛК: при следующем открытии account.html данные перечитаются
-  // с сервера и новый заказ появится сразу, без ручного обновления страницы.
+  // Обновляем кэш ЛК «на месте»: дописываем новый заказ в начало списка и
+  // НЕ трогаем избранное/адреса. Раньше мы чистили весь кэш — из-за этого при
+  // возврате в ЛК всё пропадало и приходилось ждать медленную сеть (~20 с).
+  // Теперь заказ виден сразу, а фоновая дозагрузка позже подставит номер.
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('klever_acct_')) localStorage.removeItem(k);
+      if (!k || !k.startsWith('klever_acct_')) continue;
+      let c;
+      try { c = JSON.parse(localStorage.getItem(k)); } catch(e) { continue; }
+      if (!c || c.uid !== _checkoutUserId) continue;
+      c.orders = Array.isArray(c.orders) ? c.orders : [];
+      c.orders.unshift(orderRecord);
+      c.ts = Date.now();
+      localStorage.setItem(k, JSON.stringify(c));
     }
   } catch(e) {}
 
