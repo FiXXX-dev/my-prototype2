@@ -1011,7 +1011,36 @@ function showCatSubSidebar(catId, subId) {
   var cat = (typeof getCategoryById === 'function') ? getCategoryById(catId) : null;
   if (!cat) return;
   var subs = (cat.subcategories || []).slice().sort(function(a,b){ return (a.order||0)-(b.order||0); });
-  if (!subs.length) return; // no subcategories — keep default top-level sidebar
+  if (!subs.length) {
+    // Категория без подкатегорий: всё равно показываем «чистый» сайдбар, как у
+    // категорий с подкатегориями (название-ссылка назад + сама категория), а НЕ
+    // общий список всех категорий с фильтром цены. Иначе страница новой
+    // категории выглядела как старый «плоский» каталог.
+    _catSubSidebarState = { catId: catId, subId: null };
+    var mainElN = document.querySelector('.catalog-main');
+    if (mainElN) mainElN.classList.add('has-subcat-sidebar');
+    var titleElN = document.querySelector('.sidebar-title');
+    if (titleElN) {
+      // ← добавляет CSS (.sidebar-back-link::before), здесь только текст.
+      titleElN.innerHTML = '<a href="catalog.html" class="sidebar-back-link">' +
+        ((typeof TRANSLATIONS === 'object' && (TRANSLATIONS[(typeof getSavedLang==='function'?getSavedLang():'ru')]||{})['crumb.catalog']) || 'Каталог') + '</a>';
+    }
+    var listElN = document.getElementById('sidebarCats');
+    if (listElN) {
+      var catCountsN = (typeof productCountByCategory === 'function') ? productCountByCategory() : {};
+      var nTotal = catCountsN[catId] || 0;
+      listElN.className = 'sub-list';
+      listElN.innerHTML = '<li><a href="catalog.html?cat=' + escHtml(catId) + '" class="active">' +
+        '<span>' + escHtml(catDisplayName(cat)) + '</span>' +
+        '<span class="sub-list-count">' + nTotal + '</span></a></li>';
+    }
+    var chipsElN = document.querySelector('.cat-chips');
+    if (chipsElN) {
+      chipsElN.innerHTML = '<a href="catalog.html" class="sub-chip" style="color:var(--green-dark);border-color:var(--green-dark);">&#8592; Каталог</a>' +
+        '<a href="catalog.html?cat=' + escHtml(catId) + '" class="sub-chip active">' + escHtml(catDisplayName(cat)) + '</a>';
+    }
+    return;
+  }
   _catSubSidebarState = { catId: catId, subId: subId || null };
   var counts = (typeof productCountBySubcategory === 'function') ? productCountBySubcategory(catId) : {};
   // На десктопе прячем дублирующую полосу чипов (сайдбар уже показывает то же).
