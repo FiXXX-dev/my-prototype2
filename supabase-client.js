@@ -44,6 +44,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         && SUPABASE_ANON_KEY.length > 20;
   }
 
+  // Токен авторизованного админа. Если задан — запросы к БД идут под его
+  // сессией (RLS даёт полный доступ). Устанавливается ТОЛЬКО в админ-панели
+  // после входа через Supabase Auth. На клиентских страницах остаётся null,
+  // поэтому те запросы — анонимные (и без CORS-preflight, важно на DPI).
+  let _authToken = null;
+  function setAuthToken(t){ _authToken = t || null; }
+
   let _client = null;
   function getClient(){
     if (_client) return _client;
@@ -93,7 +100,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const ctrl = new AbortController();
     const timer = setTimeout(() => _abort(ctrl), 25000);
     try {
-      const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: ctrl.signal });
+      const headers = { Accept: 'application/json' };
+      // Админ: ходим под его сессией (RLS → полный доступ). Клиент: без токена.
+      if (_authToken) headers.Authorization = 'Bearer ' + _authToken;
+      const resp = await fetch(url.toString(), { headers, signal: ctrl.signal });
       if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
       return await resp.json();
     } finally {
@@ -110,12 +120,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const ctrl = new AbortController();
     const timer = setTimeout(() => _abort(ctrl), 10000);
     try {
+      const baseHeaders = { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY };
+      // Админ: добавляем его токен → запись/правка/удаление проходят по RLS.
+      if (_authToken) baseHeaders.Authorization = 'Bearer ' + _authToken;
       const resp = await fetch(url.toString(), {
         method: method || 'POST',
-        headers: Object.assign(
-          { 'Content-Type': 'application/json', Accept: 'application/json', apikey: SUPABASE_ANON_KEY },
-          extraHeaders || {}
-        ),
+        headers: Object.assign(baseHeaders, extraHeaders || {}),
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
@@ -142,6 +152,55 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       }
     }
     throw lastErr || new Error('request failed');
+  }
+
+  // ─── Auth POST: plain fetch + retry к /auth/v1 (устойчиво к DPI/ТСПУ) ───────
+  // SDK-метод signInWithPassword шлёт HTTP/2-запрос, который на сетях с DPI
+  // (ТСПУ РФ) часто рвётся ещё до ответа (net::ERR_HTTP2_PING_FAILED) и НЕ
+  // повторяется — пользователь видит «ошибку входа», хотя пароль верный.
+  // Здесь — тот же приём, что и для заказов: лёгкий fetch + повторы при обрыве.
+  async function _authPost(path, body, qp){
+    if (!isConfigured()) return null;
+    const url = new URL(SUPABASE_URL + '/auth/v1/' + path);
+    url.searchParams.set('apikey', SUPABASE_ANON_KEY);
+    Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => _abort(ctrl), 15000);
+    try {
+      const resp = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const m = json.error_description || json.msg || json.message
+                || ('Ошибка сервера (код ' + resp.status + ')');
+        throw Object.assign(new Error(m), {
+          status: resp.status,
+          code: json.error_code || json.error || json.code || '',
+          supaError: json,
+        });
+      }
+      return json;
+    } finally { clearTimeout(timer); }
+  }
+
+  async function _authPostRetry(path, body, qp, tries){
+    const max = tries || 3;
+    let lastErr = null;
+    for (let i = 0; i < max; i++) {
+      if (i) await new Promise(r => setTimeout(r, i * 1000));
+      try { return await _authPost(path, body, qp); }
+      catch (e) {
+        lastErr = e;
+        // Ответ сервера 4xx (неверный пароль, email не подтверждён и т.п.)
+        // повторять бессмысленно — пробрасываем сразу. Повторяем только обрывы.
+        if (e && e.status && e.status >= 400 && e.status < 500) throw e;
+      }
+    }
+    throw lastErr || new Error('auth request failed');
   }
 
   // ─── Универсальные write-хелперы (plain fetch + retry, без SDK-заголовков) ──
@@ -256,52 +315,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     let language = 'ru';
     try { language = localStorage.getItem('klever_lang') || 'ru'; } catch(e){}
 
-    // Columns that must always be present — never stripped.
-    const REQUIRED = new Set(['customer_name','customer_phone','items','total_price']);
-
-    function isMissingColumnError(error){
-      const msg = (error?.message || '') + ' ' + (error?.details || '');
-      return /column .* does not exist/i.test(msg)
-          || /Could not find/i.test(msg)
-          || error?.code === '42703'
-          || error?.code === 'PGRST204';
-    }
-
-    // Extract the offending column name from a missing-column error so we can
-    // strip only THAT column and retry — this preserves delivery_method,
-    // payment_method, delivery_address, etc. as long as they exist in the schema.
-    function missingColName(error){
-      const msg = error?.message || '';
-      const m = msg.match(/column ["'`]?(\w+)["'`]? (?:of relation|does not exist)/i)
-             || msg.match(/Could not find .*?["'`](\w+)["'`]/i)
-             || msg.match(/["'`](\w+)["'`] is not present in the table/i);
-      return m ? m[1] : null;
-    }
-
-    // user_id — колонка типа uuid. Локальные пользователи (регистрация по
-    // телефону/паролю) имеют id вида "u1780688605663", который НЕ является
-    // валидным UUID → Postgres отклоняет всю вставку (22P02, 400 Bad Request).
-    // Пропускаем в БД только настоящий UUID; иначе null — заказ всё равно
-    // свяжется с пользователем по телефону/email.
     const _isUuid = v => typeof v === 'string'
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
-    const fullRow = {
+    // Заказ создаётся через защищённую функцию rpc_create_order (SECURITY
+    // DEFINER): прямого доступа к таблице orders у анонима нет (RLS), поэтому
+    // нельзя ни выгрузить, ни изменить чужие заказы. Функция возвращает
+    // созданную строку — из неё берём id (= номер заказа).
+    // Используем _pgPostRetry (plain fetch + повторы) — устойчиво к обрывам DPI.
+    const payload = {
       customer_name: order.name || '',
       customer_phone: order.phone || '',
-      items: order.items || [],
-      total_price: order.total != null ? Number(order.total) : 0,
-      language: language,
-      comment: order.comment || '',
-      // num отправляем только если значение задано — null/undefined пропускаем,
-      // чтобы не конфликтовать с NOT NULL или DEFAULT в схеме Supabase.
-      // Номером заказа теперь служит поле id (автоинкремент).
-      ...(order.num != null ? { num: order.num } : {}),
-      status: order.status || 'new',
       customer_email: order.email || '',
       company: order.company || '',
+      items: order.items || [],
       subtotal: order.subtotal != null ? Number(order.subtotal) : null,
       delivery_cost: order.delivery != null ? Number(order.delivery) : null,
+      total_price: order.total != null ? Number(order.total) : 0,
       delivery_method: order.method || 'courier',
       delivery_address: order.address || '',
       delivery_date: order.deliveryDate || null,
@@ -309,39 +339,27 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       payment_method: order.payment || 'cash',
       invoice_company: order.invoiceCompany || null,
       invoice_inn: order.invoiceInn || null,
+      comment: order.comment || '',
+      language: language,
+      status: order.status || 'new',
       user_id: _isUuid(order.userId) ? order.userId : null,
     };
 
-    // Recursively retry, removing the offending column on each missing-column error.
-    // Uses plain-fetch _pgPostRetry (NO CORS preflight) so the insert lands even on
-    // DPI/ТСПУ networks that block the SDK's OPTIONS request ("Failed to fetch").
-    async function tryInsert(row) {
-      try {
-        const data = await _pgPostRetry('orders', [row], 'POST', { Prefer: 'return=representation' }, 5);
-        return { ok: true, data: Array.isArray(data) ? data[0] : data };
-      } catch (e) {
-        const error = (e && e.supaError) || e || {};
-        if (!isMissingColumnError(error)) {
-          console.error('[supabase] insert error', error);
-          return { ok: false, error };
-        }
-        const col = missingColName(error);
-        if (!col || REQUIRED.has(col)) {
-          console.error('[supabase] cannot strip required column or unknown col', error);
-          return { ok: false, error };
-        }
-        const stripped = { ...row };
-        delete stripped[col];
-        console.warn(`[supabase] column "${col}" missing — retrying without it`);
-        return tryInsert(stripped);
-      }
-    }
-
     try {
-      return await tryInsert(fullRow);
+      const data = await _pgPostRetry('rpc/rpc_create_order', { payload }, 'POST',
+        { Prefer: 'return=representation' }, 5);
+      // rpc_create_order возвращает одну строку orders (объект); на всякий
+      // случай поддержим и массив.
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row && row.id != null) return { ok: true, data: row };
+      console.error('[supabase] rpc_create_order вернул пустой результат:', JSON.stringify(data));
+      return { ok: false, error: { message: 'empty rpc result' } };
     } catch (e) {
-      console.error('[supabase] insert exception', e);
-      return { ok: false, error: e };
+      const error = (e && e.supaError) || e || {};
+      console.error('[order] rpc_create_order failed — HTTP', e && e.status,
+        '| code:', error.code, '| message:', error.message || error,
+        '| Если функции нет — запустите fix_security_rls.sql в Supabase.');
+      return { ok: false, error };
     }
   };
 
@@ -352,10 +370,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const data = await _pgGetRetry('orders', { select: '*', order: 'created_at.desc' });
       if (!Array.isArray(data)) return null;
       return data.map(r => ({
-        // Номер заказа = реальный id из Supabase (и в админке, и везде).
+        // Номер заказа — это id (автоинкремент). Поле num устарело.
         num: r.id,
         id: r.id,
-        date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+        date: r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', {
+          day:'2-digit', month:'2-digit', year:'numeric',
+          hour:'2-digit', minute:'2-digit'
+        }) : '',
         status: r.status || 'new',
         items: Array.isArray(r.items) ? r.items : [],
         subtotal: r.subtotal,
@@ -435,9 +456,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.supaListOrdersByUser = async function(userId, opts){
     if (!isConfigured()) return null;
     const mapRow = r => ({
-      num: r.num != null ? r.num : r.id,
+      num: r.id,
       id: r.id,
-      date: r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU') : '',
+      date: r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', {
+        day:'2-digit', month:'2-digit', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      }) : '',
       status: r.status || 'new',
       items: Array.isArray(r.items) ? r.items : [],
       subtotal: r.subtotal,
@@ -458,43 +482,27 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       language: r.language,
       _supaId: r.id,
     });
-    // Normalize phone to last 10 digits so +7/8/no-code all match via ilike.
+    // Телефон → последние 10 цифр; email → нижний регистр.
     const phone = ((opts && opts.phone) || '').replace(/\D/g, '').slice(-10);
     const email = ((opts && opts.email) || '').toLowerCase().trim();
+    if (!phone && !email) return [];
 
-    // PostgREST использует * как wildcard в ilike (в URL), а не %.
-    function buildOr(withUserId) {
-      const f = [];
-      if (withUserId && userId) f.push(`user_id.eq.${userId}`);
-      if (phone) f.push(`customer_phone.ilike.*${phone}*`);
-      if (email) f.push(`customer_email.ilike.*${email}*`);
-      return f;
-    }
-
-    async function fetchWith(withUserId) {
-      const filters = buildOr(withUserId);
-      if (!filters.length) return [];
-      return _pgGetRetry('orders', { select: '*', or: '(' + filters.join(',') + ')', order: 'created_at.desc' });
-    }
-
+    // Список заказов идёт через защищённую функцию rpc_my_orders: прямого
+    // доступа к таблице orders у клиента нет (RLS), а функция возвращает только
+    // заказы с совпавшим телефоном/email — выгрузить всю базу нельзя.
     try {
-      let data;
-      try {
-        data = await fetchWith(true);
-      } catch (e) {
-        // Если колонки user_id нет в старой схеме (400) — повторяем без неё.
-        if (e && e.status === 400 && userId) data = await fetchWith(false);
-        else throw e;
-      }
-      // Deduplicate (OR may return duplicates if multiple filters hit one row).
+      const data = await _pgPostRetry('rpc/rpc_my_orders',
+        { p_phone: phone || null, p_email: email || null }, 'POST', {}, 3);
+      const rows = Array.isArray(data) ? data : [];
+      // Дедупликация на всякий случай (совпасть могли и телефон, и email).
       const seen = new Set();
-      const rows = [];
-      for (const r of (Array.isArray(data) ? data : [])) {
-        if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); }
-      }
-      return rows.map(mapRow);
+      const out = [];
+      for (const r of rows) { if (!seen.has(r.id)) { seen.add(r.id); out.push(r); } }
+      return out.map(mapRow);
     } catch (e) {
-      console.error('[supabase] list orders by user', e);
+      const error = (e && e.supaError) || e || {};
+      console.error('[supabase] rpc_my_orders failed — HTTP', e && e.status,
+        '| message:', error.message || error);
       return null;
     }
   };
@@ -516,36 +524,51 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== Auth =====
+  // Сетевой ли это сбой (обрыв/таймаут), а не ответ сервера «неверные данные»?
+  // Нужно, чтобы UI не показывал «неверный пароль» при проблемах со связью.
+  function _isNetworkErr(e){
+    if (!e) return false;
+    if (e.status && e.status >= 400 && e.status < 500) return false; // явный ответ сервера
+    const m = (e.message || '') + ' ' + (e.name || '');
+    return !e.status || e.status >= 500
+        || /timeout|fetch|network|aborted|failed|соедин|сети|ответил|вовремя/i.test(m);
+  }
+
   window.supaSignUp = async function(email, password, meta, redirectTo){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     try {
-      const options = { data: meta || {} };
-      // Куда вернуть пользователя после клика по ссылке подтверждения email.
-      // ВАЖНО: этот URL должен быть в allowlist «Redirect URLs» в дашборде
-      // Supabase (Authentication → URL Configuration), иначе Supabase
-      // проигнорирует его и уйдёт на Site URL (часто localhost → «тёмный экран»).
-      if (redirectTo) options.emailRedirectTo = redirectTo;
-      const { data, error } = await sb.auth.signUp({ email, password, options });
-      if (error) return { ok:false, error };
-      return { ok:true, user: data.user, session: data.session };
-    } catch(e) { return { ok:false, error:e }; }
+      // Регистрация через /auth/v1/signup напрямую (plain fetch + повторы) —
+      // не рвётся на DPI, в отличие от SDK-метода signUp.
+      const qp = {};
+      // redirect_to нужен только если в дашборде ВКЛючено подтверждение email.
+      if (redirectTo) qp.redirect_to = redirectTo;
+      const data = await _authPostRetry('signup', { email, password, data: meta || {} }, qp);
+      // Если подтверждение email выключено — ответ содержит сессию: сразу
+      // гидрируем её в SDK, чтобы пользователь оказался залогинен.
+      const sb = getClient();
+      if (sb && data && data.access_token) {
+        try { await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }); } catch(e){}
+      }
+      // При включённом подтверждении gotrue возвращает сам объект user (без сессии).
+      const user = data && (data.user || (data.id ? data : null));
+      return { ok:true, user, session: data && data.access_token ? data : null };
+    } catch(e) { return { ok:false, error:e, network: _isNetworkErr(e) }; }
   };
 
   window.supaSignIn = async function(email, password){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     try {
-      const result = await Promise.race([
-        sb.auth.signInWithPassword({ email, password }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
-      ]);
-      const { data, error } = result;
-      if (error) return { ok:false, error };
-      return { ok:true, user: data.user, session: data.session };
-    } catch(e) {
-      if (e && e.message === 'timeout') {
-        return { ok:false, error: { message: 'Превышено время ожидания. Проверьте соединение и попробуйте снова.' } };
+      // Вход через /auth/v1/token?grant_type=password напрямую (plain fetch +
+      // повторы). Это устраняет net::ERR_HTTP2_PING_FAILED на ТСПУ-сетях.
+      const data = await _authPostRetry('token', { email, password }, { grant_type: 'password' });
+      // Гидрируем сессию в SDK → работает getSession()/autoRefresh на всех страницах.
+      const sb = getClient();
+      if (sb && data && data.access_token) {
+        try { await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }); } catch(e){}
       }
-      return { ok:false, error:e };
+      return { ok:true, user: data && data.user, session: data };
+    } catch(e) {
+      return { ok:false, error:e, network: _isNetworkErr(e) };
     }
   };
 
@@ -1139,5 +1162,66 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { console.error('[supabase] upload image exception', e); return { ok:false, error:e }; }
   };
 
-  window.kleverSupabase = { isConfigured, getClient };
+  // ===== Админ-авторизация (Supabase Auth) =====
+  // Вход админа в панель управления. Возвращает { ok, isAdmin }.
+  window.supaAdminSignIn = async function(email, password){
+    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      // Тот же устойчивый к DPI вход, что и у клиентов.
+      const r = await window.supaSignIn(email, password);
+      if (!r.ok || !r.session || !r.session.access_token) {
+        return { ok:false, error: r.error, network: r.network };
+      }
+      setAuthToken(r.session.access_token);
+      const admin = await _checkIsAdmin();
+      if (!admin) { setAuthToken(null); try { await sb.auth.signOut(); } catch(e){} return { ok:false, reason:'not_admin' }; }
+      _bindTokenRefresh();
+      return { ok:true, isAdmin:true };
+    } catch(e){ return { ok:false, error:e }; }
+  };
+
+  // Восстановление сессии админа при перезагрузке страницы панели.
+  window.supaAdminRestore = async function(){
+    const sb = getClient(); if (!sb) return { ok:false };
+    try {
+      const { data } = await sb.auth.getSession();
+      if (!data || !data.session) return { ok:false };
+      setAuthToken(data.session.access_token);
+      const admin = await _checkIsAdmin();
+      if (!admin) { setAuthToken(null); return { ok:false }; }
+      _bindTokenRefresh();
+      return { ok:true, isAdmin:true };
+    } catch(e){ return { ok:false }; }
+  };
+
+  window.supaAdminSignOut = async function(){
+    const sb = getClient();
+    setAuthToken(null);
+    try { if (sb) await sb.auth.signOut(); } catch(e){}
+  };
+
+  // Подхватываем обновлённый токен (SDK сам рефрешит сессию раз в ~час).
+  let _tokenBound = false;
+  function _bindTokenRefresh(){
+    if (_tokenBound) return;
+    const sb = getClient(); if (!sb) return;
+    try {
+      sb.auth.onAuthStateChange((_event, session) => {
+        setAuthToken(session && session.access_token ? session.access_token : null);
+      });
+      _tokenBound = true;
+    } catch(e){}
+  }
+
+  // Проверяем через RPC is_admin(), что текущая сессия принадлежит админу.
+  async function _checkIsAdmin(){
+    try {
+      // Через устойчивый _pgPost (несёт Authorization админа), а не SDK rpc —
+      // надёжнее на DPI и без CORS-preflight.
+      const data = await _pgPostRetry('rpc/is_admin', {});
+      return data === true;
+    } catch(e){ return false; }
+  }
+
+  window.kleverSupabase = { isConfigured, getClient, setAuthToken };
 })();

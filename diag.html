@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Диагностика Supabase — Клевер</title>
+<style>
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background:#0f1a14; color:#e8f4ec; margin:0; padding:24px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:#8aaa94; font-size:13px; margin-bottom:24px; }
+  .check { background:#162119; border:1px solid #243528; border-radius:12px; padding:14px 18px; margin-bottom:12px; }
+  .check h3 { margin:0 0 8px; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .ok   { color:#2ECC71; }
+  .fail { color:#e05a4e; }
+  .wait { color:#8aaa94; }
+  pre { background:#0a120d; border-radius:8px; padding:10px 12px; font-size:12px; overflow-x:auto; white-space:pre-wrap; word-break:break-all; color:#a8c4b0; margin:0; }
+  .hint { font-size:13px; color:#C8F135; margin-top:8px; line-height:1.5; }
+  button { background:#2ECC71; color:#0f1a14; border:none; border-radius:30px; padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:24px; }
+</style>
+</head>
+<body>
+<h1>🔧 Диагностика связи с Supabase</h1>
+<div class="sub" id="projInfo"></div>
+<button onclick="runAll()">▶ Запустить проверку</button>
+<div id="checks"></div>
+
+<script>
+const URL_BASE = 'https://fquhoxxcucgesxrexsjn.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxdWhveHhjdWNnZXN4cmV4c2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NzM5MDYsImV4cCI6MjA5NTQ0OTkwNn0.z09KuaZ1ybuURb46iWl9Ef-HT2gbecw8Wjw3oFJl9wI';
+
+document.getElementById('projInfo').textContent =
+  'Проект: fquhoxxcucgesxrexsjn — SQL нужно запускать ИМЕННО в этом проекте ' +
+  '(проверьте, что эта строка есть в адресе supabase.com/dashboard/project/…)';
+
+function box(title){
+  const d = document.createElement('div');
+  d.className = 'check';
+  d.innerHTML = '<h3><span class="wait">⏳</span> ' + title + '</h3><pre>…</pre><div class="hint"></div>';
+  document.getElementById('checks').appendChild(d);
+  return {
+    set(ok, body, hint){
+      d.querySelector('h3 span').textContent = ok ? '✅' : '❌';
+      d.querySelector('h3 span').className = ok ? 'ok' : 'fail';
+      d.querySelector('pre').textContent = body;
+      d.querySelector('.hint').textContent = hint || '';
+    }
+  };
+}
+
+async function req(method, path, body){
+  const u = new URL(URL_BASE + '/rest/v1/' + path);
+  u.searchParams.set('apikey', KEY);
+  const opts = { method, headers: { Accept: 'application/json' } };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.headers['Prefer'] = 'return=representation';
+    opts.body = JSON.stringify(body);
+  }
+  const r = await fetch(u.toString(), opts);
+  const text = await r.text();
+  return { status: r.status, text: text.slice(0, 600) };
+}
+
+async function runAll(){
+  document.getElementById('checks').innerHTML = '';
+
+  // 1. Таблица orders читается?
+  const b1 = box('Чтение таблицы orders (GET)');
+  try {
+    const r = await req('GET', 'orders?select=id,num,status&order=created_at.desc&limit=3');
+    b1.set(r.status === 200, 'HTTP ' + r.status + '\n' + r.text,
+      r.status === 200 ? 'Таблица существует и читается.'
+      : r.status === 404 ? 'ТАБЛИЦЫ orders НЕТ в этом проекте (или кэш API устарел). Запустите fix_orders_schema.sql именно в проекте fquhoxxcucgesxrexsjn.'
+      : 'Неожиданная ошибка — пришлите скриншот.');
+  } catch(e){ b1.set(false, String(e), 'Сетевая ошибка (DPI/интернет).'); }
+
+  // 2. Запись тестового заказа
+  const b2 = box('Создание тестового заказа (POST)');
+  let testId = null;
+  try {
+    const r = await req('POST', 'orders', [{
+      customer_name: 'ТЕСТ-ДИАГНОСТИКА (удалится сам)',
+      customer_phone: '0000000000',
+      items: [],
+      total_price: 0,
+      status: 'new'
+    }]);
+    let num = '';
+    try { const j = JSON.parse(r.text); testId = j[0] && j[0].id; num = j[0] && j[0].num; } catch(e){}
+    b2.set(r.status >= 200 && r.status < 300,
+      'HTTP ' + r.status + (num != null ? '\nПрисвоен номер заказа: #' + num : '') + '\n' + r.text,
+      r.status < 300 ? 'Заказы сохраняются! Главная функция работает.'
+      : 'Вставка не проходит — пришлите скриншот этого блока.');
+  } catch(e){ b2.set(false, String(e), 'Сетевая ошибка (DPI/интернет).'); }
+
+  // 3. Удаляем тестовый заказ за собой
+  if (testId) {
+    const b3 = box('Удаление тестового заказа (DELETE)');
+    try {
+      const r = await req('DELETE', 'orders?id=eq.' + encodeURIComponent(testId));
+      b3.set(r.status < 300, 'HTTP ' + r.status, 'Тестовый заказ удалён.');
+    } catch(e){ b3.set(false, String(e)); }
+  }
+
+  // 4. Контроль: другие таблицы
+  const b4 = box('Контроль: таблица products (GET)');
+  try {
+    const r = await req('GET', 'products?select=sku&limit=1');
+    b4.set(r.status === 200, 'HTTP ' + r.status + '\n' + r.text,
+      r.status === 200 ? 'API проекта в целом работает.'
+      : 'Если и тут 404 — API настроен на другой проект или схема public не открыта (Settings → Data API → Exposed schemas).');
+  } catch(e){ b4.set(false, String(e)); }
+}
+</script>
+</body>
+</html>

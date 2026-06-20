@@ -714,14 +714,24 @@ function doLogin(){
         }
         return;
       }
-      // Fall back to local check
-      const msg = (res.error && res.error.message) || '';
-      const code = (res.error && res.error.code) || '';
+      // Разбираем причину отказа Supabase.
+      const msg  = (res.error && res.error.message) || '';
+      const code = (res.error && (res.error.code || res.error.error_code)) || '';
       if (/email.*not.*confirmed/i.test(msg) || code === 'email_not_confirmed') {
-        showMsg('loginMsg', '📧 Подтвердите email — проверьте почту и перейдите по ссылке из письма', 'error'); return;
+        showMsg('loginMsg', '📧 Этот email ещё не подтверждён. Проверьте почту и перейдите по ссылке из письма. Если письма нет — напишите нам, подтвердим вручную.', 'error'); return;
       }
-      if (/Invalid login/i.test(msg) || /credentials/i.test(msg)) {
+      if (/invalid.*credentials/i.test(msg) || /Invalid login/i.test(msg) || /credentials/i.test(msg)
+          || code === 'invalid_credentials' || code === 'invalid_grant') {
         showMsg('loginMsg', 'Неверный email или пароль', 'error'); return;
+      }
+      // Сетевой обрыв (DPI/ТСПУ/нет связи) — это НЕ «неверный пароль».
+      if (res.network) {
+        const localUser = getUsers().find(u => u.email && u.email.toLowerCase() === id.toLowerCase());
+        // Локальный вход возможен только для аккаунтов, заведённых на этом
+        // устройстве (хранят реальный пароль, а не '*' от Supabase-аккаунта).
+        if (localUser && localUser.password && localUser.password !== '*') { _doLoginLocal(id, pass); return; }
+        showMsg('loginMsg', 'Не удалось связаться с сервером. Проверьте интернет и попробуйте ещё раз.', 'error');
+        return;
       }
       console.warn('[auth] Supabase signin failed, trying local', res.error);
       _doLoginLocal(id, pass);
@@ -744,6 +754,11 @@ function _doLoginLocal(id, pass){
       showMsg('loginMsg', 'Пользователь не найден', 'error');
     }
     return;
+  }
+  // Аккаунт с паролем '*' создан через Supabase Auth — локально пароль не хранится.
+  // Значит сюда мы попали из-за обрыва связи, а не из-за неверного пароля.
+  if (user.password === '*'){
+    showMsg('loginMsg', 'Не удалось связаться с сервером для входа. Проверьте интернет и попробуйте ещё раз.', 'error'); return;
   }
   if (user.password !== pass){ showMsg('loginMsg', 'Неверный пароль', 'error'); return; }
   setCurrentUserId(user.id);
@@ -1121,11 +1136,30 @@ function invalidateAccountCache(){
       if (k && k.startsWith('klever_acct_')) localStorage.removeItem(k);
     }
   } catch(e) {}
+  try { localStorage.removeItem(ORDERS_KEY); } catch(e) {}
+}
+
+// Если Supabase вернул 0 заказов — ищем в localStorage по телефону/email/userId
+// (страховка: телефон при оформлении мог быть записан немного иначе).
+function _localOrdersFallback(u){
+  try {
+    const all = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
+    const phone10 = ((u && u.phone) || '').replace(/\D/g, '').slice(-10);
+    const email   = ((u && u.email) || '').toLowerCase().trim();
+    return all.filter(o => {
+      if (u && o.userId && o.userId === u.id) return true;
+      if (phone10 && o.phone && o.phone.replace(/\D/g, '').slice(-10) === phone10) return true;
+      if (email && o.email && o.email.toLowerCase() === email) return true;
+      return false;
+    }).slice().reverse();
+  } catch(e) { return []; }
 }
 
 // Применяет готовые массивы данных в память и перерисовывает активную вкладку.
 function _applyAccountData(orders, favs, addrs, uid){
-  if (Array.isArray(orders)) myOrders = orders;
+  // Supabase ответил массивом (даже пустым) — он источник истины.
+  // localStorage используем только если Supabase вообще недоступен (null).
+  myOrders = Array.isArray(orders) ? orders : _localOrdersFallback(getCurrentUser());
   if (Array.isArray(favs))   myFavorites = favs;
   if (Array.isArray(addrs)) {
     myAddresses = addrs.map(mapAddrRow);
@@ -1146,6 +1180,7 @@ function _applyAccountData(orders, favs, addrs, uid){
 async function loadAccountData(){
   const u = getCurrentUser();
   if (!u) return;
+
   if (accountDataLoaded && accountDataLoadedFor === u.id) return;
   if (accountDataLoading) return accountDataLoading;
 

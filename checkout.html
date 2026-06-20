@@ -987,14 +987,31 @@ async function submitOrder() {
         if (_trackLink) _trackLink.href = 'order-status.html?num=' + encodeURIComponent(finalNum);
         console.log('[order] saved to Supabase, id:', finalNum);
       } else {
-        // ok:false — ошибка БД (напр. RLS, ограничение). Заказ остаётся в
-        // localStorage; логируем для диагностики, пользователя не пугаем.
+        // ok:false — заказ остался только в localStorage этого браузера и в
+        // админку НЕ попадёт. Молчать нельзя: показываем предупреждение.
         console.error('[order] Supabase insert NOT ok:', supaRes && supaRes.error);
+        showOrderSyncWarn();
       }
     }).catch(e => {
       console.error('[order] Supabase insert failed:', e && (e.message || e));
+      showOrderSyncWarn();
     });
   }
+}
+
+// Предупреждение на экране успеха: заказ не дошёл до сервера, и магазин его
+// не увидит — просим клиента позвонить, чтобы заказ не потерялся.
+function showOrderSyncWarn() {
+  try {
+    if (document.getElementById('orderSyncWarn')) return;
+    const d = document.createElement('div');
+    d.id = 'orderSyncWarn';
+    d.style.cssText = 'margin:20px auto 0;max-width:520px;background:#fff6e8;border:1.5px solid #f0c98a;border-radius:14px;padding:14px 18px;font-size:14px;color:#8a6a2e;line-height:1.6;text-align:left;';
+    d.innerHTML = '⚠️ <strong>Не удалось передать заказ на сервер.</strong> Чтобы мы точно его не пропустили, пожалуйста, позвоните нам: <a href="tel:+79958891280" style="color:#8a6a2e;font-weight:700;white-space:nowrap;">+7 (995) 889-12-80</a>';
+    const det = document.getElementById('successDetails');
+    if (det && det.parentNode) det.parentNode.insertBefore(d, det.nextSibling);
+    else document.getElementById('successWrap').appendChild(d);
+  } catch (e) {}
 }
 
 function showError(fieldId, hintId) {

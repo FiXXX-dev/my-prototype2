@@ -377,9 +377,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="login-logo"><svg class="logo-icon" width="48" height="48" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg> <span>Клевер</span></div>
     <div class="login-sub">Панель управления магазином</div>
     <div class="login-form">
-      <input type="password" class="login-input" id="passInput" placeholder="Введите пароль" onkeypress="if(event.key==='Enter') doLogin()">
-      <div class="login-err" id="loginErr">Неверный пароль</div>
-      <button class="login-btn" onclick="doLogin()">Войти →</button>
+      <input type="email" class="login-input" id="emailInput" placeholder="Email администратора" autocomplete="username" onkeypress="if(event.key==='Enter') doLogin()">
+      <input type="password" class="login-input" id="passInput" placeholder="Пароль" autocomplete="current-password" onkeypress="if(event.key==='Enter') doLogin()">
+      <div class="login-err" id="loginErr">Неверный email или пароль</div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Войти →</button>
     </div>
     <a href="index.html" style="display:block;text-align:center;margin-top:20px;color:#8aaa94;font-size:13px;text-decoration:none;">← Вернуться на сайт</a>
   </div>
@@ -393,6 +394,7 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <a href="index.html" class="side-logo"><svg class="logo-icon" width="28" height="28" aria-hidden="true" focusable="false"><use href="#clover-logo"/></svg><span>Клевер</span><span class="badge">админ</span></a>
     <nav class="side-nav">
       <button class="side-link active" onclick="showTab('dashboard', this)"><span class="icon icon-chart"></span> Дашборд</button>
+      <button class="side-link" onclick="showTab('analytics', this)"><span class="icon icon-chart"></span> Аналитика</button>
       <button class="side-link" onclick="showTab('products', this)"><span class="icon icon-package"></span> Товары <span class="count" id="cntProducts">0</span></button>
       <button class="side-link" onclick="showTab('categories', this)"><span class="icon icon-folder"></span> Категории <span class="count" id="cntCategories">0</span></button>
       <button class="side-link" onclick="showTab('orders', this)"><span class="icon icon-bag"></span> Заказы <span class="count" id="cntOrders">0</span></button>
@@ -499,6 +501,54 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </div>
       </div>
       <div id="dashLastOrders"></div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="tab-content" id="tab-analytics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Аналитика</div>
+          <div class="page-sub">Детальная статистика продаж по периодам</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="date" id="analyticsFrom" style="padding:9px 12px;border:1.5px solid #d0e8d8;border-radius:10px;font-family:inherit;font-size:13px;outline:none;">
+          <span style="color:#8aaa94;font-size:13px;">—</span>
+          <input type="date" id="analyticsTo" style="padding:9px 12px;border:1.5px solid #d0e8d8;border-radius:10px;font-family:inherit;font-size:13px;outline:none;">
+          <button class="btn btn-primary" onclick="renderAnalytics()" style="padding:9px 18px;">Показать</button>
+        </div>
+      </div>
+
+      <!-- Сводные цифры -->
+      <div class="stats-grid" id="analyticsStats" style="margin-bottom:24px;"></div>
+
+      <!-- График по дням — кликабельный -->
+      <div class="tbl-wrap" style="padding:20px;margin-bottom:20px;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;">📈 Выручка по дням <span id="analyticsPeriodLabel" style="font-size:12px;color:#8aaa94;font-weight:400;margin-left:8px;"></span></div>
+        <div id="analyticsChart" style="min-height:120px;"></div>
+      </div>
+
+      <!-- Детализация выбранного дня -->
+      <div id="analyticsDayDetail" style="display:none;margin-bottom:20px;">
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;">📋 Заказы за <span id="analyticsDayTitle"></span></div>
+            <button onclick="document.getElementById('analyticsDayDetail').style.display='none'" style="background:none;border:none;color:#8aaa94;font-size:20px;cursor:pointer;">✕</button>
+          </div>
+          <div id="analyticsDayOrders"></div>
+        </div>
+      </div>
+
+      <!-- Топ товаров за период -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;">🏆 Топ товаров за период</div>
+          <div id="analyticsTopProducts"></div>
+        </div>
+        <div class="tbl-wrap" style="padding:20px;">
+          <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;margin-bottom:16px;">👥 Топ клиентов за период</div>
+          <div id="analyticsTopClients"></div>
+        </div>
+      </div>
     </section>
 
     <!-- PRODUCTS -->
@@ -1399,22 +1449,38 @@ const DEFAULT_PRODUCTS=[
 {name:'Папка-скоросшиватель 10 шт',sku:'KANC08',price:125,cat:'Канцелярия',img:''}
 ];
 
-// ===== АУТЕНТИФИКАЦИЯ =====
-const ADMIN_PASS = 'cleverspb33355';
-
-function doLogin() {
-  const pass = document.getElementById('passInput').value;
-  if (pass === ADMIN_PASS) {
-    sessionStorage.setItem('klever_admin', '1');
-    showAdmin();
-  } else {
-    document.getElementById('loginErr').classList.add('show');
-    document.getElementById('passInput').focus();
+// ===== АУТЕНТИФИКАЦИЯ (Supabase Auth) =====
+// Пароль больше НЕ хранится в коде. Вход — реальный аккаунт Supabase Auth,
+// а доступ к данным проверяется на сервере (RLS + функция is_admin()).
+async function doLogin() {
+  const email = (document.getElementById('emailInput').value || '').trim();
+  const pass  = document.getElementById('passInput').value || '';
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  err.classList.remove('show');
+  if (!email || !pass) { err.textContent = 'Введите email и пароль'; err.classList.add('show'); return; }
+  if (typeof supaAdminSignIn !== 'function') { err.textContent = 'Сервис недоступен'; err.classList.add('show'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Вход…'; }
+  try {
+    const res = await supaAdminSignIn(email, pass);
+    if (res && res.ok) {
+      showAdmin();
+    } else {
+      err.textContent = (res && res.reason === 'not_admin')
+        ? 'Этот аккаунт не админ' : 'Неверный email или пароль';
+      err.classList.add('show');
+      document.getElementById('passInput').focus();
+    }
+  } catch(e) {
+    err.textContent = 'Ошибка входа, попробуйте ещё раз';
+    err.classList.add('show');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Войти →'; }
   }
 }
 
-function doLogout() {
-  sessionStorage.removeItem('klever_admin');
+async function doLogout() {
+  try { if (typeof supaAdminSignOut === 'function') await supaAdminSignOut(); } catch(e){}
   location.reload();
 }
 
@@ -1451,6 +1517,7 @@ function showTab(name, btn) {
   }
   if (name === 'settings') loadSettings();
   if (name === 'categories') loadCatHomeStateAndRender();
+  if (name === 'analytics') renderAnalytics();
 }
 
 // On admin login, prime orders from Supabase and subscribe to live changes
@@ -1648,12 +1715,9 @@ function _renderDashTopProducts(allOrders){
       return `<button onclick="setDashTopMode('${m}')" style="border:1px solid ${on ? '#2ECC71' : '#dce8e0'};background:${on ? '#eafaf0' : '#fff'};color:${on ? '#1aab58' : '#6b8a74'};font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;">${label}</button>`;
     }).join('');
   }
+  // Подпись-объяснение убрана — загромождала блок.
   const sub = document.getElementById('dashTopSub');
-  if (sub) {
-    sub.textContent = byRevenue
-      ? 'Товары, принёсшие больше всего денег (все заказы, кроме отменённых). Полоска — сравнение с лидером, процент — доля от всей выручки.'
-      : 'Самые продаваемые по количеству штук (все заказы, кроме отменённых). Полоска — сравнение с лидером, процент — доля от всех проданных штук.';
-  }
+  if (sub) sub.textContent = '';
 
   const elTop = document.getElementById('dashTopProducts');
   if (!elTop) return;
@@ -1663,16 +1727,19 @@ function _renderDashTopProducts(allOrders){
       const val = byRevenue ? p.revenue : p.qty;
       const barPct = maxVal ? Math.round(val / maxVal * 100) : 0;
       const sharePct = totalVal ? Math.round(val / totalVal * 100) : 0;
-      const shareHint = byRevenue ? '% от всей выручки' : '% от всех проданных штук';
       return `
-        <div style="margin-bottom:13px;">
-          <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px;">
-            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i + 1}. ${escH(p.name)}</span>
-            <span style="color:#6b8a74;white-space:nowrap;">${p.qty} шт · ${p.revenue.toLocaleString('ru-RU')} ₽ · <strong style="color:#1aab58;" title="${shareHint}">${sharePct}%</strong></span>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:12px;color:#8aaa94;font-weight:700;width:16px;flex-shrink:0;">${i+1}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:4px;">
+              <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(p.name)}</span>
+              <span style="font-size:12px;color:#1aab58;font-weight:700;white-space:nowrap;flex-shrink:0;">${byRevenue ? p.revenue.toLocaleString('ru-RU') + ' ₽' : p.qty + ' шт'}</span>
+            </div>
+            <div style="height:6px;background:#eef5f0;border-radius:6px;overflow:hidden;">
+              <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;transition:width .4s ease;"></div>
+            </div>
           </div>
-          <div style="height:8px;background:#eef5f0;border-radius:6px;overflow:hidden;" title="${barPct}% от лидера">
-            <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:6px;"></div>
-          </div>
+          <span style="font-size:11px;color:#b0c8b8;font-weight:700;width:28px;text-align:right;flex-shrink:0;">${sharePct}%</span>
         </div>`;
     }).join('');
 }
@@ -2164,7 +2231,7 @@ function renderOrders() {
 }
 
 function orderCardHtml(o) {
-  const items = (o.items || []).map(i => `<div class="order-item"><span>${i.name} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
+  const items = (o.items || []).map(i => `<div class="order-item"><span>${escH(i.name)} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
   const isPickup = o.method === 'pickup';
   const STATUS_CLASS = {assembling:'assembling',courier:'courier',ready:'ready',done:'done',issued:'issued',cancelled:'cancelled'};
@@ -2177,7 +2244,7 @@ function orderCardHtml(o) {
       <div class="order-head">
         <div class="order-head-main">
           <div>
-            <div class="order-num">#${o.num != null ? o.num : (o.id != null ? o.id : '?')}</div>
+            <div class="order-num">#${o.num != null ? o.num : (o.id ? String(o.id).slice(0,8) : '…')}</div>
             <div class="order-date">${o.date}</div>
           </div>
           <span class="order-status status-${sClass}">${sLabel}</span>
@@ -2190,26 +2257,26 @@ function orderCardHtml(o) {
           <div class="order-section">
             <div class="order-label">Клиент</div>
             <div class="order-value">
-              <strong>${o.name}</strong>${o.company ? ' · ' + o.company : ''}<br>
-              <span class="icon icon-phone"></span> ${o.phone}${o.email ? '<br><span class="icon icon-mail"></span> ' + o.email : ''}
+              <strong>${escH(o.name)}</strong>${o.company ? ' · ' + escH(o.company) : ''}<br>
+              <span class="icon icon-phone"></span> ${escH(o.phone)}${o.email ? '<br><span class="icon icon-mail"></span> ' + escH(o.email) : ''}
             </div>
           </div>
           <div class="order-section">
             <div class="order-label">Доставка</div>
             <div class="order-value">
               ${o.method === 'pickup' ? '<span class="icon icon-store"></span> Самовывоз' : '<span class="icon icon-truck"></span> Курьер'}<br>
-              ${o.address || '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + o.deliveryDate : ''}${o.deliveryTime ? ' ' + o.deliveryTime : ''}
+              ${o.address ? escH(o.address) : '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + escH(o.deliveryDate) : ''}${o.deliveryTime ? ' ' + escH(o.deliveryTime) : ''}
             </div>
           </div>
         </div>
         ${o.payment ? `<div class="order-section" style="margin-top:14px;padding-top:14px;border-top:1px solid #e8f4ec;">
           <div class="order-label">Оплата</div>
-          <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${o.invoiceCompany || ''}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + o.invoiceInn : ''}</span>` : ''}</div>
+          <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${escH(o.invoiceCompany || '')}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + escH(o.invoiceInn) : ''}</span>` : ''}</div>
         </div>` : ''}
         ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
         ${o.comment && String(o.comment).trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
           <div class="order-label" style="margin-bottom:6px;"><span class="icon icon-chat"></span> Комментарий клиента</div>
-          <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${String(o.comment).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;')}</div>
+          <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${escH(o.comment)}</div>
         </div>` : ''}
         <div class="order-actions">
           <div class="status-select-wrap">
@@ -2483,7 +2550,7 @@ function buildPrintSlip(o) {
   const rows = items.map((i, idx) => `
     <tr>
       <td>${idx + 1}</td>
-      <td>${(i.name || '').replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;')}</td>
+      <td>${escH(i.name)}</td>
       <td style="text-align:center;">${i.qty}</td>
       <td style="text-align:right;">${(i.price || 0).toLocaleString('ru-RU')} ₽</td>
       <td style="text-align:right;">${((i.qty||1)*(i.price||0)).toLocaleString('ru-RU')} ₽</td>
@@ -2491,11 +2558,11 @@ function buildPrintSlip(o) {
   const statusLabel = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Доставлен',issued:'Выдан',cancelled:'Отменён'}[o.status] || o.status;
   const methodLabel = o.method === 'pickup' ? 'Самовывоз' : 'Курьерская доставка';
   const paymentLabel = {cash: o.method==='pickup'?'Наличными / картой при получении':'Наличными / картой курьеру', invoice:'Безналичный расчёт (счёт)', transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
-  const safeComment = o.comment ? String(o.comment).replace(/[<>]/g, c => c==='<'?'&lt;':'&gt;') : '';
+  const safeComment = o.comment ? escH(o.comment) : '';
   return `
     <div class="pi-header">
       <div>
-        <div class="pi-title">Накладная #${o.num != null ? o.num : (o.id || '?')}</div>
+        <div class="pi-title">Накладная #${o.num != null ? o.num : (o.id ? String(o.id).slice(0,8) : '…')}</div>
         <div class="pi-meta">${o.date} · ${statusLabel}</div>
       </div>
       <div style="text-align:right;font-size:11px;color:#888;">
@@ -2506,15 +2573,15 @@ function buildPrintSlip(o) {
     <div class="pi-grid">
       <div class="pi-section">
         <div class="pi-label">Клиент</div>
-        <div class="pi-value"><strong>${o.name||'—'}</strong>${o.company?'<br>'+o.company:''}${o.phone?'<br>'+o.phone:''}${o.email?'<br>'+o.email:''}</div>
+        <div class="pi-value"><strong>${o.name?escH(o.name):'—'}</strong>${o.company?'<br>'+escH(o.company):''}${o.phone?'<br>'+escH(o.phone):''}${o.email?'<br>'+escH(o.email):''}</div>
       </div>
       <div class="pi-section">
         <div class="pi-label">Доставка</div>
-        <div class="pi-value">${methodLabel}${o.address?'<br>'+o.address:''}${o.deliveryDate?'<br>'+o.deliveryDate:''}${o.deliveryTime?' '+o.deliveryTime:''}</div>
+        <div class="pi-value">${methodLabel}${o.address?'<br>'+escH(o.address):''}${o.deliveryDate?'<br>'+escH(o.deliveryDate):''}${o.deliveryTime?' '+escH(o.deliveryTime):''}</div>
       </div>
       ${o.payment?`<div class="pi-section">
         <div class="pi-label">Оплата</div>
-        <div class="pi-value">${paymentLabel}${o.invoiceCompany?'<br>'+o.invoiceCompany:''}${o.invoiceInn?'<br>ИНН '+o.invoiceInn:''}</div>
+        <div class="pi-value">${paymentLabel}${o.invoiceCompany?'<br>'+escH(o.invoiceCompany):''}${o.invoiceInn?'<br>ИНН '+escH(o.invoiceInn):''}</div>
       </div>`:''}
       ${safeComment?`<div class="pi-section">
         <div class="pi-label">Комментарий</div>
@@ -3052,10 +3119,15 @@ function plural(n, forms) {
 // При первом запуске — загружаем настройки
 loadSettings();
 
-// Авто-вход если сессия активна (после возврата на админку)
-if (sessionStorage.getItem('klever_admin') === '1') {
-  showAdmin();
-}
+// Авто-вход: восстанавливаем сессию Supabase Auth (если админ уже входил).
+(async function(){
+  try {
+    if (typeof supaAdminRestore === 'function') {
+      const res = await supaAdminRestore();
+      if (res && res.ok) showAdmin();
+    }
+  } catch(e){}
+})();
 
 // ===== CATEGORIES ADMIN =====
 const ADMIN_ICON_CHOICES = ['takeaway','spray','paper-roll','shield','box','broom','paperclip','flame','bag','package','star','heart','phone','mail','pin','truck','store','chat','chart','gear','lock','megaphone'];
@@ -4156,6 +4228,244 @@ async function moveBannerOrder(id, dir) {
     ]);
   }
   await loadBannersAdmin();
+}
+
+// ===== АНАЛИТИКА =====
+function renderAnalytics() {
+  const allOrders = getOrders();
+
+  const toEl = document.getElementById('analyticsTo');
+  const fromEl = document.getElementById('analyticsFrom');
+  const today = new Date(); today.setHours(23,59,59,999);
+  const defFrom = new Date(); defFrom.setDate(today.getDate() - 29); defFrom.setHours(0,0,0,0);
+
+  if (!fromEl.value) fromEl.valueAsDate = defFrom;
+  if (!toEl.value) toEl.valueAsDate = today;
+
+  const dFrom = new Date(fromEl.value); dFrom.setHours(0,0,0,0);
+  const dTo = new Date(toEl.value); dTo.setHours(23,59,59,999);
+
+  function parseD(o) {
+    if (!o.date) return null;
+    const parts = o.date.split(',')[0].trim().split('.');
+    if (parts.length < 3) return null;
+    return new Date(+parts[2], +parts[1]-1, +parts[0]);
+  }
+
+  const filtered = allOrders.filter(o => {
+    if (o.status === 'cancelled') return false;
+    const d = parseD(o); if (!d) return false;
+    return d >= dFrom && d <= dTo;
+  });
+
+  const totalRev = filtered.reduce((s, o) => s + (Number(o.total) || 0), 0);
+  const avgCheck = filtered.length ? Math.round(totalRev / filtered.length) : 0;
+  const doneOrders = filtered.filter(o => o.status === 'done' || o.status === 'issued');
+  const doneRev = doneOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+
+  const statsEl = document.getElementById('analyticsStats');
+  if (statsEl) statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Заказов за период</div><div class="stat-num">${filtered.length}</div><div class="stat-sub">Без отменённых</div></div>
+    <div class="stat-card"><div class="stat-label">Сумма заказов</div><div class="stat-num">${totalRev.toLocaleString('ru-RU')} ₽</div><div class="stat-sub">Все активные</div></div>
+    <div class="stat-card"><div class="stat-label">Выполнено</div><div class="stat-num">${doneOrders.length}</div><div class="stat-sub">${doneRev.toLocaleString('ru-RU')} ₽</div></div>
+    <div class="stat-card"><div class="stat-label">Средний чек</div><div class="stat-num">${avgCheck.toLocaleString('ru-RU')} ₽</div><div class="stat-sub">По всем заказам</div></div>
+  `;
+
+  const days = [];
+  for (let d = new Date(dFrom); d <= dTo; d.setDate(d.getDate()+1)) {
+    days.push({ d: new Date(d), sum: 0, orders: [] });
+  }
+  filtered.forEach(o => {
+    const od = parseD(o); if (!od) return;
+    const b = days.find(x => x.d.toDateString() === od.toDateString());
+    if (b) { b.sum += Number(o.total)||0; b.orders.push(o); }
+  });
+
+  const maxSum = Math.max(1, ...days.map(b => b.sum));
+  const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const periodDays = days.length;
+  const labelStep = periodDays <= 14 ? 1 : periodDays <= 31 ? 2 : 7;
+
+  const chartEl = document.getElementById('analyticsChart');
+  const periodLabel = document.getElementById('analyticsPeriodLabel');
+  if (periodLabel) periodLabel.textContent = `(${filtered.length} заказов · ${totalRev.toLocaleString('ru-RU')} ₽)`;
+
+  if (chartEl) {
+    chartEl.innerHTML = '<div style="display:flex;align-items:flex-end;gap:3px;height:140px;overflow-x:auto;">' +
+      days.map((b, i) => {
+        const h = Math.round(b.sum / maxSum * 110);
+        const hasOrders = b.orders.length > 0;
+        return `<div onclick="showAnalyticsDay(${i})" style="flex:1;min-width:${periodDays > 60 ? 8 : 20}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;cursor:${hasOrders?'pointer':'default'};" title="${b.d.toLocaleDateString('ru-RU')} — ${b.sum.toLocaleString('ru-RU')} ₽ · ${b.orders.length} заказов">
+          <span style="font-size:9px;color:${b.sum?'#1aab58':'transparent'};font-weight:700;">${b.sum ? (b.sum>=1000?Math.round(b.sum/1000)+'к':b.sum) : ''}</span>
+          <div style="width:100%;height:${Math.max(2,h)}px;background:${b.sum?'linear-gradient(180deg,#2ECC71,#1aab58)':'#eef5f0'};border-radius:3px 3px 0 0;transition:opacity .15s;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'"></div>
+          <span style="font-size:9px;color:#8aaa94;">${i % labelStep === 0 ? b.d.getDate() : ''}</span>
+        </div>`;
+      }).join('') + '</div>';
+    chartEl._days = days;
+  }
+
+  // Топ товаров за период
+  const productMap = {};
+  filtered.forEach(o => {
+    (o.items||[]).forEach(i => {
+      if (!productMap[i.name]) productMap[i.name] = {qty:0, rev:0};
+      productMap[i.name].qty += Number(i.qty)||0;
+      productMap[i.name].rev += (Number(i.qty)||0) * (Number(i.price)||0);
+    });
+  });
+  const topProds = Object.entries(productMap).sort((a,b)=>b[1].rev-a[1].rev).slice(0,8);
+  const maxPRev = topProds.length ? topProds[0][1].rev : 1;
+  const topProdsEl = document.getElementById('analyticsTopProducts');
+  if (topProdsEl) topProdsEl.innerHTML = topProds.length
+    ? topProds.map(([name,v],i) => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:12px;color:#8aaa94;font-weight:700;width:18px;flex-shrink:0;">${i+1}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+              <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(name)}</span>
+              <span style="font-size:12px;color:#1aab58;font-weight:700;white-space:nowrap;margin-left:6px;">${v.rev.toLocaleString('ru-RU')} ₽</span>
+            </div>
+            <div style="height:5px;background:#eef5f0;border-radius:4px;"><div style="height:100%;width:${Math.round(v.rev/maxPRev*100)}%;background:linear-gradient(90deg,#2ECC71,#C8F135);border-radius:4px;"></div></div>
+          </div>
+          <span style="font-size:11px;color:#8aaa94;width:40px;text-align:right;flex-shrink:0;">${v.qty} шт</span>
+        </div>`)
+      .join('')
+    : '<div style="color:#8aaa94;font-size:14px;">Нет данных</div>';
+
+  // Топ клиентов за период
+  const clientMap = {};
+  filtered.forEach(o => {
+    const key = o.phone || o.email || o.name || 'unknown';
+    if (!clientMap[key]) clientMap[key] = {name: o.name||'—', phone: o.phone||'', count:0, rev:0};
+    clientMap[key].count++;
+    clientMap[key].rev += Number(o.total)||0;
+  });
+  const topClients = Object.values(clientMap).sort((a,b)=>b.rev-a.rev).slice(0,8);
+  const topClientsEl = document.getElementById('analyticsTopClients');
+  if (topClientsEl) topClientsEl.innerHTML = topClients.length
+    ? topClients.map((c,i) => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f7f2;">
+          <div style="width:30px;height:30px;border-radius:50%;background:#eaf5ee;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1aab58;font-size:13px;flex-shrink:0;">${i+1}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(c.name)}</div>
+            <div style="font-size:11px;color:#8aaa94;">${escH(c.phone)} · ${c.count} ${c.count===1?'заказ':c.count<5?'заказа':'заказов'}</div>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:#1aab58;white-space:nowrap;">${c.rev.toLocaleString('ru-RU')} ₽</span>
+        </div>`)
+      .join('')
+    : '<div style="color:#8aaa94;font-size:14px;">Нет данных</div>';
+}
+
+function showAnalyticsDay(idx) {
+  const chartEl = document.getElementById('analyticsChart');
+  if (!chartEl || !chartEl._days) return;
+  const b = chartEl._days[idx];
+  if (!b || !b.orders.length) return;
+
+  const detailEl = document.getElementById('analyticsDayDetail');
+  const titleEl = document.getElementById('analyticsDayTitle');
+  const ordersEl = document.getElementById('analyticsDayOrders');
+  if (!detailEl || !titleEl || !ordersEl) return;
+
+  titleEl.textContent = b.d.toLocaleDateString('ru-RU', {day:'numeric', month:'long', year:'numeric'});
+  const dayTotal = b.orders.reduce((s,o) => s+(Number(o.total)||0), 0);
+
+  const STATUS_LABEL = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Выполнен',issued:'Выдан',cancelled:'Отменён'};
+  const STATUS_COLOR = {new:'#f0a500',assembling:'#3498db',courier:'#8e44ad',ready:'#16a085',done:'#1aab58',issued:'#1aab58',cancelled:'#e74c3c'};
+
+  ordersEl.innerHTML = `
+    <div style="margin-bottom:20px;padding:14px 20px;background:#f0faf4;border-radius:12px;display:flex;gap:28px;flex-wrap:wrap;font-size:14px;">
+      <span>📦 Заказов: <strong>${b.orders.length}</strong></span>
+      <span>💰 Выручка: <strong style="color:#1aab58;">${dayTotal.toLocaleString('ru-RU')} ₽</strong></span>
+      <span>🧾 Средний чек: <strong>${Math.round(dayTotal/b.orders.length).toLocaleString('ru-RU')} ₽</strong></span>
+    </div>
+    ${b.orders.map(o => {
+      const items = o.items || [];
+      const st = o.status || 'new';
+      const stColor = STATUS_COLOR[st] || '#888';
+      const stLabel = STATUS_LABEL[st] || st;
+      const delivery = o.method === 'pickup' ? '🏪 Самовывоз' : '🚚 Курьер';
+      const PAY = {cash:'💵 Наличными/картой', invoice:'🏦 Безналичный расчёт', transfer:'💳 Перевод на карту'};
+      const payLabel = PAY[o.payment] || o.payment || '—';
+
+      return `
+        <div style="border:1.5px solid #e8f4ec;border-radius:14px;margin-bottom:14px;overflow:hidden;">
+
+          <!-- Шапка заказа — кликабельная -->
+          <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.ana-arrow').textContent=this.nextElementSibling.style.display==='block'?'▲':'▼'"
+               style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;background:#fff;user-select:none;">
+            <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;color:#1a2e22;min-width:52px;">#${o.num}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.name?escH(o.name):'—'}</div>
+              <div style="font-size:12px;color:#8aaa94;">${escH(o.phone||'')} ${o.email ? '· '+escH(o.email) : ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:15px;font-weight:900;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</div>
+              <div style="font-size:11px;color:#8aaa94;">${items.length} ${items.length===1?'товар':items.length<5?'товара':'товаров'}</div>
+            </div>
+            <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:${stColor};flex-shrink:0;">${stLabel}</span>
+            <span class="ana-arrow" style="color:#8aaa94;font-size:12px;flex-shrink:0;">▼</span>
+          </div>
+
+          <!-- Детали заказа — скрыты по умолчанию -->
+          <div style="display:none;border-top:1.5px solid #e8f4ec;">
+
+            <!-- Инфо: доставка, оплата, дата -->
+            <div style="display:flex;gap:0;border-bottom:1px solid #f0f7f2;">
+              <div style="flex:1;padding:12px 18px;border-right:1px solid #f0f7f2;">
+                <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Доставка</div>
+                <div style="font-size:13px;font-weight:600;">${delivery}</div>
+                ${o.address ? `<div style="font-size:12px;color:#6b8a74;margin-top:2px;">${escH(o.address)}</div>` : ''}
+                ${o.deliveryDate ? `<div style="font-size:12px;color:#6b8a74;">📅 ${escH(o.deliveryDate)}${o.deliveryTime?' '+escH(o.deliveryTime):''}</div>` : ''}
+              </div>
+              <div style="flex:1;padding:12px 18px;border-right:1px solid #f0f7f2;">
+                <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Оплата</div>
+                <div style="font-size:13px;font-weight:600;">${payLabel}</div>
+                ${o.invoiceCompany ? `<div style="font-size:12px;color:#6b8a74;">${escH(o.invoiceCompany)}${o.invoiceInn?' · ИНН '+escH(o.invoiceInn):''}</div>` : ''}
+              </div>
+              <div style="flex:1;padding:12px 18px;">
+                <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Время заказа</div>
+                <div style="font-size:13px;font-weight:600;">${o.date||'—'}</div>
+                ${o.comment ? `<div style="font-size:12px;color:#f0a500;margin-top:4px;">💬 ${escH(o.comment)}</div>` : ''}
+              </div>
+            </div>
+
+            <!-- Таблица товаров -->
+            <div style="padding:14px 18px;">
+              <div style="font-size:12px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Состав заказа</div>
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                  <tr style="border-bottom:1.5px solid #e8f4ec;">
+                    <th style="padding:6px 8px;text-align:left;color:#6b8a74;font-weight:600;">Товар</th>
+                    <th style="padding:6px 8px;text-align:center;color:#6b8a74;font-weight:600;width:60px;">Кол-во</th>
+                    <th style="padding:6px 8px;text-align:right;color:#6b8a74;font-weight:600;width:90px;">Цена</th>
+                    <th style="padding:6px 8px;text-align:right;color:#6b8a74;font-weight:600;width:100px;">Сумма</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map(i => `
+                    <tr style="border-bottom:1px solid #f5faf6;">
+                      <td style="padding:9px 8px;font-weight:500;">${i.name?escH(i.name):'—'}</td>
+                      <td style="padding:9px 8px;text-align:center;color:#6b8a74;">${i.qty||1} шт</td>
+                      <td style="padding:9px 8px;text-align:right;color:#6b8a74;">${(Number(i.price)||0).toLocaleString('ru-RU')} ₽</td>
+                      <td style="padding:9px 8px;text-align:right;font-weight:700;color:#1a2e22;">${((Number(i.qty)||1)*(Number(i.price)||0)).toLocaleString('ru-RU')} ₽</td>
+                    </tr>`).join('')}
+                </tbody>
+                <tfoot>
+                  <tr style="border-top:2px solid #e8f4ec;">
+                    <td colspan="3" style="padding:10px 8px;text-align:right;font-weight:700;color:#6b8a74;">Итого:</td>
+                    <td style="padding:10px 8px;text-align:right;font-size:16px;font-weight:900;color:#1aab58;">${(Number(o.total)||0).toLocaleString('ru-RU')} ₽</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+          </div>
+        </div>`;
+    }).join('')}`;
+
+  detailEl.style.display = 'block';
+  detailEl.scrollIntoView({behavior:'smooth', block:'start'});
 }
 </script>
 <div id="printSlip" style="display:none;"></div>
