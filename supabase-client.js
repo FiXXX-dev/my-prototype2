@@ -441,8 +441,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   window.supaDeleteAllOrders = async function(){
     if (!isConfigured()) return { ok: false, reason: 'unconfigured' };
-    // neq on an always-set column avoids PostgREST's no-WHERE-clause guard.
-    const r = await _pgDelete('orders', 'id=neq.00000000-0000-0000-0000-000000000000');
+    // id — это bigint (int8), а не uuid. Фильтр id=gt.0 покрывает все строки
+    // и одновременно удовлетворяет защите PostgREST «DELETE без WHERE запрещён».
+    const r = await _pgDelete('orders', 'id=gt.0');
     if (!r.ok) console.error('[supabase] delete-all error', r.error);
     return r;
   };
