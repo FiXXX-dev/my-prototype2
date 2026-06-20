@@ -23,7 +23,7 @@ revoke all on public.admins from anon, authenticated;
 
 -- ВПИШИТЕ СЮДА UUID вашего админ-аккаунта из Authentication → Users:
 insert into public.admins (user_id)
-values ('ВСТАВЬТЕ_UUID_АДМИНА_СЮДА')
+values ('64e76962-3dcd-4f64-a282-b59158f10d1a')
 on conflict (user_id) do nothing;
 
 -- ── 2. Хелпер: текущий пользователь — админ? ────────────────────────────────
