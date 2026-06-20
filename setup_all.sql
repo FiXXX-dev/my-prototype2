@@ -49,9 +49,14 @@ drop policy if exists "orders_insert" on public.orders;
 drop policy if exists "orders_modify" on public.orders;
 drop policy if exists "orders_delete" on public.orders;
 drop policy if exists "orders_admin_all" on public.orders;
+-- Запись (insert/update/delete) отбираем у всех — клиенты пишут через RPC.
+-- SELECT оставляем authenticated: RLS ниже пропустит только is_admin().
+-- Анонимам — ничего.
+revoke all on public.orders from anon, authenticated;
+grant select on public.orders to authenticated;
+
 create policy "orders_admin_all" on public.orders
   for all using (public.is_admin()) with check (public.is_admin());
-revoke all on public.orders from anon, authenticated;
 
 -- ── 1.4 RPC для клиентских сценариев (SECURITY DEFINER — обходят RLS) ────────
 
