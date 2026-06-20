@@ -787,10 +787,17 @@
     showSection();
     bannerStartAuto();
   }
+  var BANNERS_FALLBACK = [
+    { title:'Бесплатная доставка по СПб', subtitle:'На следующий рабочий день при заказе до 18:00', bg_color:'#2ECC71', text_color:'#ffffff', link_url:'delivery.html', link_text:'Подробнее' },
+    { title:'Скидки для постоянных клиентов', subtitle:'Индивидуальные условия для HoReCa', bg_color:'#FF6B35', text_color:'#ffffff', link_url:'wholesale.html', link_text:'Узнать условия' },
+    { title:'Более 2000 наименований', subtitle:'Всё для ресторанов, кафе и отелей', bg_color:'#0f1a14', text_color:'#ffffff', link_url:'catalog.html', link_text:'Смотреть каталог' },
+  ];
   function loadBanners(){
     // 1) Мгновенный показ из кэша, если он есть — без ожидания сети.
+    //    Нет кэша (первый визит) — показываем статичные баннеры немедленно,
+    //    Supabase перезапишет их, когда ответит.
     var cached = getCachedBanners();
-    if (cached && cached.length) showBanners(cached);
+    showBanners(cached && cached.length ? cached : BANNERS_FALLBACK);
 
     // 2) Обновление из Supabase.
     if (typeof window.supaGetBanners !== 'function') return;

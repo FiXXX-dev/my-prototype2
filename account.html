@@ -1369,16 +1369,36 @@ function saveProfile(){
   showCartMsg('Данные сохранены');
 }
 
-function changePassword(){
+async function changePassword(){
   hideMsg('passMsg');
   const u = getCurrentUser();
   const oldP = document.getElementById('oldPass').value;
   const newP = document.getElementById('newPass').value;
   const newP2 = document.getElementById('newPass2').value;
-  if (oldP !== u.password){ showMsg('passMsg', 'Текущий пароль неверный', 'error'); return; }
+  if (!oldP){ showMsg('passMsg', 'Введите текущий пароль', 'error'); return; }
   if (newP.length < 6){ showMsg('passMsg', 'Новый пароль минимум 6 символов', 'error'); return; }
   if (newP !== newP2){ showMsg('passMsg', 'Пароли не совпадают', 'error'); return; }
-  updateCurrentUser({password: newP});
+
+  if (u && u.password === '*' && typeof supaSignIn === 'function') {
+    // Supabase user — verify old password by re-authenticating, then updateUser
+    showMsg('passMsg', 'Проверяем пароль…', 'info');
+    const check = await supaSignIn(u.email, oldP);
+    if (!check.ok) {
+      showMsg('passMsg', check.network ? 'Нет связи с сервером. Попробуйте ещё раз.' : 'Текущий пароль неверный', 'error');
+      return;
+    }
+    showMsg('passMsg', 'Сохраняем…', 'info');
+    const res = await supaUpdatePassword(newP);
+    if (!res.ok) {
+      showMsg('passMsg', 'Не удалось обновить пароль: ' + ((res.error && res.error.message) || 'ошибка сервера'), 'error');
+      return;
+    }
+  } else {
+    // Local-only user — compare plaintext
+    if (oldP !== (u && u.password)){ showMsg('passMsg', 'Текущий пароль неверный', 'error'); return; }
+    updateCurrentUser({password: newP});
+  }
+
   document.getElementById('oldPass').value = '';
   document.getElementById('newPass').value = '';
   document.getElementById('newPass2').value = '';

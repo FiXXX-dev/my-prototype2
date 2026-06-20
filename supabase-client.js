@@ -596,6 +596,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     return { ok: true };
   };
 
+  window.supaUpdatePassword = async function(newPassword){
+    const sb = getClient();
+    if (!sb) return { ok:false, reason:'unconfigured' };
+    try {
+      const { data, error } = await sb.auth.updateUser({ password: newPassword });
+      if (error) return { ok:false, error, network: _isNetworkErr(error) };
+      return { ok:true, user: data && data.user };
+    } catch(e) {
+      return { ok:false, error:e, network: _isNetworkErr(e) };
+    }
+  };
+
   window.supaGetCurrentUser = async function(){
     const sb = getClient(); if (!sb) return null;
     try {
