@@ -145,8 +145,12 @@ begin
       execute format('drop policy if exists "%I_admin_write" on public.%I', t, t);
       execute format('create policy "%I_public_read" on public.%I for select using (true)', t, t);
       execute format('create policy "%I_admin_write" on public.%I for all using (public.is_admin()) with check (public.is_admin())', t, t);
-      execute format('grant select on public.%I to anon, authenticated', t);
-      execute format('revoke insert, update, delete on public.%I from anon, authenticated', t);
+      execute format('grant select on public.%I to anon', t);
+      -- authenticated = все авторизованные пользователи, включая админа.
+      -- Таблично-уровневые GRANT должны разрешать запись; RLS-политика
+      -- settings_admin_write (и аналогичные) ограничивает её только is_admin().
+      -- Без этого GRANT PostgreSQL блокирует INSERT/UPDATE/DELETE ДО проверки RLS.
+      execute format('grant select, insert, update, delete on public.%I to authenticated', t);
     end if;
   end loop;
 end $$;
