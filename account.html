@@ -724,6 +724,11 @@ function doLogin(){
           || code === 'invalid_credentials' || code === 'invalid_grant') {
         showMsg('loginMsg', 'Неверный email или пароль', 'error'); return;
       }
+      // Вход по email отключён в настройках Supabase (Email-провайдер выключен).
+      if (/logins?\s+are\s+disabled/i.test(msg) || /provider.*disabled/i.test(msg)
+          || code === 'email_provider_disabled' || code === 'signup_disabled') {
+        showMsg('loginMsg', 'Вход по email сейчас недоступен. Если вы владелец — включите Email-провайдер в Supabase (Authentication → Providers → Email).', 'error'); return;
+      }
       // Сетевой обрыв (DPI/ТСПУ/нет связи) — это НЕ «неверный пароль».
       if (res.network) {
         const localUser = getUsers().find(u => u.email && u.email.toLowerCase() === id.toLowerCase());
