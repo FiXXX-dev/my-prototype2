@@ -714,14 +714,24 @@ function doLogin(){
         }
         return;
       }
-      // Fall back to local check
-      const msg = (res.error && res.error.message) || '';
-      const code = (res.error && res.error.code) || '';
+      // Разбираем причину отказа Supabase.
+      const msg  = (res.error && res.error.message) || '';
+      const code = (res.error && (res.error.code || res.error.error_code)) || '';
       if (/email.*not.*confirmed/i.test(msg) || code === 'email_not_confirmed') {
-        showMsg('loginMsg', '📧 Подтвердите email — проверьте почту и перейдите по ссылке из письма', 'error'); return;
+        showMsg('loginMsg', '📧 Этот email ещё не подтверждён. Проверьте почту и перейдите по ссылке из письма. Если письма нет — напишите нам, подтвердим вручную.', 'error'); return;
       }
-      if (/Invalid login/i.test(msg) || /credentials/i.test(msg)) {
+      if (/invalid.*credentials/i.test(msg) || /Invalid login/i.test(msg) || /credentials/i.test(msg)
+          || code === 'invalid_credentials' || code === 'invalid_grant') {
         showMsg('loginMsg', 'Неверный email или пароль', 'error'); return;
+      }
+      // Сетевой обрыв (DPI/ТСПУ/нет связи) — это НЕ «неверный пароль».
+      if (res.network) {
+        const localUser = getUsers().find(u => u.email && u.email.toLowerCase() === id.toLowerCase());
+        // Локальный вход возможен только для аккаунтов, заведённых на этом
+        // устройстве (хранят реальный пароль, а не '*' от Supabase-аккаунта).
+        if (localUser && localUser.password && localUser.password !== '*') { _doLoginLocal(id, pass); return; }
+        showMsg('loginMsg', 'Не удалось связаться с сервером. Проверьте интернет и попробуйте ещё раз.', 'error');
+        return;
       }
       console.warn('[auth] Supabase signin failed, trying local', res.error);
       _doLoginLocal(id, pass);
@@ -744,6 +754,11 @@ function _doLoginLocal(id, pass){
       showMsg('loginMsg', 'Пользователь не найден', 'error');
     }
     return;
+  }
+  // Аккаунт с паролем '*' создан через Supabase Auth — локально пароль не хранится.
+  // Значит сюда мы попали из-за обрыва связи, а не из-за неверного пароля.
+  if (user.password === '*'){
+    showMsg('loginMsg', 'Не удалось связаться с сервером для входа. Проверьте интернет и попробуйте ещё раз.', 'error'); return;
   }
   if (user.password !== pass){ showMsg('loginMsg', 'Неверный пароль', 'error'); return; }
   setCurrentUserId(user.id);

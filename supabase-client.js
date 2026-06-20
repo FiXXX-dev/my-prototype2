@@ -154,6 +154,55 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     throw lastErr || new Error('request failed');
   }
 
+  // ─── Auth POST: plain fetch + retry к /auth/v1 (устойчиво к DPI/ТСПУ) ───────
+  // SDK-метод signInWithPassword шлёт HTTP/2-запрос, который на сетях с DPI
+  // (ТСПУ РФ) часто рвётся ещё до ответа (net::ERR_HTTP2_PING_FAILED) и НЕ
+  // повторяется — пользователь видит «ошибку входа», хотя пароль верный.
+  // Здесь — тот же приём, что и для заказов: лёгкий fetch + повторы при обрыве.
+  async function _authPost(path, body, qp){
+    if (!isConfigured()) return null;
+    const url = new URL(SUPABASE_URL + '/auth/v1/' + path);
+    url.searchParams.set('apikey', SUPABASE_ANON_KEY);
+    Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => _abort(ctrl), 15000);
+    try {
+      const resp = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const m = json.error_description || json.msg || json.message
+                || ('Ошибка сервера (код ' + resp.status + ')');
+        throw Object.assign(new Error(m), {
+          status: resp.status,
+          code: json.error_code || json.error || json.code || '',
+          supaError: json,
+        });
+      }
+      return json;
+    } finally { clearTimeout(timer); }
+  }
+
+  async function _authPostRetry(path, body, qp, tries){
+    const max = tries || 3;
+    let lastErr = null;
+    for (let i = 0; i < max; i++) {
+      if (i) await new Promise(r => setTimeout(r, i * 1000));
+      try { return await _authPost(path, body, qp); }
+      catch (e) {
+        lastErr = e;
+        // Ответ сервера 4xx (неверный пароль, email не подтверждён и т.п.)
+        // повторять бессмысленно — пробрасываем сразу. Повторяем только обрывы.
+        if (e && e.status && e.status >= 400 && e.status < 500) throw e;
+      }
+    }
+    throw lastErr || new Error('auth request failed');
+  }
+
   // ─── Универсальные write-хелперы (plain fetch + retry, без SDK-заголовков) ──
   // Переносят надёжность fix'а заказов на все операции записи в админке:
   // лёгкий запрос (нет Authorization/x-client-info) + повтор при обрыве (DPI).
@@ -475,36 +524,51 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== Auth =====
+  // Сетевой ли это сбой (обрыв/таймаут), а не ответ сервера «неверные данные»?
+  // Нужно, чтобы UI не показывал «неверный пароль» при проблемах со связью.
+  function _isNetworkErr(e){
+    if (!e) return false;
+    if (e.status && e.status >= 400 && e.status < 500) return false; // явный ответ сервера
+    const m = (e.message || '') + ' ' + (e.name || '');
+    return !e.status || e.status >= 500
+        || /timeout|fetch|network|aborted|failed|соедин|сети|ответил|вовремя/i.test(m);
+  }
+
   window.supaSignUp = async function(email, password, meta, redirectTo){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     try {
-      const options = { data: meta || {} };
-      // Куда вернуть пользователя после клика по ссылке подтверждения email.
-      // ВАЖНО: этот URL должен быть в allowlist «Redirect URLs» в дашборде
-      // Supabase (Authentication → URL Configuration), иначе Supabase
-      // проигнорирует его и уйдёт на Site URL (часто localhost → «тёмный экран»).
-      if (redirectTo) options.emailRedirectTo = redirectTo;
-      const { data, error } = await sb.auth.signUp({ email, password, options });
-      if (error) return { ok:false, error };
-      return { ok:true, user: data.user, session: data.session };
-    } catch(e) { return { ok:false, error:e }; }
+      // Регистрация через /auth/v1/signup напрямую (plain fetch + повторы) —
+      // не рвётся на DPI, в отличие от SDK-метода signUp.
+      const qp = {};
+      // redirect_to нужен только если в дашборде ВКЛючено подтверждение email.
+      if (redirectTo) qp.redirect_to = redirectTo;
+      const data = await _authPostRetry('signup', { email, password, data: meta || {} }, qp);
+      // Если подтверждение email выключено — ответ содержит сессию: сразу
+      // гидрируем её в SDK, чтобы пользователь оказался залогинен.
+      const sb = getClient();
+      if (sb && data && data.access_token) {
+        try { await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }); } catch(e){}
+      }
+      // При включённом подтверждении gotrue возвращает сам объект user (без сессии).
+      const user = data && (data.user || (data.id ? data : null));
+      return { ok:true, user, session: data && data.access_token ? data : null };
+    } catch(e) { return { ok:false, error:e, network: _isNetworkErr(e) }; }
   };
 
   window.supaSignIn = async function(email, password){
-    const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     try {
-      const result = await Promise.race([
-        sb.auth.signInWithPassword({ email, password }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
-      ]);
-      const { data, error } = result;
-      if (error) return { ok:false, error };
-      return { ok:true, user: data.user, session: data.session };
-    } catch(e) {
-      if (e && e.message === 'timeout') {
-        return { ok:false, error: { message: 'Превышено время ожидания. Проверьте соединение и попробуйте снова.' } };
+      // Вход через /auth/v1/token?grant_type=password напрямую (plain fetch +
+      // повторы). Это устраняет net::ERR_HTTP2_PING_FAILED на ТСПУ-сетях.
+      const data = await _authPostRetry('token', { email, password }, { grant_type: 'password' });
+      // Гидрируем сессию в SDK → работает getSession()/autoRefresh на всех страницах.
+      const sb = getClient();
+      if (sb && data && data.access_token) {
+        try { await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }); } catch(e){}
       }
-      return { ok:false, error:e };
+      return { ok:true, user: data && data.user, session: data };
+    } catch(e) {
+      return { ok:false, error:e, network: _isNetworkErr(e) };
     }
   };
 
@@ -1103,11 +1167,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   window.supaAdminSignIn = async function(email, password){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error || !data || !data.session) return { ok:false, error };
-      setAuthToken(data.session.access_token);
+      // Тот же устойчивый к DPI вход, что и у клиентов.
+      const r = await window.supaSignIn(email, password);
+      if (!r.ok || !r.session || !r.session.access_token) {
+        return { ok:false, error: r.error, network: r.network };
+      }
+      setAuthToken(r.session.access_token);
       const admin = await _checkIsAdmin();
-      if (!admin) { setAuthToken(null); await sb.auth.signOut(); return { ok:false, reason:'not_admin' }; }
+      if (!admin) { setAuthToken(null); try { await sb.auth.signOut(); } catch(e){} return { ok:false, reason:'not_admin' }; }
       _bindTokenRefresh();
       return { ok:true, isAdmin:true };
     } catch(e){ return { ok:false, error:e }; }
@@ -1149,9 +1216,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // Проверяем через RPC is_admin(), что текущая сессия принадлежит админу.
   async function _checkIsAdmin(){
     try {
-      const sb = getClient();
-      const { data, error } = await sb.rpc('is_admin');
-      return !error && data === true;
+      // Через устойчивый _pgPost (несёт Authorization админа), а не SDK rpc —
+      // надёжнее на DPI и без CORS-preflight.
+      const data = await _pgPostRetry('rpc/is_admin', {});
+      return data === true;
     } catch(e){ return false; }
   }
 
