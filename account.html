@@ -1161,10 +1161,21 @@ function _localOrdersFallback(u){
 }
 
 // Применяет готовые массивы данных в память и перерисовывает активную вкладку.
+// Выбираем, какой список заказов показать. ВАЖНО: пустой массив с сервера НЕ
+// затирает уже показанные заказы — это почти всегда временный промах (репликация
+// ещё не догнала, телефон/email чуть отличается, фоновый запрос на ТСПУ-сети
+// вернул [] вместо данных). Из-за такого затирания ЛК и «сбрасывался в ноль».
+// Непустой ответ сервера всегда заменяет — он источник истины.
+function _pickOrders(incoming){
+  if (Array.isArray(incoming) && incoming.length) return incoming;
+  if (Array.isArray(myOrders) && myOrders.length) return myOrders;
+  return _localOrdersFallback(getCurrentUser());
+}
+
 function _applyAccountData(orders, favs, addrs, uid){
   // Supabase ответил массивом (даже пустым) — он источник истины.
   // localStorage используем только если Supabase вообще недоступен (null).
-  myOrders = Array.isArray(orders) ? orders : _localOrdersFallback(getCurrentUser());
+  myOrders = _pickOrders(orders);
   if (Array.isArray(favs))   myFavorites = favs;
   if (Array.isArray(addrs)) {
     myAddresses = addrs.map(mapAddrRow);
@@ -1237,7 +1248,7 @@ async function loadAccountData(){
       ]);
       const val = i => (results[i].status==='fulfilled' ? results[i].value : null);
       const [orders, favs, addrs] = [val(0), val(1), val(2)];
-      if (Array.isArray(orders)) myOrders = orders;
+      myOrders = _pickOrders(orders);
       if (Array.isArray(favs))   myFavorites = favs;
       if (Array.isArray(addrs)) {
         myAddresses = addrs.map(mapAddrRow);
@@ -1246,7 +1257,9 @@ async function loadAccountData(){
       const anyOk = [orders, favs, addrs].some(Array.isArray);
       if (anyOk) {
         accountDataLoaded = true; accountDataLoadedFor = u.id;
-        _acctWriteCache(u.id, orders||[], favs||[], addrs||[]);
+        // Кэшируем myOrders (после _pickOrders), а не сырой пустой ответ — иначе
+        // в кэш попадёт [] и при следующем заходе заказы снова «обнулятся».
+        _acctWriteCache(u.id, myOrders, favs||[], addrs||[]);
       }
     } catch(e) {
       console.warn('[account] loadAccountData failed', e);
@@ -1691,6 +1704,41 @@ document.addEventListener('click', function(e){
     document.getElementById('addrSuggestions')?.classList.remove('visible');
   }
 });
+
+// ── Тихое обновление при возврате на вкладку ───────────────────────────────
+// Замена Supabase Realtime, который здесь неприменим: realtime работает по
+// WebSocket (его рвёт ТСПУ/DPI — ровно поэтому всё приложение переписано на
+// plain-fetch), и к тому же уважает RLS, а у обычного пользователя нет SELECT
+// на orders (доступ только через rpc_my_orders). Поэтому новые заказы и смену
+// статуса подтягиваем сами: когда пользователь возвращается на вкладку ЛК или
+// в окно браузера, тихо перечитываем данные через тот же устойчивый rpc.
+let _lastAcctRefresh = 0;
+async function refreshAccountInBackground(){
+  const u = getCurrentUser();
+  if (!u) return;
+  if (!(window.kleverSupabase && window.kleverSupabase.isConfigured())) return;
+  if (Date.now() - _lastAcctRefresh < 8000) return;   // не чаще раза в 8 секунд
+  _lastAcctRefresh = Date.now();
+  try {
+    const results = await Promise.allSettled([
+      (typeof supaListOrdersByUser === 'function')
+        ? supaListOrdersByUser(u.id, { phone: u.phone||'', email: u.email||'' }) : Promise.resolve(null),
+      (typeof supaGetFavoritesFull === 'function') ? supaGetFavoritesFull() : Promise.resolve(null),
+      (typeof supaListAddressesByEmail === 'function') ? supaListAddressesByEmail() : Promise.resolve(null),
+    ]);
+    const val = i => (results[i].status==='fulfilled' ? results[i].value : null);
+    const [orders, favs, addrs] = [val(0), val(1), val(2)];
+    if ([orders, favs, addrs].some(Array.isArray)) {
+      _acctWriteCache(u.id, _pickOrders(orders), favs||myFavorites,
+        addrs || myAddresses.map(a=>({id:a.id,label:a.label,address:a.address,is_default:a.isDefault})));
+      _applyAccountData(orders, favs, addrs, u.id);   // _pickOrders внутри не даст «обнулиться»
+    }
+  } catch(e) { console.warn('[account] bg refresh on focus failed', e); }
+}
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible') refreshAccountInBackground();
+});
+window.addEventListener('focus', refreshAccountInBackground);
 
 // Авто-вход
 if (getCurrentUser()){ showAccount(); }
