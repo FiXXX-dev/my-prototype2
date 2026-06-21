@@ -42,7 +42,7 @@
   .hbrowse-title{font-family:'Unbounded',sans-serif;font-size:clamp(24px,3vw,32px);font-weight:900;letter-spacing:-1px;color:var(--text);}
   .hbrowse-count{color:#8aaa94;font-size:14px;margin-top:6px;}
   .hbrowse-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
-  .cat-tile{display:block;border-radius:20px;overflow:hidden;text-decoration:none;color:inherit;position:relative;min-height:200px;transition:transform .2s,box-shadow .2s;background:#f2f7f4;}
+  .cat-tile{display:block;border-radius:20px;overflow:hidden;text-decoration:none;color:inherit;position:relative;min-height:260px;transition:transform .2s,box-shadow .2s;background:#f2f7f4;}
   .cat-tile:hover{transform:translateY(-6px);box-shadow:0 18px 50px rgba(0,0,0,0.15);}
   .cat-tile-bg{position:absolute;inset:0;background-size:cover;background-position:center;}
   .cat-tile-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:22px;color:white;}
@@ -96,7 +96,7 @@
   @media(max-width:900px){
     .hbrowse{padding:18px 16px 40px;}
     .hbrowse-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
-    .cat-tile{min-height:140px;}
+    .cat-tile{min-height:180px;}
     .cat-tile-overlay{padding:14px;}
     .cat-tile-name{font-size:14px;}
     .cat-tile-icon-bg{font-size:60px;}
@@ -817,7 +817,6 @@ function renderCategoryTiles(){
       ${c.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
       <div class="cat-tile-overlay">
         <div class="cat-tile-name">${escHtml(catDisplayName(c))}</div>
-        <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
       </div>
     </a>`;
   }).join('') + '</div>';
@@ -877,7 +876,6 @@ function subTilesHtml(catId, cat, nodes, counts){
       ${s.img ? '' : `<span class="cat-tile-icon-bg ${iconCls}"></span>`}
       <div class="cat-tile-overlay">
         <div class="cat-tile-name">${escHtml(subDisplayName(catId, s))}</div>
-        <div class="cat-tile-count">${n} ${wordForm(n, ['товар','товара','товаров'])}</div>
       </div>
     </a>`;
   }).join('');
