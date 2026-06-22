@@ -1227,13 +1227,24 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // ===== Админ-авторизация (Supabase Auth) =====
-  // Вход админа в панель управления. Возвращает { ok, isAdmin }.
   const _ADMIN_CACHE_KEY = 'klever_admin_uid_v1';
+
+  // Читает сессию напрямую из localStorage — без SDK, без сетевых запросов.
+  // SDK-метод getSession() делает запрос на рефреш если токен истёк,
+  // и этот запрос DPI режет → пользователь видит экран входа.
+  function _readStoredSession() {
+    try {
+      const ref = (SUPABASE_URL.match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1] || '';
+      const raw = ref ? localStorage.getItem('sb-' + ref + '-auth-token') : null;
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      return (s && s.access_token) ? s : null;
+    } catch(e) { return null; }
+  }
 
   window.supaAdminSignIn = async function(email, password){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
-      // Тот же устойчивый к DPI вход, что и у клиентов.
       const r = await window.supaSignIn(email, password);
       if (!r.ok || !r.session || !r.session.access_token) {
         return { ok:false, error: r.error, network: r.network };
@@ -1241,7 +1252,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       setAuthToken(r.session.access_token);
       const admin = await _checkIsAdmin();
       if (!admin) { setAuthToken(null); try { await sb.auth.signOut(); } catch(e){} return { ok:false, reason:'not_admin' }; }
-      // Кэшируем uid — при следующей перезагрузке не будем делать сетевой запрос
       const uid = r.session.user && r.session.user.id;
       if (uid) localStorage.setItem(_ADMIN_CACHE_KEY, uid);
       _bindTokenRefresh();
@@ -1249,27 +1259,41 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e){ return { ok:false, error:e }; }
   };
 
-  // Восстановление сессии админа при перезагрузке страницы панели.
+  // Восстановление сессии без блокирующих сетевых вызовов (устойчиво к DPI).
   window.supaAdminRestore = async function(){
     const sb = getClient(); if (!sb) return { ok:false };
     try {
-      const { data } = await sb.auth.getSession();
-      if (!data || !data.session) return { ok:false };
-      const token = data.session.access_token;
-      const uid   = data.session.user && data.session.user.id;
+      let session = _readStoredSession();
+      if (!session) return { ok:false };
+
+      // Токен истёк — рефрешим через DPI-устойчивый _authPostRetry (не SDK).
+      if (session.expires_at && session.expires_at < Date.now() / 1000 + 30) {
+        if (!session.refresh_token) return { ok:false };
+        try {
+          const refreshed = await _authPostRetry('token',
+            { refresh_token: session.refresh_token },
+            { grant_type: 'refresh_token' }
+          );
+          if (!refreshed || !refreshed.access_token) return { ok:false };
+          try { await sb.auth.setSession({ access_token: refreshed.access_token, refresh_token: refreshed.refresh_token }); } catch(e){}
+          session = refreshed;
+        } catch(e) { return { ok:false }; }
+      }
+
+      const token = session.access_token;
+      const uid   = session.user && session.user.id;
       setAuthToken(token);
 
       if (uid && localStorage.getItem(_ADMIN_CACHE_KEY) === uid) {
-        // Uid совпадает с кэшем прошлого входа — показываем панель сразу,
-        // фоновая проверка is_admin() не блокирует UI.
+        // uid совпадает → показываем панель мгновенно, проверяем фоново.
         _bindTokenRefresh();
         _checkIsAdmin()
           .then(ok => { if (!ok) { localStorage.removeItem(_ADMIN_CACHE_KEY); location.reload(); } })
-          .catch(() => {}); // сетевая ошибка — не выбрасываем
+          .catch(() => {});
         return { ok:true, isAdmin:true };
       }
 
-      // Uid нет в кэше — первый вход или другой браузер: проверяем через сеть.
+      // Первый вход в этом браузере — одна сетевая проверка.
       const admin = await _checkIsAdmin();
       if (!admin) { setAuthToken(null); return { ok:false }; }
       if (uid) localStorage.setItem(_ADMIN_CACHE_KEY, uid);
