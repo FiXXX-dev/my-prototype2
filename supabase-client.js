@@ -94,20 +94,42 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const url = new URL(SUPABASE_URL + '/rest/v1/' + table);
     url.searchParams.set('apikey', SUPABASE_ANON_KEY);
     Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
-    // Таймаут: если соединение зависло (DPI/медленная сеть), обрываем и даём
-    // слою выше повторить, а не ждём минутами OS-таймаут TCP. На мобильных и
-    // throttled-сетях запросы к *.supabase.co идут медленно — берём 25с.
     const ctrl = new AbortController();
     const timer = setTimeout(() => _abort(ctrl), 25000);
     try {
       const headers = { Accept: 'application/json' };
-      // Админ: ходим под его сессией (RLS → полный доступ). Клиент: без токена.
       if (_authToken) headers.Authorization = 'Bearer ' + _authToken;
       const resp = await fetch(url.toString(), { headers, signal: ctrl.signal });
       if (!resp.ok) throw Object.assign(new Error('HTTP ' + resp.status), { status: resp.status });
       return await resp.json();
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  // Возвращает точное число строк через Prefer: count=exact + Content-Range.
+  // Используется только в админке (уже идёт Authorization → preflight не страшен).
+  async function _pgGetCount(table, qp) {
+    if (!isConfigured()) return -1;
+    const url = new URL(SUPABASE_URL + '/rest/v1/' + table);
+    url.searchParams.set('apikey', SUPABASE_ANON_KEY);
+    url.searchParams.set('limit', '1');
+    Object.entries(qp || {}).forEach(([k, v]) => url.searchParams.append(k, v));
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => _abort(ctrl), 15000);
+    try {
+      const headers = { Accept: 'application/json', Prefer: 'count=exact' };
+      if (_authToken) headers.Authorization = 'Bearer ' + _authToken;
+      const resp = await fetch(url.toString(), { headers, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!resp.ok) return -1;
+      // Content-Range: 0-0/3247  или  */<total>
+      const cr = resp.headers.get('Content-Range') || '';
+      const m = cr.match(/\/(\d+)$/);
+      return m ? parseInt(m[1], 10) : -1;
+    } catch(e) {
+      clearTimeout(timer);
+      return -1;
     }
   }
 
@@ -1070,7 +1092,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // Server-side pagination + search for admin products table.
-  // Returns { ok, items, total } where total is the count of all matching rows.
+  // Returns { ok, items, total } — total is the exact count from Content-Range.
   window.supaGetProductsPage = async function(opts){
     const search  = (opts && opts.search)  || '';
     const catName = (opts && opts.catName) || '';
@@ -1079,24 +1101,25 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
     const base = { order: 'sort_order.asc,id.asc' };
     if (search) {
-      const s = search.replace(/[*()\[\]]/g, ''); // strip PostgREST special chars
+      const s = search.replace(/[*()\[\]]/g, '');
       base['or'] = '(name.ilike.*' + s + '*,sku.ilike.*' + s + '*)';
     }
     if (catName) base['cat'] = 'eq.' + catName;
 
     const offset = (page - 1) * perPage;
-    const countQp = Object.assign({}, base, { select: 'id', limit: '10000' });
-    const dataQp  = Object.assign({}, base, { select: '*', limit: String(perPage), offset: String(offset) });
+    const dataQp = Object.assign({}, base, { select: '*', limit: String(perPage), offset: String(offset) });
 
     try {
-      const [countArr, pageArr] = await Promise.all([
-        _pgGetRetry('products', countQp),
+      // Run count and data fetch in parallel.
+      // _pgGetCount uses Prefer: count=exact → bypasses PostgREST max-rows cap.
+      const [total, pageArr] = await Promise.all([
+        _pgGetCount('products', base),
         _pgGetRetry('products', dataQp),
       ]);
       return {
         ok: true,
-        items: Array.isArray(pageArr)  ? pageArr  : [],
-        total: Array.isArray(countArr) ? countArr.length : 0,
+        items: Array.isArray(pageArr) ? pageArr : [],
+        total: total >= 0 ? total : (Array.isArray(pageArr) ? pageArr.length : 0),
       };
     } catch(e) {
       console.error('[supabase] supaGetProductsPage', e);
