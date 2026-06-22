@@ -1229,9 +1229,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   // ===== Админ-авторизация (Supabase Auth) =====
   const _ADMIN_CACHE_KEY = 'klever_admin_uid_v1';
 
-  // Читает сессию напрямую из localStorage — без SDK, без сетевых запросов.
-  // SDK-метод getSession() делает запрос на рефреш если токен истёк,
-  // и этот запрос DPI режет → пользователь видит экран входа.
   function _readStoredSession() {
     try {
       const ref = (SUPABASE_URL.match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1] || '';
@@ -1240,6 +1237,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const s = JSON.parse(raw);
       return (s && s.access_token) ? s : null;
     } catch(e) { return null; }
+  }
+
+  // Возвращает { checked, isAdmin }. checked=false если была сетевая ошибка.
+  async function _checkIsAdminSafe() {
+    try {
+      const data = await _pgPostRetry('rpc/is_admin', {});
+      return { checked: true, isAdmin: data === true };
+    } catch(e) {
+      const isAuthErr = e && e.status && (e.status === 401 || e.status === 403);
+      return { checked: isAuthErr, isAdmin: false };
+    }
   }
 
   window.supaAdminSignIn = async function(email, password){
@@ -1259,14 +1267,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e){ return { ok:false, error:e }; }
   };
 
-  // Восстановление сессии без блокирующих сетевых вызовов (устойчиво к DPI).
+  // Восстановление сессии: если токен в localStorage — показываем панель сразу.
+  // is_admin() проверяем фоново; выкидываем только при явном отказе сервера,
+  // а не при сетевой ошибке (DPI может зарезать запрос).
   window.supaAdminRestore = async function(){
     const sb = getClient(); if (!sb) return { ok:false };
     try {
       let session = _readStoredSession();
       if (!session) return { ok:false };
 
-      // Токен истёк — рефрешим через DPI-устойчивый _authPostRetry (не SDK).
+      // Токен истёк — рефрешим через DPI-устойчивый _authPostRetry.
       if (session.expires_at && session.expires_at < Date.now() / 1000 + 30) {
         if (!session.refresh_token) return { ok:false };
         try {
@@ -1283,21 +1293,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       const token = session.access_token;
       const uid   = session.user && session.user.id;
       setAuthToken(token);
-
-      if (uid && localStorage.getItem(_ADMIN_CACHE_KEY) === uid) {
-        // uid совпадает → показываем панель мгновенно, проверяем фоново.
-        _bindTokenRefresh();
-        _checkIsAdmin()
-          .then(ok => { if (!ok) { localStorage.removeItem(_ADMIN_CACHE_KEY); location.reload(); } })
-          .catch(() => {});
-        return { ok:true, isAdmin:true };
-      }
-
-      // Первый вход в этом браузере — одна сетевая проверка.
-      const admin = await _checkIsAdmin();
-      if (!admin) { setAuthToken(null); return { ok:false }; }
-      if (uid) localStorage.setItem(_ADMIN_CACHE_KEY, uid);
       _bindTokenRefresh();
+
+      // Фоновая проверка — не блокирует UI. Выкидываем только если сервер
+      // явно ответил «не админ»; сетевую ошибку игнорируем.
+      _checkIsAdminSafe().then(result => {
+        if (result.checked && !result.isAdmin) {
+          localStorage.removeItem(_ADMIN_CACHE_KEY);
+          setAuthToken(null);
+          location.reload();
+        } else if (result.isAdmin && uid) {
+          localStorage.setItem(_ADMIN_CACHE_KEY, uid);
+        }
+      }).catch(() => {});
+
       return { ok:true, isAdmin:true };
     } catch(e){ return { ok:false }; }
   };
