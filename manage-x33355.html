@@ -568,9 +568,9 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
 
       <div class="toolbar">
         <div class="toolbar-search">
-          <input type="text" id="searchProducts" placeholder="Поиск по названию или артикулу..." oninput="renderProducts()">
+          <input type="text" id="searchProducts" placeholder="Поиск по названию или артикулу..." oninput="onSearchProducts()">
         </div>
-        <select class="toolbar-select" id="filterCat" onchange="renderProducts()">
+        <select class="toolbar-select" id="filterCat" onchange="loadProductsPage(1)">
           <option value="">Все категории</option>
           <option>Бытовая химия</option>
           <option>Бумажная продукция</option>
@@ -1794,56 +1794,80 @@ function _renderDashAnalytics(allOrders){
 // ===== ТОВАРЫ =====
 let editingSku = null;
 let productsPage = 1;
-const PRODUCTS_PER_PAGE = 20;
+const PRODUCTS_PER_PAGE = 50;
+let _prodPageItems  = [];  // items on the current server page
+let _prodTotalCount = 0;   // total matching rows on server
+let _searchDebounce = null;
+
+function normalizeProduct(p) {
+  return Object.assign({}, p, {
+    categoryId:   p.category_id || p.categoryId || '',
+    isHit:        !!(p.is_hit || p.isHit),
+    desc:         p.description || p.desc || '',
+    emoji:        p.emoji || '📦',
+    availability: p.availability || 'in',
+    old_price:    Number(p.old_price) || 0,
+  });
+}
+
+function onSearchProducts() {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(() => loadProductsPage(1), 350);
+}
 
 async function loadProductsAdmin() {
-  if (typeof window.supaGetProducts === 'function') {
-    try {
-      const data = await window.supaGetProducts();
-      if (data && data.length) {
-        const normalized = data.map(p => Object.assign({}, p, {
-          categoryId: p.category_id || p.categoryId || '',
-          isHit: !!(p.is_hit || p.isHit),
-          desc: p.description || p.desc || '',
-          emoji: p.emoji || '📦',
-          availability: p.availability || 'in',
-          old_price: Number(p.old_price) || 0,
-        }));
-        try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(normalized)); } catch(e) {}
-        populateFilterCat();
-        renderProducts();
-        updateCounts();
-        return;
-      }
-    } catch(e) {}
-  }
+  await ensureCategoriesLoaded();
   populateFilterCat();
-  renderProducts();
+  await loadProductsPage(1);
   updateCounts();
 }
 
-function renderProducts() {
-  const q = (document.getElementById('searchProducts').value || '').toLowerCase().trim();
-  const cat = document.getElementById('filterCat').value;
-  let all = getProducts();
-  let filtered = all.filter(p => {
-    const matchQ = !q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
-    const matchC = !cat || p.cat === cat;
-    return matchQ && matchC;
-  });
+async function loadProductsPage(page) {
+  productsPage = page;
+  const search  = (document.getElementById('searchProducts').value || '').trim();
+  const catName = document.getElementById('filterCat').value;
 
-  const total = filtered.length;
+  if (typeof window.supaGetProductsPage === 'function') {
+    const tbody = document.getElementById('productsBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#8aaa94;padding:24px;">⏳ Загрузка...</td></tr>';
+    try {
+      const res = await window.supaGetProductsPage({ search, catName, page, perPage: PRODUCTS_PER_PAGE });
+      if (res && res.ok) {
+        _prodPageItems  = res.items.map(normalizeProduct);
+        _prodTotalCount = res.total;
+        // Merge current page into localStorage so editProduct/toggleHit can find rows
+        const stored = getProducts();
+        const merged = [..._prodPageItems, ...stored.filter(s => !_prodPageItems.some(p => p.sku === s.sku))];
+        try { localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(merged)); } catch(e) {}
+        renderProducts();
+        return;
+      }
+    } catch(e) { console.error('[admin] loadProductsPage', e); }
+  }
+  // Fallback: localStorage + client-side filter/page
+  const all = getProducts();
+  const q = search.toLowerCase();
+  const filtered = all.filter(p => {
+    const mq = !q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
+    return mq && (!catName || p.cat === catName);
+  });
+  _prodTotalCount = filtered.length;
+  const offset = (page - 1) * PRODUCTS_PER_PAGE;
+  _prodPageItems  = filtered.slice(offset, offset + PRODUCTS_PER_PAGE);
+  renderProducts();
+}
+
+function renderProducts() {
+  const total = _prodTotalCount;
   const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
   if (productsPage > totalPages) productsPage = totalPages;
-  const start = (productsPage - 1) * PRODUCTS_PER_PAGE;
-  const pageItems = filtered.slice(start, start + PRODUCTS_PER_PAGE);
 
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
-  if (pageItems.length === 0) {
+  if (_prodPageItems.length === 0) {
     document.getElementById('productsBody').innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
-    document.getElementById('productsBody').innerHTML = pageItems.map(p => `
+    document.getElementById('productsBody').innerHTML = _prodPageItems.map(p => `
       <tr${(p.availability || 'in') === 'out' ? ' style="background:#fff5f5;"' : ''}>
         <td><div class="prod-img-cell">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div></td>
         <td><strong>${p.name}</strong></td>
@@ -1885,22 +1909,25 @@ function renderProducts() {
 }
 
 function goPage(n) {
-  productsPage = n;
-  renderProducts();
+  loadProductsPage(n);
   document.querySelector('.tbl-wrap').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function toggleHit(sku) {
-  const products = getProducts().map(p => {
+  _prodPageItems = _prodPageItems.map(p => {
     if (p.sku !== sku) return p;
     const newIsHit = !p.isHit;
-    // badge и isHit всегда синхронизируем: 'hit' ↔ isHit, остальные бейджи не трогаем
     const newBadge = newIsHit ? 'hit' : (p.badge === 'hit' ? '' : (p.badge || ''));
     return { ...p, isHit: newIsHit, badge: newBadge };
   });
-  setProducts(products);
+  setProducts(getProducts().map(p => {
+    if (p.sku !== sku) return p;
+    const newIsHit = !p.isHit;
+    const newBadge = newIsHit ? 'hit' : (p.badge === 'hit' ? '' : (p.badge || ''));
+    return { ...p, isHit: newIsHit, badge: newBadge };
+  }));
   renderProducts();
-  const p = products.find(x => x.sku === sku);
+  const p = _prodPageItems.find(x => x.sku === sku);
   toast(p && p.isHit ? '⭐ Добавлено в хиты продаж' : 'Убрано из хитов');
   if (p && typeof window.supaUpsertProduct === 'function') {
     window.supaUpsertProduct(p)
@@ -1921,10 +1948,10 @@ function availabilitySelectHtml(p){
 }
 
 function setAvailability(sku, val){
-  const products = getProducts().map(p => p.sku === sku ? {...p, availability: val} : p);
-  setProducts(products);
+  _prodPageItems = _prodPageItems.map(p => p.sku === sku ? {...p, availability: val} : p);
+  setProducts(getProducts().map(p => p.sku === sku ? {...p, availability: val} : p));
   renderProducts();
-  const p = products.find(x => x.sku === sku);
+  const p = _prodPageItems.find(x => x.sku === sku);
   if (p && typeof window.supaUpsertProduct === 'function') {
     window.supaUpsertProduct(p)
       .then(r => {
@@ -2046,7 +2073,7 @@ async function uploadProductImage(input) {
 }
 
 function editProduct(sku) {
-  const p = getProducts().find(x => x.sku === sku);
+  const p = _prodPageItems.find(x => x.sku === sku) || getProducts().find(x => x.sku === sku);
   if (!p) return;
   editingSku = sku;
   // id категории: из товара (category_id) или по легаси-названию.
@@ -2131,21 +2158,26 @@ async function saveProduct() {
 
   setProducts(products);
   closeProductModal();
-  renderProducts();
   updateCounts();
   toast(editingSku ? '✓ Товар обновлён' : '✓ Товар добавлен');
   if (typeof supaRequestSync === 'function') supaRequestSync();
+  loadProductsPage(editingSku ? productsPage : 1);
 }
 
 function deleteProduct(sku) {
   if (!confirm('Удалить товар? Это действие необратимо.')) return;
   setProducts(getProducts().filter(p => p.sku !== sku));
+  _prodPageItems  = _prodPageItems.filter(p => p.sku !== sku);
+  _prodTotalCount = Math.max(0, _prodTotalCount - 1);
   renderProducts();
   updateCounts();
   toast('Товар удалён');
   if (typeof window.supaDeleteProduct === 'function') {
     window.supaDeleteProduct(sku)
-      .then(() => { if (typeof supaRequestSync === 'function') supaRequestSync(); })
+      .then(() => {
+        if (typeof supaRequestSync === 'function') supaRequestSync();
+        loadProductsPage(productsPage);
+      })
       .catch(e => console.error('[admin] deleteProduct supabase', e));
   }
 }

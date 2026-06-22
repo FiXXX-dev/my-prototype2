@@ -1069,6 +1069,41 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     } catch(e) { console.error('[supabase] get products exception', e); return null; }
   };
 
+  // Server-side pagination + search for admin products table.
+  // Returns { ok, items, total } where total is the count of all matching rows.
+  window.supaGetProductsPage = async function(opts){
+    const search  = (opts && opts.search)  || '';
+    const catName = (opts && opts.catName) || '';
+    const page    = (opts && opts.page)    || 1;
+    const perPage = (opts && opts.perPage) || 50;
+
+    const base = { order: 'sort_order.asc,id.asc' };
+    if (search) {
+      const s = search.replace(/[*()\[\]]/g, ''); // strip PostgREST special chars
+      base['or'] = '(name.ilike.*' + s + '*,sku.ilike.*' + s + '*)';
+    }
+    if (catName) base['cat'] = 'eq.' + catName;
+
+    const offset = (page - 1) * perPage;
+    const countQp = Object.assign({}, base, { select: 'id', limit: '10000' });
+    const dataQp  = Object.assign({}, base, { select: '*', limit: String(perPage), offset: String(offset) });
+
+    try {
+      const [countArr, pageArr] = await Promise.all([
+        _pgGetRetry('products', countQp),
+        _pgGetRetry('products', dataQp),
+      ]);
+      return {
+        ok: true,
+        items: Array.isArray(pageArr)  ? pageArr  : [],
+        total: Array.isArray(countArr) ? countArr.length : 0,
+      };
+    } catch(e) {
+      console.error('[supabase] supaGetProductsPage', e);
+      return { ok: false, items: [], total: 0 };
+    }
+  };
+
   window.supaGetProductBySku = async function(sku){
     if (!isConfigured()) return null;
     try {
