@@ -1228,6 +1228,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   // ===== Админ-авторизация (Supabase Auth) =====
   // Вход админа в панель управления. Возвращает { ok, isAdmin }.
+  const _ADMIN_CACHE_KEY = 'klever_admin_uid_v1';
+
   window.supaAdminSignIn = async function(email, password){
     const sb = getClient(); if (!sb) return { ok:false, reason:'unconfigured' };
     try {
@@ -1239,6 +1241,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       setAuthToken(r.session.access_token);
       const admin = await _checkIsAdmin();
       if (!admin) { setAuthToken(null); try { await sb.auth.signOut(); } catch(e){} return { ok:false, reason:'not_admin' }; }
+      // Кэшируем uid — при следующей перезагрузке не будем делать сетевой запрос
+      const uid = r.session.user && r.session.user.id;
+      if (uid) localStorage.setItem(_ADMIN_CACHE_KEY, uid);
       _bindTokenRefresh();
       return { ok:true, isAdmin:true };
     } catch(e){ return { ok:false, error:e }; }
@@ -1250,9 +1255,24 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     try {
       const { data } = await sb.auth.getSession();
       if (!data || !data.session) return { ok:false };
-      setAuthToken(data.session.access_token);
+      const token = data.session.access_token;
+      const uid   = data.session.user && data.session.user.id;
+      setAuthToken(token);
+
+      if (uid && localStorage.getItem(_ADMIN_CACHE_KEY) === uid) {
+        // Uid совпадает с кэшем прошлого входа — показываем панель сразу,
+        // фоновая проверка is_admin() не блокирует UI.
+        _bindTokenRefresh();
+        _checkIsAdmin()
+          .then(ok => { if (!ok) { localStorage.removeItem(_ADMIN_CACHE_KEY); location.reload(); } })
+          .catch(() => {}); // сетевая ошибка — не выбрасываем
+        return { ok:true, isAdmin:true };
+      }
+
+      // Uid нет в кэше — первый вход или другой браузер: проверяем через сеть.
       const admin = await _checkIsAdmin();
       if (!admin) { setAuthToken(null); return { ok:false }; }
+      if (uid) localStorage.setItem(_ADMIN_CACHE_KEY, uid);
       _bindTokenRefresh();
       return { ok:true, isAdmin:true };
     } catch(e){ return { ok:false }; }
@@ -1260,6 +1280,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
   window.supaAdminSignOut = async function(){
     const sb = getClient();
+    localStorage.removeItem(_ADMIN_CACHE_KEY);
     setAuthToken(null);
     try { if (sb) await sb.auth.signOut(); } catch(e){}
   };
