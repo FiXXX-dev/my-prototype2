@@ -1092,34 +1092,27 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   };
 
   // Server-side pagination + search for admin products table.
-  // Returns { ok, items, total } — total is the exact count from Content-Range.
+  // Uses SECURITY DEFINER RPCs — bypasses RLS, sees all 3663+ rows.
   window.supaGetProductsPage = async function(opts){
     const search  = (opts && opts.search)  || '';
     const catName = (opts && opts.catName) || '';
     const page    = (opts && opts.page)    || 1;
     const perPage = (opts && opts.perPage) || 50;
-
-    const base = { order: 'sort_order.asc,id.asc' };
-    if (search) {
-      const s = search.replace(/[*()\[\]]/g, '');
-      base['or'] = '(name.ilike.*' + s + '*,sku.ilike.*' + s + '*)';
-    }
-    if (catName) base['cat'] = 'eq.' + catName;
-
-    const offset = (page - 1) * perPage;
-    const dataQp = Object.assign({}, base, { select: '*', limit: String(perPage), offset: String(offset) });
+    const offset  = (page - 1) * perPage;
 
     try {
-      // Run count and data fetch in parallel.
-      // _pgGetCount uses Prefer: count=exact → bypasses PostgREST max-rows cap.
-      const [total, pageArr] = await Promise.all([
-        _pgGetCount('products', base),
-        _pgGetRetry('products', dataQp),
+      const dataBody  = { p_search: search, p_cat: catName, p_limit: perPage, p_offset: offset };
+      const countBody = { p_search: search, p_cat: catName };
+
+      const [items, total] = await Promise.all([
+        _pgPostRetry('rpc/rpc_admin_products', dataBody),
+        _pgPostRetry('rpc/rpc_admin_products_count', countBody),
       ]);
+
       return {
         ok: true,
-        items: Array.isArray(pageArr) ? pageArr : [],
-        total: total >= 0 ? total : (Array.isArray(pageArr) ? pageArr.length : 0),
+        items: Array.isArray(items) ? items : [],
+        total: (typeof total === 'number' || typeof total === 'string') ? Number(total) : 0,
       };
     } catch(e) {
       console.error('[supabase] supaGetProductsPage', e);

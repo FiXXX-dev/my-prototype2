@@ -1594,7 +1594,7 @@ function loadAll() {
 }
 
 function updateCounts() {
-  document.getElementById('cntProducts').textContent = getProducts().length;
+  document.getElementById('cntProducts').textContent = _prodTotalCount || getProducts().length;
   const cntCatsEl = document.getElementById('cntCategories');
   if (cntCatsEl && typeof getCategories === 'function') cntCatsEl.textContent = getCategories().length;
   // В сайдбаре показываем НОВЫЕ заказы (без выполненных)
