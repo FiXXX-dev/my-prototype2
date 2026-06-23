@@ -201,6 +201,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
 <script src="data-loader.js"></script>
+<script src="maps.js"></script>
 </head>
 <body>
 <svg class="klever-svg-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;" xmlns="http://www.w3.org/2000/svg">
@@ -1647,7 +1648,8 @@ function deleteAddress(idx){
   }
 }
 
-// ====== ПОДСКАЗКИ АДРЕСОВ через OpenStreetMap Nominatim (бесплатно, без ключа) ======
+// ====== ПОДСКАЗКИ АДРЕСОВ через Яндекс (не блокируется в РФ, точные адреса) ======
+// Если ключ Яндекса не задан в maps.js — поле работает как обычный ручной ввод.
 let addrSearchTimer = null;
 function searchAddress(query){
   clearTimeout(addrSearchTimer);
@@ -1659,37 +1661,35 @@ function searchAddress(query){
     loading.classList.remove('visible');
     return;
   }
+  if (!window.KleverMaps || !window.KleverMaps.isConfigured()) {
+    sugBox.classList.remove('visible');
+    loading.classList.remove('visible');
+    return;
+  }
 
   loading.classList.add('visible');
 
   // Дебаунс 400мс — не дёргаем API на каждой букве
   addrSearchTimer = setTimeout(() => {
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&accept-language=ru&countrycodes=ru&q=' + encodeURIComponent(query);
-
-    fetch(url, {headers: {'User-Agent': 'KleverShop/1.0'}})
-      .then(r => r.json())
-      .then(data => {
-        loading.classList.remove('visible');
-        if (!data || data.length === 0){
-          sugBox.classList.remove('visible');
-          return;
-        }
-        sugBox.innerHTML = data.map(item => {
-          const addr = item.address || {};
-          const main = item.display_name.split(',').slice(0, 3).join(', ');
-          const sub = [addr.city || addr.town || addr.village, addr.state].filter(Boolean).join(', ');
-          return `<div class="addr-sug-item" onclick="selectAddress('${item.display_name.replace(/'/g, "\\'")}')">
-            <div class="addr-sug-main">${main}</div>
-            <div class="addr-sug-sub">${sub}</div>
-          </div>`;
-        }).join('');
-        sugBox.classList.add('visible');
-      })
-      .catch(err => {
-        loading.classList.remove('visible');
+    window.KleverMaps.load().then(ymaps => {
+      return ymaps.suggest(query, { results: 6 });
+    }).then(items => {
+      loading.classList.remove('visible');
+      if (!items || items.length === 0){
         sugBox.classList.remove('visible');
-        console.error('Ошибка подсказок:', err);
-      });
+        return;
+      }
+      sugBox.innerHTML = items.map(item => {
+        const full = (item.value || item.displayName || '').replace(/'/g, "\\'");
+        return `<div class="addr-sug-item" onclick="selectAddress('${full}')">
+          <div class="addr-sug-main">${item.displayName || item.value || ''}</div>
+        </div>`;
+      }).join('');
+      sugBox.classList.add('visible');
+    }).catch(err => {
+      loading.classList.remove('visible');
+      sugBox.classList.remove('visible');
+    });
   }, 400);
 }
 
