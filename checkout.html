@@ -258,7 +258,7 @@ footer p{color:rgba(255,255,255,0.25);font-size:13px;}
     <span style="font-size:24px;">💰</span>
     <div style="font-size:13px;line-height:1.4;">
       <strong style="display:block;color:#cf7a00;">Минимальная сумма — <span id="minOrderBadge">5 000 ₽</span></strong>
-      <span style="color:#8a6a2a;"><span data-i18n="checkout.min_warn_desc">При меньшей сумме заказ не оформляется</span></span>
+      <span style="color:#8a6a2a;">При доставке курьером. Самовывоз — без ограничений</span>
     </div>
   </div>
 </div>
@@ -745,7 +745,8 @@ function updateSummary() {
   const warning = document.getElementById('minOrderWarning');
   const submitBtn = document.getElementById('submitBtn');
 
-  if (subtotal < MIN_ORDER) {
+  // При самовывозе минимальная сумма заказа не действует.
+  if (deliveryMethod !== 'pickup' && subtotal < MIN_ORDER) {
     warning.classList.add('visible');
     document.getElementById('needMore').textContent = MIN_ORDER - subtotal;
     submitBtn.disabled = true;
@@ -805,7 +806,11 @@ function updateSummary() {
 
 // Валидация и отправка
 async function submitOrder() {
-  if (getSubtotal() < MIN_ORDER) return;
+  // Минимальная сумма заказа действует только для доставки курьером.
+  // При самовывозе ограничений на сумму нет.
+  const _dChecked = document.querySelector('input[name="delivery"]:checked');
+  const _dMethod = _dChecked ? _dChecked.value : deliveryMethod;
+  if (_dMethod !== 'pickup' && getSubtotal() < MIN_ORDER) return;
 
   // Товары, которых нет в наличии, оформить нельзя.
   const _oosNames = getCart().filter(i => cartItemOOS(i.sku)).map(i => i.name);
