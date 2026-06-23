@@ -1232,10 +1232,29 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
   function _readStoredSession() {
     try {
       const ref = (SUPABASE_URL.match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1] || '';
-      const raw = ref ? localStorage.getItem('sb-' + ref + '-auth-token') : null;
-      if (!raw) return null;
-      const s = JSON.parse(raw);
-      return (s && s.access_token) ? s : null;
+      // Перебираем все возможные форматы ключа Supabase JS v1/v2
+      const candidates = [];
+      if (ref) candidates.push('sb-' + ref + '-auth-token');
+      candidates.push('supabase.auth.token');
+      // Сканируем localStorage на случай нестандартного ключа
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.includes('auth-token') || k.includes('auth.token')) && !candidates.includes(k))
+          candidates.push(k);
+      }
+      for (const key of candidates) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          const s = JSON.parse(raw);
+          // v2: { access_token, ... }  /  v1: { currentSession: { access_token, ... } }
+          const sess = (s && s.access_token) ? s
+                     : (s && s.currentSession && s.currentSession.access_token) ? s.currentSession
+                     : null;
+          if (sess) return sess;
+        } catch(e) {}
+      }
+      return null;
     } catch(e) { return null; }
   }
 
