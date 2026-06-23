@@ -2262,10 +2262,23 @@ function renderOrders() {
   }
 }
 
+// Вынимает ссылку на точку Яндекс.Карт из комментария (checkout кладёт её
+// строкой «Точка на карте: https://yandex.ru/maps/...»). Возвращает
+// { mapUrl, comment } — comment уже без этой строки, чтобы не дублировать.
+function _extractMapLink(comment) {
+  const text = String(comment || '');
+  const m = text.match(/Точка на карте:\s*(https?:\/\/\S+)/);
+  if (!m) return { mapUrl: '', comment: text };
+  const clean = text.replace(/\n?Точка на карте:\s*https?:\/\/\S+/, '').trim();
+  return { mapUrl: m[1], comment: clean };
+}
+
 function orderCardHtml(o) {
   const items = (o.items || []).map(i => `<div class="order-item"><span>${escH(i.name)} × ${i.qty}</span><span>${i.qty * i.price} ₽</span></div>`).join('');
   const expanded = expandedOrders.has(String(o.num));
   const isPickup = o.method === 'pickup';
+  const _ml = _extractMapLink(o.comment);
+  const _cleanComment = _ml.comment;
   const STATUS_CLASS = {assembling:'assembling',courier:'courier',ready:'ready',done:'done',issued:'issued',cancelled:'cancelled'};
   const STATUS_LABEL = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'✓ Доставлен',issued:'✓ Выдан',cancelled:'✕ Отменён'};
   const sClass = STATUS_CLASS[o.status] || 'new';
@@ -2298,6 +2311,7 @@ function orderCardHtml(o) {
             <div class="order-value">
               ${o.method === 'pickup' ? '<span class="icon icon-store"></span> Самовывоз' : '<span class="icon icon-truck"></span> Курьер'}<br>
               ${o.address ? escH(o.address) : '—'}${o.deliveryDate ? '<br><span class="icon icon-calendar"></span> ' + escH(o.deliveryDate) : ''}${o.deliveryTime ? ' ' + escH(o.deliveryTime) : ''}
+              ${_ml.mapUrl ? `<br><a href="${escH(_ml.mapUrl)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:6px 12px;background:#eaf7ef;border:1.5px solid #2ECC71;border-radius:8px;color:#1aab58;font-size:13px;font-weight:700;text-decoration:none;"><span class="icon icon-pin"></span> Открыть точку на карте</a>` : ''}
             </div>
           </div>
         </div>
@@ -2306,9 +2320,9 @@ function orderCardHtml(o) {
           <div class="order-value">${({cash: o.method==='pickup'?'<span class="icon icon-coin"></span> Наличными или картой при получении':'<span class="icon icon-coin"></span> Наличными или картой курьеру', invoice:'<span class="icon icon-bank"></span> Безналичный расчёт (счёт)', transfer:'<span class="icon icon-credit-card"></span> Перевод на карту'}[o.payment])||o.payment}${o.payment === 'invoice' && (o.invoiceCompany || o.invoiceInn) ? `<br><span style="color:#6b8a74;font-size:13px;">${escH(o.invoiceCompany || '')}${o.invoiceCompany && o.invoiceInn ? ' · ' : ''}${o.invoiceInn ? 'ИНН ' + escH(o.invoiceInn) : ''}</span>` : ''}</div>
         </div>` : ''}
         ${items ? `<div class="order-items"><div class="order-label" style="margin-bottom:10px;">Товары (${o.items.length})</div>${items}</div>` : ''}
-        ${o.comment && String(o.comment).trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
+        ${_cleanComment && _cleanComment.trim() ? `<div class="order-section" style="margin-top:14px;padding:14px 16px;background:#fff8e8;border:1px solid #ffe2b3;border-radius:12px;">
           <div class="order-label" style="margin-bottom:6px;"><span class="icon icon-chat"></span> Комментарий клиента</div>
-          <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${escH(o.comment)}</div>
+          <div class="order-value" style="font-size:14px;line-height:1.5;color:#1a2e22;white-space:pre-wrap;">${escH(_cleanComment)}</div>
         </div>` : ''}
         <div class="order-actions">
           <div class="status-select-wrap">
@@ -2590,7 +2604,8 @@ function buildPrintSlip(o) {
   const statusLabel = {new:'В обработке',assembling:'В сборке',courier:'Передан курьеру',ready:'Готов к выдаче',done:'Доставлен',issued:'Выдан',cancelled:'Отменён'}[o.status] || o.status;
   const methodLabel = o.method === 'pickup' ? 'Самовывоз' : 'Курьерская доставка';
   const paymentLabel = {cash: o.method==='pickup'?'Наличными / картой при получении':'Наличными / картой курьеру', invoice:'Безналичный расчёт (счёт)', transfer:'Перевод на карту'}[o.payment] || (o.payment || '—');
-  const safeComment = o.comment ? escH(o.comment) : '';
+  const _piMl = _extractMapLink(o.comment);
+  const safeComment = _piMl.comment ? escH(_piMl.comment) : '';
   return `
     <div class="pi-header">
       <div>
@@ -2609,7 +2624,7 @@ function buildPrintSlip(o) {
       </div>
       <div class="pi-section">
         <div class="pi-label">Доставка</div>
-        <div class="pi-value">${methodLabel}${o.address?'<br>'+escH(o.address):''}${o.deliveryDate?'<br>'+escH(o.deliveryDate):''}${o.deliveryTime?' '+escH(o.deliveryTime):''}</div>
+        <div class="pi-value">${methodLabel}${o.address?'<br>'+escH(o.address):''}${o.deliveryDate?'<br>'+escH(o.deliveryDate):''}${o.deliveryTime?' '+escH(o.deliveryTime):''}${_piMl.mapUrl?'<br>📍 '+escH(_piMl.mapUrl):''}</div>
       </div>
       ${o.payment?`<div class="pi-section">
         <div class="pi-label">Оплата</div>
@@ -4458,7 +4473,8 @@ function showAnalyticsDay(idx) {
               <div style="flex:1;padding:12px 18px;">
                 <div style="font-size:11px;color:#8aaa94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Время заказа</div>
                 <div style="font-size:13px;font-weight:600;">${o.date||'—'}</div>
-                ${o.comment ? `<div style="font-size:12px;color:#f0a500;margin-top:4px;">💬 ${escH(o.comment)}</div>` : ''}
+                ${_extractMapLink(o.comment).comment ? `<div style="font-size:12px;color:#f0a500;margin-top:4px;">💬 ${escH(_extractMapLink(o.comment).comment)}</div>` : ''}
+                ${_extractMapLink(o.comment).mapUrl ? `<div style="font-size:12px;margin-top:4px;"><a href="${escH(_extractMapLink(o.comment).mapUrl)}" target="_blank" rel="noopener" style="color:#1aab58;font-weight:700;text-decoration:none;">📍 Точка на карте</a></div>` : ''}
               </div>
             </div>
 
