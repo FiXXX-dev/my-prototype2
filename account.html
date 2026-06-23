@@ -1671,9 +1671,7 @@ function searchAddress(query){
 
   // Дебаунс 400мс — не дёргаем API на каждой букве
   addrSearchTimer = setTimeout(() => {
-    window.KleverMaps.load().then(ymaps => {
-      return ymaps.suggest(query, { results: 6 });
-    }).then(items => {
+    window.KleverMaps.suggest(query, 6).then(items => {
       loading.classList.remove('visible');
       if (!items || items.length === 0){
         sugBox.classList.remove('visible');
@@ -1683,10 +1681,11 @@ function searchAddress(query){
         const full = (item.value || item.displayName || '').replace(/'/g, "\\'");
         return `<div class="addr-sug-item" onclick="selectAddress('${full}')">
           <div class="addr-sug-main">${item.displayName || item.value || ''}</div>
+          ${item.subtitle ? `<div class="addr-sug-sub">${item.subtitle}</div>` : ''}
         </div>`;
       }).join('');
       sugBox.classList.add('visible');
-    }).catch(err => {
+    }).catch(() => {
       loading.classList.remove('visible');
       sugBox.classList.remove('visible');
     });
