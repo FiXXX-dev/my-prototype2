@@ -9,7 +9,7 @@
 (function () {
   'use strict';
 
-  var YANDEX_API_KEY = ''; // <-- ВСТАВЬТЕ КЛЮЧ СЮДА
+  var YANDEX_API_KEY = '63637aae-9e1d-41c9-ac23-e5fb6f303bf4';
 
   // По умолчанию центр — Санкт-Петербург.
   var DEFAULT_CENTER = [59.9311, 30.3609];
