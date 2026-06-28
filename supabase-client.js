@@ -1183,6 +1183,24 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     return _pgDelete('products', 'sku=eq.' + encodeURIComponent(String(sku)));
   };
 
+  // Массовое удаление по массиву артикулов. Бьём на части, чтобы не упереться
+  // в лимит длины URL у фильтра in.(...).
+  window.supaDeleteProducts = async function(skus){
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const list = (skus || []).map(s => String(s)).filter(Boolean);
+    if (!list.length) return { ok:true };
+    const CHUNK = 50;
+    for (let i = 0; i < list.length; i += CHUNK) {
+      // PostgREST in.(): значения через запятую, каждое — в кавычках на случай
+      // запятых/спецсимволов в артикуле.
+      const inList = list.slice(i, i + CHUNK)
+        .map(s => '"' + s.replace(/"/g, '\\"') + '"').join(',');
+      const r = await _pgDelete('products', 'sku=in.(' + encodeURIComponent(inList) + ')');
+      if (!r.ok) { console.error('[supabase] bulk delete products', r.error); return r; }
+    }
+    return { ok:true };
+  };
+
   window.supaBulkUpsertProducts = async function(products){
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const rows = (products || []).map(_productRow);
