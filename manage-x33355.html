@@ -582,10 +582,19 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         </select>
       </div>
 
+      <div id="bulkBar" style="display:none;align-items:center;justify-content:space-between;gap:16px;background:#0f1a14;color:#fff;padding:14px 20px;border-radius:14px;margin-bottom:14px;flex-wrap:wrap;">
+        <span id="bulkBarCount" style="font-weight:600;">Выбрано 0 товаров</span>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="clearProductSelection()">Снять выбор</button>
+          <button class="btn btn-danger btn-sm" onclick="openBulkDeleteModal()"><span class="icon icon-trash"></span> Удалить выбранные</button>
+        </div>
+      </div>
+
       <div class="tbl-wrap">
         <table class="tbl" id="productsTable">
           <thead>
             <tr>
+              <th style="width:40px;text-align:center;"><input type="checkbox" id="prodSelectAll" onclick="toggleSelectAllProducts(this)" title="Выбрать все на странице" style="width:18px;height:18px;cursor:pointer;accent-color:var(--green,#2ECC71);"></th>
               <th style="width:60px;">Фото</th>
               <th>Название</th>
               <th>Артикул</th>
@@ -898,6 +907,18 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeProductModal()">Отмена</button>
       <button class="btn btn-primary" onclick="saveProduct()"><span class="icon icon-save"></span> Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА ПОДТВЕРЖДЕНИЯ МАССОВОГО УДАЛЕНИЯ -->
+<div class="modal-overlay" id="bulkDeleteModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">Удаление товаров</div>
+    <div class="modal-sub" id="bulkDeleteText">Удалить выбранные товары? Это действие нельзя отменить.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeBulkDeleteModal()">Отмена</button>
+      <button class="btn btn-danger" id="bulkDeleteConfirmBtn" onclick="confirmBulkDelete()"><span class="icon icon-trash"></span> Удалить</button>
     </div>
   </div>
 </div>
@@ -1865,10 +1886,11 @@ function renderProducts() {
   document.getElementById('productsCount').textContent = total + ' ' + plural(total, ['товар','товара','товаров']);
 
   if (_prodPageItems.length === 0) {
-    document.getElementById('productsBody').innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
+    document.getElementById('productsBody').innerHTML = '<tr><td colspan="10"><div class="empty"><div class="empty-icon"><span class="icon icon-package" style="color:#d0e8d8;"></span></div><div class="empty-title">Товары не найдены</div></div></td></tr>';
   } else {
     document.getElementById('productsBody').innerHTML = _prodPageItems.map(p => `
-      <tr${(p.availability || 'in') === 'out' ? ' style="background:#fff5f5;"' : ''}>
+      <tr${_selectedProductSkus.has(String(p.sku)) ? ' style="background:#f1fbf5;"' : ((p.availability || 'in') === 'out' ? ' style="background:#fff5f5;"' : '')}>
+        <td style="text-align:center;"><input type="checkbox" class="prod-row-check" value="${p.sku}" ${_selectedProductSkus.has(String(p.sku)) ? 'checked' : ''} onclick="toggleProductSelection('${p.sku}', this)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--green,#2ECC71);"></td>
         <td><div class="prod-img-cell">${p.img ? `<img src="${p.img}" onerror="this.outerHTML='📦'">` : '📦'}</div></td>
         <td><strong>${p.name}</strong></td>
         <td><span class="col-num">${p.sku}</span></td>
@@ -1906,6 +1928,100 @@ function renderProducts() {
     html += `<button onclick="goPage(${productsPage+1})" ${productsPage===totalPages?'disabled':''}>›</button>`;
     pager.innerHTML = html;
   }
+
+  _syncBulkUI();
+}
+
+// ===== Массовый выбор и удаление товаров =====
+// Выбор хранится по sku и переживает переключение страниц/фильтров.
+const _selectedProductSkus = new Set();
+
+// Синхронизирует панель действий и чекбокс «выбрать все» с состоянием выбора.
+function _syncBulkUI() {
+  const bar = document.getElementById('bulkBar');
+  const n = _selectedProductSkus.size;
+  if (bar) {
+    bar.style.display = n > 0 ? 'flex' : 'none';
+    const cnt = document.getElementById('bulkBarCount');
+    if (cnt) cnt.textContent = 'Выбрано ' + n + ' ' + plural(n, ['товар','товара','товаров']);
+  }
+  // «Выбрать все» отмечен, только если все товары текущей страницы выбраны.
+  const selAll = document.getElementById('prodSelectAll');
+  if (selAll) {
+    const items = _prodPageItems || [];
+    const onPage = items.filter(p => _selectedProductSkus.has(String(p.sku))).length;
+    selAll.checked = items.length > 0 && onPage === items.length;
+    selAll.indeterminate = onPage > 0 && onPage < items.length;
+  }
+}
+
+function toggleProductSelection(sku, el) {
+  const key = String(sku);
+  if (el && el.checked) _selectedProductSkus.add(key);
+  else _selectedProductSkus.delete(key);
+  const row = el && el.closest('tr');
+  if (row) row.style.background = (el && el.checked) ? '#f1fbf5' : '';
+  _syncBulkUI();
+}
+
+// «Выбрать все» — действует на товары текущей страницы.
+function toggleSelectAllProducts(el) {
+  (_prodPageItems || []).forEach(p => {
+    const key = String(p.sku);
+    if (el.checked) _selectedProductSkus.add(key);
+    else _selectedProductSkus.delete(key);
+  });
+  renderProducts();
+}
+
+function clearProductSelection() {
+  _selectedProductSkus.clear();
+  renderProducts();
+}
+
+function openBulkDeleteModal() {
+  const n = _selectedProductSkus.size;
+  if (n === 0) return;
+  document.getElementById('bulkDeleteText').textContent =
+    'Удалить ' + n + ' ' + plural(n, ['товар','товара','товаров']) + '? Это действие нельзя отменить.';
+  document.getElementById('bulkDeleteModal').classList.add('open');
+}
+
+function closeBulkDeleteModal() {
+  document.getElementById('bulkDeleteModal').classList.remove('open');
+}
+
+async function confirmBulkDelete() {
+  const skus = Array.from(_selectedProductSkus);
+  const n = skus.length;
+  if (n === 0) { closeBulkDeleteModal(); return; }
+  const btn = document.getElementById('bulkDeleteConfirmBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Удаление…'; }
+
+  // Оптимистично убираем из локального состояния и текущей страницы.
+  const skuSet = new Set(skus.map(String));
+  setProducts(getProducts().filter(p => !skuSet.has(String(p.sku))));
+  _prodPageItems  = _prodPageItems.filter(p => !skuSet.has(String(p.sku)));
+  _prodTotalCount = Math.max(0, _prodTotalCount - n);
+  _selectedProductSkus.clear();
+
+  if (typeof window.supaDeleteProducts === 'function') {
+    try {
+      const res = await window.supaDeleteProducts(skus);
+      if (res && res.ok === false && res.reason !== 'unconfigured') {
+        console.error('[admin] bulk delete supabase', res.error);
+      } else if (res && res.ok && typeof supaRequestSync === 'function') {
+        supaRequestSync();
+      }
+    } catch(e) { console.error('[admin] bulk delete supabase', e); }
+  }
+
+  closeBulkDeleteModal();
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="icon icon-trash"></span> Удалить'; }
+  // Перезагружаем текущую страницу с сервера, чтобы подтянуть актуальные данные.
+  loadProductsPage(productsPage);
+  updateCounts();
+  toast('Удалено ' + n + ' ' + plural(n, ['товар','товара','товаров']));
 }
 
 function goPage(n) {
