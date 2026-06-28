@@ -5,5 +5,4 @@
  {"id":"packaging","name":"Упаковка","show_on_homepage":true,"sort_order":5,"image_url":null,"color":"#2ECC71","product_count":0}, 
  {"id":"household","name":"Хозтовары","show_on_homepage":true,"sort_order":6,"image_url":null,"color":"#2ECC71","product_count":0}, 
  {"id":"stationery","name":"Канцелярия","show_on_homepage":true,"sort_order":7,"image_url":"https://main-cdn.sbermegamarket.ru/mid9/hlr-system/209/828/866/462/817/10/2463684633899199t.jpg","color":"#2ECC71","product_count":8}, 
- {"id":"coal","name":"Уголь","show_on_homepage":true,"sort_order":8,"image_url":null,"color":"#2ECC71","product_count":0}, 
- {"id":"consumingprdcts","name":"Продукты питания","show_on_homepage":false,"sort_order":9,"image_url":null,"color":"#2ECC71","product_count":0}]
+ {"id":"coal","name":"Уголь","show_on_homepage":true,"sort_order":8,"image_url":null,"color":"#2ECC71","product_count":0}]
