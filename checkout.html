@@ -698,16 +698,31 @@ function selectDelivery(method) {
   updateSummary();
 }
 
+// Минимальный заказ товара: из каталога (data-loader) или из самой позиции корзины.
+function _kleverMinQty(sku, fb) {
+  try {
+    const p = (window.getProductsSync ? getProductsSync() : []).find(x => x.sku === sku) || fb;
+    const v = parseInt(p && p.min_qty, 10);
+    return v > 1 ? v : 1;
+  } catch(e) { return 1; }
+}
+
 // Изменение количества товара
 function changeItemQty(sku, delta) {
   const cart = getCart();
   const item = cart.find(i => i.sku === sku);
   if (!item) return;
-  item.qty += delta;
-  if (item.qty <= 0) {
+  const mq = _kleverMinQty(sku, item);
+  const nq = item.qty + delta;
+  if (nq <= 0 && mq <= 1) {
     removeItem(sku);
     return;
   }
+  if (nq < mq) {
+    showCartMsg('Минимальный заказ: ' + mq + ' шт', true);
+    return;
+  }
+  item.qty = nq;
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
   updateSummary();
 }
@@ -789,7 +804,7 @@ function updateSummary() {
       <div class="summary-item-info">
         <div class="summary-item-name">${i.name}</div>
         ${_oos ? '<div style="color:#e05a4e;font-size:11px;font-weight:800;">Нет в наличии — удалите из заказа</div>' : ''}
-        <div class="summary-item-unit-price">${i.price} ₽ за шт.</div>
+        <div class="summary-item-unit-price">${i.price} ₽ за шт.${_kleverMinQty(i.sku, i) > 1 ? ' · мин. ' + _kleverMinQty(i.sku, i) + ' шт' : ''}</div>
         <div class="summary-item-controls">
           <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', -1)">−</button>
           <span class="qty-val-sm">${i.qty}</span>
@@ -818,6 +833,15 @@ async function submitOrder() {
   const _dChecked = document.querySelector('input[name="delivery"]:checked');
   const _dMethod = _dChecked ? _dChecked.value : deliveryMethod;
   if (_dMethod !== 'pickup' && getSubtotal() < MIN_ORDER) return;
+
+  // Количество каждой позиции не меньше минимального заказа товара.
+  const _belowMin = getCart().filter(i => i.qty < _kleverMinQty(i.sku, i));
+  if (_belowMin.length) {
+    showCartMsg('Минимальный заказ: ' + _belowMin.map(i =>
+      '«' + i.name + '» — от ' + _kleverMinQty(i.sku, i) + ' шт').join(', '), true);
+    updateSummary();
+    return;
+  }
 
   // Товары, которых нет в наличии, оформить нельзя.
   const _oosNames = getCart().filter(i => cartItemOOS(i.sku)).map(i => i.name);
