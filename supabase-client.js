@@ -1201,7 +1201,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     return { ok:true };
   };
 
-  window.supaBulkUpsertProducts = async function(products){
+  // Удаляет ВСЕ товары (режим «заменить все» при CSV-импорте).
+  // PostgREST требует фильтр у DELETE — используем всегда-истинный sku=neq.__none__.
+  window.supaDeleteAllProducts = async function(){
+    if (!isConfigured()) return { ok:false, reason:'unconfigured' };
+    const r = await _pgDelete('products', 'sku=neq.' + encodeURIComponent('__none__'));
+    if (!r.ok) console.error('[supabase] delete all products', r.error);
+    return r;
+  };
+
+  // onProgress(done, total) — опциональный колбэк для отображения прогресса.
+  window.supaBulkUpsertProducts = async function(products, onProgress){
     if (!isConfigured()) return { ok:false, reason:'unconfigured' };
     const rows = (products || []).map(_productRow);
     const CHUNK = 50;
@@ -1216,6 +1226,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
         r = await _pgUpsert('products', stripNewCols(chunk), 'sku');
       }
       if (!r.ok) { console.error('[supabase] bulk upsert products', r.error); return { ok:false, error:r.error }; }
+      if (typeof onProgress === 'function') {
+        try { onProgress(Math.min(i + CHUNK, rows.length), rows.length); } catch(e) {}
+      }
     }
     return { ok:true };
   };
