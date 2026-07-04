@@ -355,3 +355,68 @@ if (typeof window !== 'undefined') {
   window.classifyProduct = classifyProduct;
   window.migrateProductsToSubcategories = migrateProductsToSubcategories;
 }
+
+// ===== Поиск: ранжирование результатов по релевантности =====
+// Используется каталогом, живым поиском (оверлей) и админкой.
+
+// Нормализация строки для поиска: нижний регистр, ё == е.
+function kleverSearchNorm(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/ё/g, 'е').trim();
+}
+
+// Оценка релевантности названия для запроса. Запрос может быть из нескольких
+// слов — каждое обязано встречаться в названии, иначе 0 («не подходит»).
+// За каждое слово запроса: 3 — название начинается с него, 2 — какое-то слово
+// названия начинается с него, 1 — найдено в середине слова. Итог — сумма.
+function kleverSearchScore(name, query) {
+  const n = kleverSearchNorm(name);
+  const words = kleverSearchNorm(query).split(/\s+/).filter(Boolean);
+  if (!words.length || !n) return 0;
+  const nameWords = n.split(/\s+/);
+  let score = 0;
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (n.indexOf(w) === -1) return 0;
+    if (n.indexOf(w) === 0) score += 3;
+    else if (nameWords.some(function (nw) { return nw.indexOf(w) === 0; })) score += 2;
+    else score += 1;
+  }
+  return score;
+}
+
+// Сопоставление товара с запросом: по названию (score > 0) или по артикулу.
+// Точное совпадение артикула — всегда первое (score 1e9).
+function kleverSearchMatch(p, query) {
+  const q = kleverSearchNorm(query);
+  if (!q) return { match: true, score: 0, exactSku: false };
+  const sku = kleverSearchNorm(p && p.sku);
+  const exactSku = sku !== '' && sku === q;
+  const skuHit = sku !== '' && sku.indexOf(q) !== -1;
+  const nameScore = kleverSearchScore(p && p.name, q);
+  return {
+    match: exactSku || skuHit || nameScore > 0,
+    score: exactSku ? 1e9 : nameScore,
+    exactSku: exactSku,
+  };
+}
+
+// Сортирует МАССИВ товаров по релевантности запросу (по убыванию score,
+// внутри одинакового score — по алфавиту). Мутирует и возвращает массив.
+function kleverSortByRelevance(items, query, scoreOf) {
+  const get = scoreOf || function (p) { return kleverSearchMatch(p, query).score; };
+  const cache = new Map();
+  items.forEach(function (p) { cache.set(p, get(p)); });
+  items.sort(function (a, b) {
+    const d = cache.get(b) - cache.get(a);
+    if (d) return d;
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+  });
+  return items;
+}
+
+if (typeof window !== 'undefined') {
+  window.kleverSearchNorm = kleverSearchNorm;
+  window.kleverSearchScore = kleverSearchScore;
+  window.kleverSearchMatch = kleverSearchMatch;
+  window.kleverSortByRelevance = kleverSortByRelevance;
+}

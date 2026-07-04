@@ -1860,6 +1860,11 @@ async function loadProductsPage(page) {
       const res = await window.supaGetProductsPage({ search, catName, page, perPage: PRODUCTS_PER_PAGE });
       if (res && res.ok) {
         _prodPageItems  = res.items.map(normalizeProduct);
+        // Сервер ищет через ilike без ранжирования — пересортировываем
+        // страницу по релевантности (точный артикул > начало названия > ...).
+        if (search && typeof kleverSortByRelevance === 'function') {
+          kleverSortByRelevance(_prodPageItems, search);
+        }
         _prodTotalCount = res.total;
         // Merge current page into localStorage so editProduct/toggleHit can find rows
         const stored = getProducts();
@@ -1874,9 +1879,12 @@ async function loadProductsPage(page) {
   const all = getProducts();
   const q = search.toLowerCase();
   const filtered = all.filter(p => {
-    const mq = !q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
+    const mq = !q || (typeof kleverSearchMatch === 'function'
+      ? kleverSearchMatch(p, q).match
+      : (p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q)));
     return mq && (!catName || p.cat === catName);
   });
+  if (q && typeof kleverSortByRelevance === 'function') kleverSortByRelevance(filtered, q);
   _prodTotalCount = filtered.length;
   const offset = (page - 1) * PRODUCTS_PER_PAGE;
   _prodPageItems  = filtered.slice(offset, offset + PRODUCTS_PER_PAGE);
