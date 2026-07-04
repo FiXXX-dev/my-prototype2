@@ -847,6 +847,10 @@ body{font-family:'Onest',sans-serif;background:#f8fbf9;color:var(--text);}
         <input type="number" id="prodOldPrice" placeholder="Например: 50 (было до скидки)">
       </div>
       <div class="form-grp">
+        <label>Мин. заказ, шт <span style="color:#8aaa94;font-size:11px;font-weight:400;">— цена показывается за 1 шт, но меньше этого количества купить нельзя</span></label>
+        <input type="number" id="prodMinQty" min="1" step="1" placeholder="1">
+      </div>
+      <div class="form-grp">
         <label>Категория *</label>
         <select id="prodCat" onchange="onProductCatChange()">
           <option>Бытовая химия</option>
@@ -1828,6 +1832,7 @@ function normalizeProduct(p) {
     emoji:        p.emoji || '📦',
     availability: p.availability || 'in',
     old_price:    Number(p.old_price) || 0,
+    min_qty:      Math.max(1, parseInt(p.min_qty, 10) || 1),
   });
 }
 
@@ -2131,6 +2136,7 @@ function openProductModal() {
   document.getElementById('prodSku').value = '';
   document.getElementById('prodPrice').value = '';
   document.getElementById('prodOldPrice').value = '';
+  document.getElementById('prodMinQty').value = '';
   document.getElementById('prodBadge').value = '';
   document.getElementById('prodAvailability').value = 'in';
   document.getElementById('prodImg').value = '';
@@ -2199,6 +2205,7 @@ function editProduct(sku) {
   document.getElementById('prodSku').value = p.sku;
   document.getElementById('prodPrice').value = p.price;
   document.getElementById('prodOldPrice').value = p.old_price || '';
+  document.getElementById('prodMinQty').value = (p.min_qty > 1) ? p.min_qty : '';
   document.getElementById('prodBadge').value = p.badge || '';
   document.getElementById('prodAvailability').value = p.availability || 'in';
   document.getElementById('prodImg').value = p.img || '';
@@ -2225,6 +2232,7 @@ async function saveProduct() {
   const sku = document.getElementById('prodSku').value.trim();
   const price = parseFloat(document.getElementById('prodPrice').value);
   const old_price = parseFloat(document.getElementById('prodOldPrice').value) || 0;
+  const min_qty = Math.max(1, parseInt(document.getElementById('prodMinQty').value, 10) || 1);
   // value списка = id категории. Имя берём из дерева (для p.cat и отображения),
   // id — для категории на клиенте (классификация/фильтры).
   const categoryId = document.getElementById('prodCat').value || undefined;
@@ -2250,14 +2258,14 @@ async function saveProduct() {
 
   if (editingSku) {
     // Редактирование
-    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, old_price: old_price || undefined, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc} : p);
+    products = products.map(p => p.sku === editingSku ? {...p, name, sku, price, old_price: old_price || undefined, min_qty, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc} : p);
   } else {
     // Добавление
     if (existing) {
       alert('Товар с таким артикулом уже существует!');
       return;
     }
-    products.unshift({name, sku, price, old_price: old_price || undefined, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc, emoji:'📦'});
+    products.unshift({name, sku, price, old_price: old_price || undefined, min_qty, cat, categoryId, subcategory, badge: badge || undefined, availability, img, desc, emoji:'📦'});
   }
 
   // Сначала пишем в Supabase (источник истины) и проверяем результат —
@@ -3971,14 +3979,15 @@ function csvEscape(v) {
 
 function exportProductsCsv() {
   const products = getProducts();
-  const cols = ['name','sku','price','category','subcategory','img','description'];
-  const headerRu = ['Название','Артикул','Цена','Категория','Подкатегория','Фото','Описание'];
+  const cols = ['name','sku','price','min_qty','category','subcategory','img','description'];
+  const headerRu = ['Название','Артикул','Цена','Минзаказ','Категория','Подкатегория','Фото','Описание'];
   let csv = '﻿' + headerRu.map(csvEscape).join(';') + '\r\n';
   for (const p of products) {
     const row = [
       p.name || '',
       p.sku || '',
       p.price != null ? p.price : '',
+      p.min_qty > 1 ? p.min_qty : 1,
       p.cat || '',
       p.subcategory || '',
       p.img || '',
@@ -4032,6 +4041,7 @@ const _CSV_HEADER_ALIASES = {
   'subcategory': 'subcategory', 'подкатегория': 'subcategory', 'sub': 'subcategory',
   'img': 'img', 'image': 'img', 'фото': 'img', 'картинка': 'img',
   'description': 'description', 'описание': 'description', 'desc': 'description',
+  'min_qty': 'min_qty', 'минзаказ': 'min_qty', 'мин. заказ': 'min_qty', 'мин заказ': 'min_qty',
 };
 
 function detectColumnMap(headerRow) {
@@ -4187,6 +4197,7 @@ async function runCsvImport() {
       const subRaw = map.subcategory != null ? (r[map.subcategory] || '').trim() : '';
       const img = map.img != null ? (r[map.img] || '').trim() : '';
       const desc = map.description != null ? (r[map.description] || '').trim() : '';
+      const min_qty = map.min_qty != null ? Math.max(1, parseInt(r[map.min_qty], 10) || 1) : 1;
       const catRec = catsByName[cat.toLowerCase()];
       const categoryId = catRec ? catRec.id : undefined;
       // Подкатегория: в CSV — название (или id из экспорта), в товаре храним id.
@@ -4197,7 +4208,7 @@ async function runCsvImport() {
         else subNotFound++;
       }
       const rec = { name, sku, price, cat, categoryId, subcategory: subcategory || undefined,
-                    img, desc, emoji:'📦' };
+                    min_qty, img, desc, emoji:'📦' };
       if (bySku.has(sku)) {
         existing[bySku.get(sku)] = { ...existing[bySku.get(sku)], ...rec };
         updated++;

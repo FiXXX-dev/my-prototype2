@@ -1152,6 +1152,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
       availability: p.availability || 'in',
       // Старая цена: если > 0 и > price — показывается зачёркнутой на карточке.
       old_price: Number(p.old_price) || 0,
+      // Минимальное количество заказа (шт); 1 = без ограничения.
+      min_qty: Math.max(1, parseInt(p.min_qty, 10) || 1),
       is_active: true,
     };
     return row;
@@ -1172,6 +1174,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     if (!r.ok && _isMissingColErr(r.error)) {
       if ('old_price' in row) delete row.old_price;
       if ('availability' in row) delete row.availability;
+      if ('min_qty' in row) delete row.min_qty;
       r = await _pgUpsert('products', row, 'sku');
     }
     if (!r.ok) console.error('[supabase] upsert product', r.error);
@@ -1216,7 +1219,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     const rows = (products || []).map(_productRow);
     const CHUNK = 50;
     let stripNew = false;   // станет true, если схема не знает новых колонок
-    const stripNewCols = arr => arr.map(r => { const c = {...r}; delete c.availability; delete c.old_price; return c; });
+    const stripNewCols = arr => arr.map(r => { const c = {...r}; delete c.availability; delete c.old_price; delete c.min_qty; return c; });
     for (let i = 0; i < rows.length; i += CHUNK) {
       let chunk = rows.slice(i, i + CHUNK);
       if (stripNew) chunk = stripNewCols(chunk);

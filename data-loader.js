@@ -44,6 +44,8 @@
       emoji: p.emoji || '📦',
       availability: p.availability || 'in',
       old_price: Number(p.old_price) || 0,
+      // Минимальное количество заказа; 1 = без ограничения.
+      min_qty: Math.max(1, parseInt(p.min_qty, 10) || 1),
     });
   }
 
