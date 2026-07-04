@@ -536,17 +536,31 @@ function applyFilters() {
 
   document.getElementById('clearBtn').style.display = query ? 'block' : 'none';
 
+  // Релевантность: точный артикул > название начинается с запроса > слово
+  // названия начинается с запроса > совпадение в середине (е == ё, слова
+  // запроса — через И). Категорию тоже матчим, но с минимальным приоритетом.
+  const _scores = new Map();
   filteredProducts = ALL_PRODUCTS.filter(p => {
     // Фильтр по id категории (новые категории работают так же, как стандартные).
     const catMatch = !currentCatId || catProductMatch(p, currentCatId);
     const subMatch = !currentSub || p.subcategory === currentSub;
     const priceMatch = p.price >= min && p.price <= max;
-    const searchMatch = !query || p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query) || p.cat.toLowerCase().includes(query);
+    let searchMatch = true;
+    if (query) {
+      const m = kleverSearchMatch(p, query);
+      const inCat = kleverSearchNorm(p.cat).includes(kleverSearchNorm(query));
+      searchMatch = m.match || inCat;
+      _scores.set(p, m.score || (inCat ? 0.5 : 0));
+    }
     return catMatch && subMatch && priceMatch && searchMatch;
   });
 
-  if (sort === 'asc') filteredProducts.sort((a,b) => a.price - b.price);
-  if (sort === 'desc') filteredProducts.sort((a,b) => b.price - a.price);
+  const _byScore = (a,b) => (_scores.get(b)||0) - (_scores.get(a)||0);
+  const _byName  = (a,b) => String(a.name||'').localeCompare(String(b.name||''), 'ru');
+  // Явная сортировка по цене — главнее релевантности; score — тай-брейкер.
+  if (sort === 'asc')       filteredProducts.sort((a,b) => a.price - b.price || _byScore(a,b) || _byName(a,b));
+  else if (sort === 'desc') filteredProducts.sort((a,b) => b.price - a.price || _byScore(a,b) || _byName(a,b));
+  else if (query)           filteredProducts.sort((a,b) => _byScore(a,b) || _byName(a,b));
 
   document.getElementById('resultCount').textContent = query && filteredProducts.length > 0
     ? `Найдено: ${filteredProducts.length} ${wordForm(filteredProducts.length, ['товар','товара','товаров'])}`
@@ -1539,11 +1553,22 @@ document.addEventListener('DOMContentLoaded',updateCartBadge);
     const q = query.trim().toLowerCase();
     if (!q){ box.classList.remove('has-content'); box.innerHTML=''; return; }
     const all = getProducts();
-    const matches = all.filter(p => {
-      const n = (p.name||'').toLowerCase();
-      const s = (p.sku||'').toString().toLowerCase();
-      return n.includes(q) || s.includes(q);
-    }).slice(0, 8);
+    // Ранжируем: точный артикул > название начинается с запроса > слово
+    // названия начинается с запроса > середина слова (е == ё, слова через И).
+    const matches = all
+      .map(p => {
+        if (typeof kleverSearchMatch === 'function') {
+          const m = kleverSearchMatch(p, q);
+          return m.match ? { p, score: m.score } : null;
+        }
+        const n = (p.name||'').toLowerCase();
+        const s = (p.sku||'').toString().toLowerCase();
+        return (n.includes(q) || s.includes(q)) ? { p, score: 0 } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b.score - a.score) || String(a.p.name||'').localeCompare(String(b.p.name||''), 'ru'))
+      .slice(0, 8)
+      .map(x => x.p);
     box.classList.add('has-content');
     if (matches.length === 0){
       box.innerHTML = '<div class="klever-search-empty"><span class="icon icon-search icon-2x" style="display:block;margin:0 auto 10px;"></span>Ничего не найдено по запросу «'+escHtml(query)+'»</div>';

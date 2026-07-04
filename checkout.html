@@ -1561,11 +1561,22 @@ if (typeof supaListAddressesByEmail === 'function' && window.kleverSupabase && w
     const q = query.trim().toLowerCase();
     if (!q){ box.classList.remove('has-content'); box.innerHTML=''; return; }
     const all = getProducts();
-    const matches = all.filter(p => {
-      const n = (p.name||'').toLowerCase();
-      const s = (p.sku||'').toString().toLowerCase();
-      return n.includes(q) || s.includes(q);
-    }).slice(0, 8);
+    // Ранжируем: точный артикул > название начинается с запроса > слово
+    // названия начинается с запроса > середина слова (е == ё, слова через И).
+    const matches = all
+      .map(p => {
+        if (typeof kleverSearchMatch === 'function') {
+          const m = kleverSearchMatch(p, q);
+          return m.match ? { p, score: m.score } : null;
+        }
+        const n = (p.name||'').toLowerCase();
+        const s = (p.sku||'').toString().toLowerCase();
+        return (n.includes(q) || s.includes(q)) ? { p, score: 0 } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b.score - a.score) || String(a.p.name||'').localeCompare(String(b.p.name||''), 'ru'))
+      .slice(0, 8)
+      .map(x => x.p);
     box.classList.add('has-content');
     if (matches.length === 0){
       box.innerHTML = '<div class="klever-search-empty"><span class="icon icon-search icon-2x" style="display:block;margin:0 auto 10px;"></span>Ничего не найдено по запросу «'+escHtml(query)+'»</div>';
