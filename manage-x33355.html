@@ -4135,7 +4135,7 @@ function renderCsvPreview(rows) {
   if (missing.length) document.getElementById('csvImportBtn').disabled = true;
 }
 
-function runCsvImport() {
+async function runCsvImport() {
   if (!_csvParsedRows) return;
   const rows = _csvParsedRows;
   const map = detectColumnMap(rows[0]);
@@ -4144,19 +4144,36 @@ function runCsvImport() {
   }
   const replaceMode = document.getElementById('csvReplaceMode').checked;
   const progress = document.getElementById('csvImportProgress');
+  const importBtn = document.getElementById('csvImportBtn');
   progress.style.display = 'block';
+  progress.style.color = '';
+  if (importBtn) importBtn.disabled = true;
   const total = rows.length - 1;
 
-  // Build category name → id map for proper categoryId fill
+  // Свежее дерево категорий из БД — для конвертации названий в id.
+  try { await ensureCategoriesLoaded(); } catch(e) {}
+
+  // Категории: название → запись (для categoryId).
   const catsByName = {};
-  getCategories().forEach(c => { catsByName[c.name.toLowerCase()] = c; });
+  getCategories().forEach(c => { catsByName[c.name.trim().toLowerCase()] = c; });
+
+  // Подкатегории: название → id по всему дереву, включая вложенные (3-й уровень).
+  // Плюс набор известных id — экспорт пишет в CSV id, поддерживаем и его.
+  const subsByName = {};
+  const subIds = new Set();
+  getCategories().forEach(c => (c.subcategories || []).forEach(s => {
+    subsByName[s.name.trim().toLowerCase()] = s.id; subIds.add(s.id);
+    (s.children || []).forEach(k => {
+      subsByName[k.name.trim().toLowerCase()] = k.id; subIds.add(k.id);
+    });
+  }));
 
   let existing = replaceMode ? [] : getProducts();
   const bySku = new Map(existing.map((p, i) => [p.sku, i]));
-  let added = 0, updated = 0, skipped = 0;
+  let added = 0, updated = 0, skipped = 0, subNotFound = 0;
   const skuSeen = new Set();
 
-  function processChunk(start) {
+  function processChunk(start, done) {
     const end = Math.min(start + 200, rows.length);
     for (let i = start; i < end; i++) {
       const r = rows[i];
@@ -4167,11 +4184,18 @@ function runCsvImport() {
       if (skuSeen.has(sku)) { skipped++; continue; } // dup within CSV
       skuSeen.add(sku);
       const cat = map.category != null ? (r[map.category] || '').trim() : '';
-      const subcategory = map.subcategory != null ? (r[map.subcategory] || '').trim() : '';
+      const subRaw = map.subcategory != null ? (r[map.subcategory] || '').trim() : '';
       const img = map.img != null ? (r[map.img] || '').trim() : '';
       const desc = map.description != null ? (r[map.description] || '').trim() : '';
       const catRec = catsByName[cat.toLowerCase()];
       const categoryId = catRec ? catRec.id : undefined;
+      // Подкатегория: в CSV — название (или id из экспорта), в товаре храним id.
+      let subcategory = '';
+      if (subRaw) {
+        if (subIds.has(subRaw)) subcategory = subRaw;
+        else if (subsByName[subRaw.toLowerCase()]) subcategory = subsByName[subRaw.toLowerCase()];
+        else subNotFound++;
+      }
       const rec = { name, sku, price, cat, categoryId, subcategory: subcategory || undefined,
                     img, desc, emoji:'📦' };
       if (bySku.has(sku)) {
@@ -4183,19 +4207,53 @@ function runCsvImport() {
         added++;
       }
     }
-    progress.textContent = `Импортировано ${Math.min(end-1, total)} из ${total}…`;
+    progress.textContent = `Обработано ${Math.min(end-1, total)} из ${total}…`;
     if (end < rows.length) {
-      setTimeout(()=>processChunk(end), 0);
+      setTimeout(()=>processChunk(end, done), 0);
     } else {
-      setProducts(existing);
-      try { migrateProductsToSubcategories(); } catch(e) {}
-      progress.textContent = `✓ Готово. Добавлено: ${added}, обновлено: ${updated}, пропущено: ${skipped}`;
-      renderProducts();
-      updateCounts();
-      setTimeout(() => { closeImportModal(); toast(`✓ Импорт: +${added}, ↻${updated}`); }, 1200);
+      done();
     }
   }
-  processChunk(1);
+
+  processChunk(1, async function finishImport() {
+    setProducts(existing);
+
+    // ===== Сохраняем в Supabase =====
+    let dbError = null;
+    try {
+      if (replaceMode && typeof window.supaDeleteAllProducts === 'function') {
+        progress.textContent = 'Удаляем старые товары из базы…';
+        const rDel = await window.supaDeleteAllProducts();
+        if (rDel && rDel.ok === false && rDel.reason !== 'unconfigured') dbError = rDel.error;
+      }
+      if (!dbError && typeof window.supaBulkUpsertProducts === 'function') {
+        const rUp = await window.supaBulkUpsertProducts(existing, function(done, totalRows){
+          progress.textContent = `Сохраняем в базу: ${done} из ${totalRows}…`;
+        });
+        if (rUp && rUp.ok === false && rUp.reason !== 'unconfigured') dbError = rUp.error;
+        if (rUp && rUp.ok && typeof supaRequestSync === 'function') supaRequestSync();
+      }
+    } catch(e) { dbError = e; }
+
+    const report = `Добавлено: ${added}, обновлено: ${updated}, пропущено: ${skipped}`
+      + (subNotFound ? `, подкатегория не найдена: ${subNotFound}` : '');
+
+    if (typeof loadProductsPage === 'function') loadProductsPage(1);
+    else renderProducts();
+    updateCounts();
+    if (importBtn) importBtn.disabled = false;
+
+    if (dbError) {
+      const msg = (dbError && dbError.message) || String(dbError);
+      progress.style.color = '#FF3B6B';
+      progress.textContent = `⚠ ${report}. Но запись в базу не удалась: ${msg}. `
+        + `Товары сохранены только локально — повторите импорт.`;
+      return; // модалку не закрываем, чтобы ошибка была видна
+    }
+
+    progress.textContent = `✓ Готово. ${report}`;
+    setTimeout(() => { closeImportModal(); toast(`✓ Импорт: +${added}, ↻${updated}`); }, 1600);
+  });
 }
 
 // ===== BANNERS ADMIN =====
