@@ -713,7 +713,8 @@ function changeItemQty(sku, delta) {
   const item = cart.find(i => i.sku === sku);
   if (!item) return;
   const mq = _kleverMinQty(sku, item);
-  const nq = item.qty + delta;
+  // Шаг = упаковка: к соседнему кратному min_qty (при мин. 1 — обычный ±1).
+  const nq = delta > 0 ? (Math.floor(item.qty / mq) + 1) * mq : (Math.ceil(item.qty / mq) - 1) * mq;
   if (nq <= 0 && mq <= 1) {
     removeItem(sku);
     return;
@@ -804,7 +805,7 @@ function updateSummary() {
       <div class="summary-item-info">
         <div class="summary-item-name">${i.name}</div>
         ${_oos ? '<div style="color:#e05a4e;font-size:11px;font-weight:800;">Нет в наличии — удалите из заказа</div>' : ''}
-        <div class="summary-item-unit-price">${i.price} ₽ за шт.${_kleverMinQty(i.sku, i) > 1 ? ' · мин. ' + _kleverMinQty(i.sku, i) + ' шт' : ''}</div>
+        <div class="summary-item-unit-price">${i.price} ₽ за шт.${_kleverMinQty(i.sku, i) > 1 ? ' · упак. ' + _kleverMinQty(i.sku, i) + ' шт' : ''}</div>
         <div class="summary-item-controls">
           <button class="qty-btn-sm" onclick="changeItemQty('${i.sku}', -1)">−</button>
           <span class="qty-val-sm">${i.qty}</span>
@@ -834,11 +835,14 @@ async function submitOrder() {
   const _dMethod = _dChecked ? _dChecked.value : deliveryMethod;
   if (_dMethod !== 'pickup' && getSubtotal() < MIN_ORDER) return;
 
-  // Количество каждой позиции не меньше минимального заказа товара.
-  const _belowMin = getCart().filter(i => i.qty < _kleverMinQty(i.sku, i));
-  if (_belowMin.length) {
-    showCartMsg('Минимальный заказ: ' + _belowMin.map(i =>
-      '«' + i.name + '» — от ' + _kleverMinQty(i.sku, i) + ' шт').join(', '), true);
+  // Количество каждой позиции: не меньше минимума и кратно упаковке.
+  const _badQty = getCart().filter(i => {
+    const mq = _kleverMinQty(i.sku, i);
+    return i.qty < mq || (mq > 1 && i.qty % mq !== 0);
+  });
+  if (_badQty.length) {
+    showCartMsg('Проверьте количество: ' + _badQty.map(i =>
+      '«' + i.name + '» — продаётся упаковками по ' + _kleverMinQty(i.sku, i) + ' шт').join(', '), true);
     updateSummary();
     return;
   }
