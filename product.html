@@ -269,12 +269,13 @@ function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCart
 function _kleverIsOOS(sku){try{const p=(window.getProductsSync?getProductsSync():[]).find(x=>x.sku===sku);return !!p&&(p.availability||'in')==='out';}catch(e){return false;}}
 function _kleverMinQty(sku,fb){try{const p=(window.getProductsSync?getProductsSync():[]).find(x=>x.sku===sku)||fb;const v=parseInt(p&&p.min_qty,10);return v>1?v:1;}catch(e){return 1;}}
 function showMinQtyToast(n){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#e05a4e;font-size:18px;font-weight:900;">!</span> Минимальный заказ: '+n+' шт';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
+function showPackToast(n){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#e05a4e;font-size:18px;font-weight:900;">!</span> Продаётся упаковками по '+n+' шт';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 function showOOSToast(name){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:#e05a4e;font-size:18px;font-weight:900;">✕</span> «'+name+'» нет в наличии';document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},2200);}
 function showCartMsg(msg,isErr){let t=document.getElementById('cartToast');if(t)t.remove();t=document.createElement('div');t.id='cartToast';t.className='cart-toast';t.innerHTML='<span style="color:'+(isErr?'#e05a4e':'#2ECC71')+';font-size:18px;font-weight:900;">'+(isErr?'✕':'✓')+'</span> '+msg;document.body.appendChild(t);setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3200);}
-function addToCart(p){if(_kleverIsOOS(p.sku)){showOOSToast(p.name);return;}const c=getCart();const e=c.find(i=>i.sku===p.sku);if(e)e.qty++;else c.push({...p,qty:_kleverMinQty(p.sku,p)});saveCart(c);showAddedToast(p.name);}
+function addToCart(p){if(_kleverIsOOS(p.sku)){showOOSToast(p.name);return;}const c=getCart();const e=c.find(i=>i.sku===p.sku);const mq=_kleverMinQty(p.sku,p);if(e)e.qty=(Math.floor(e.qty/mq)+1)*mq;else c.push({...p,qty:mq});saveCart(c);showAddedToast(p.name);}
 function removeFromCart(s){let c=getCart();c=c.filter(i=>i.sku!==s);saveCart(c);renderCart();if(typeof syncCartQtyBlock==='function')syncCartQtyBlock();}
-function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;if(d>0&&_kleverIsOOS(s)){showOOSToast(i.name||'Товар');return;}const mq=_kleverMinQty(s,i);const nq=i.qty+d;if(nq<=0&&mq<=1){removeFromCart(s);return;}if(nq<mq){showMinQtyToast(mq);return;}i.qty=nq;saveCart(c);renderCart();if(typeof syncCartQtyBlock==='function')syncCartQtyBlock();}
-function setCartQty(s,inp){const v=parseInt(inp.value)||1;if(v<=0){removeFromCart(s);return;}const c=getCart();const i=c.find(x=>x.sku===s);if(!i){inp.value=1;return;}const mq=_kleverMinQty(s,i);if(v<mq)showMinQtyToast(mq);i.qty=Math.max(mq,Math.min(9999,v));inp.value=i.qty;saveCart(c);renderCart();}
+function changeQty(s,d){const c=getCart();const i=c.find(x=>x.sku===s);if(!i)return;if(d>0&&_kleverIsOOS(s)){showOOSToast(i.name||'Товар');return;}const mq=_kleverMinQty(s,i);const nq=d>0?(Math.floor(i.qty/mq)+1)*mq:(Math.ceil(i.qty/mq)-1)*mq;if(nq<=0&&mq<=1){removeFromCart(s);return;}if(nq<mq){showMinQtyToast(mq);return;}i.qty=nq;saveCart(c);renderCart();if(typeof syncCartQtyBlock==='function')syncCartQtyBlock();}
+function setCartQty(s,inp){const v=parseInt(inp.value)||1;if(v<=0){removeFromCart(s);return;}const c=getCart();const i=c.find(x=>x.sku===s);if(!i){inp.value=1;return;}const mq=_kleverMinQty(s,i);const q2=Math.max(mq,Math.ceil(Math.min(9999,v)/mq)*mq);if(mq>1&&v%mq!==0)showPackToast(mq);else if(v<mq)showMinQtyToast(mq);i.qty=q2;inp.value=i.qty;saveCart(c);renderCart();}
 function getCartTotal(){return Math.round(getCart().reduce((s,i)=>s+i.price*i.qty,0)*100)/100;}
 function getCartCount(){return getCart().reduce((s,i)=>s+i.qty,0);}
 function updateCartBadge(){const b=document.getElementById('cartBadge');if(!b)return;const c=getCartCount();b.textContent=c;b.style.display=c>0?'flex':'none';}
@@ -381,10 +382,10 @@ function renderProduct() {
           <div class="prod-oos-sub">Этого товара сейчас нет. Свяжитесь с нами — подскажем сроки поступления.</div>
         </div>` : `
         <div class="counter-wrap" id="counterWrap">
-          <div class="counter-label" data-i18n="product.qty_label">Количество:${_mq > 1 ? ' <span style="color:#8aaa94;font-weight:400;">(минимальный заказ — ' + _mq + ' шт)</span>' : ''}</div>
+          <div class="counter-label" data-i18n="product.qty_label">Количество:${_mq > 1 ? ' <span style="color:#8aaa94;font-weight:400;">(упаковка — ' + _mq + ' шт)</span>' : ''}</div>
           <div class="counter">
             <button class="counter-btn" onclick="changeQtyLocal(-1)">−</button>
-            <input class="counter-val" id="qty" type="number" value="${_mq}" min="${_mq}">
+            <input class="counter-val" id="qty" type="number" value="${_mq}" min="${_mq}" step="${_mq}" onchange="qtyInputSnap(this)">
             <button class="counter-btn" onclick="changeQtyLocal(1)">+</button>
           </div>
         </div>
@@ -447,8 +448,19 @@ function renderProduct() {
 function changeQtyLocal(delta) {
   const el = document.getElementById('qty');
   const mq = _kleverMinQty(product.sku, product);
-  const nv = (parseInt(el.value) || mq) + delta;
+  const cur = parseInt(el.value) || mq;
+  // Шаг = упаковка: к соседнему кратному min_qty (при мин. 1 — обычный ±1).
+  const nv = delta > 0 ? (Math.floor(cur / mq) + 1) * mq : (Math.ceil(cur / mq) - 1) * mq;
   if (nv < mq) { showMinQtyToast(mq); el.value = mq; return; }
+  el.value = nv;
+}
+
+// Ручной ввод количества: округляем ВВЕРХ до кратного упаковке (49 → 50, 51 → 100).
+function qtyInputSnap(el) {
+  const mq = _kleverMinQty(product.sku, product);
+  const v = parseInt(el.value) || mq;
+  const nv = Math.max(mq, Math.ceil(v / mq) * mq);
+  if (nv !== v && mq > 1) showPackToast(mq);
   el.value = nv;
 }
 
@@ -466,7 +478,8 @@ function addCurrentToCart() {
   const mq = _kleverMinQty(product.sku, product);
   const qtyEl = document.getElementById('qty');
   let qty = qtyEl ? (parseInt(qtyEl.value) || mq) : mq;
-  if (qty < mq) { qty = mq; if (qtyEl) qtyEl.value = mq; }
+  qty = Math.max(mq, Math.ceil(qty / mq) * mq);   // кратно упаковке
+  if (qtyEl) qtyEl.value = qty;
   const c = getCart();
   const e = c.find(i => i.sku === product.sku);
   if (e) e.qty += qty;
@@ -542,11 +555,12 @@ function productQtyDec(){
   const item = cart.find(i => i.sku === product.sku);
   if (!item) return;
   const mq = _kleverMinQty(product.sku, product);
-  if (item.qty - 1 < mq) {
+  const nq = (Math.ceil(item.qty / mq) - 1) * mq;  // предыдущее кратное
+  if (nq < mq) {
     if (mq > 1) { showMinQtyToast(mq); return; }  // ниже минимума нельзя
     saveCart(cart.filter(i => i.sku !== product.sku)); // мин. 1: удаляем
   } else {
-    item.qty--;
+    item.qty = nq;
     saveCart(cart);
   }
   syncCartQtyBlock();
